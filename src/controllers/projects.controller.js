@@ -55,7 +55,12 @@ export const createProject = async (req, res) => {
 export const getProjects = async (req, res)=>{
     try {
         
-        const projects = await Project.find({owner: req.user.id}).sort({createdAt: -1})
+        const projects = await Project.find({
+            owner: req.user.id
+        })
+        .populate("client", "name email company")
+        .sort({ createdAt: -1 })
+
 
         return success(res, 200, projects)
     } catch (error) {
@@ -63,4 +68,25 @@ export const getProjects = async (req, res)=>{
     }
 
 
+}
+
+export const getProjectById = async (req, res) => {
+    try {
+        const { id } = req.params
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return fail(res, 400, "ID de proyecto no es válido")
+        }
+        const project = await Project.findOne({
+            _id: id,
+            owner: req.user.id
+        }).populate("client", "name email company")
+        .select("-__v -owner")
+
+        if (!project) {
+            return fail(res, 404, "Proyecto no encontrado")
+        }
+        return success(res, 200, project)
+    } catch (error) {
+        return fail(res, 500, error.message)
+    }   
 }
