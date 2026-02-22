@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
-import { success, fail } from '../utils/response.js'
+import { fail } from '../utils/response.js'
 
 export const auth = (req, res, next) => {
   const authHeader = req.headers.authorization
