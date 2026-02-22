@@ -7,7 +7,7 @@ import { success, fail } from '../utils/response.js';
 export const createProject = async (req, res) => {
     try {
         //Obtengo datos del body
-        const {title, description, status, budget, startDate, endDate, client}= req.body
+        const {title, description, budget, startDate, endDate, client}= req.body
 
         //Verifico que el titulo y cliente sean proporcionados
         if(!title || !client){
@@ -35,7 +35,6 @@ export const createProject = async (req, res) => {
         const project = await Project.create({
             title,
             description,
-            status,
             budget,
             startDate,
             endDate,
@@ -104,7 +103,7 @@ const allowedtransitions = {
     cancelled: []
 }
 
-
+//Función para actualizar un proyecto por su ID, asegurando que pertenezca al usuario autenticado
 export const updateProject = async (req, res)=>{
     try {
         const {id} = req.params
@@ -145,9 +144,49 @@ export const updateProject = async (req, res)=>{
 
         await project.save()
         return success(res, 200, project)
-        
+
 
     } catch (error) {
         return fail(res, 500, error.message)
     }
+}
+
+
+export const getDashboardMetrics = async (req, res) => {
+  try {
+    const ownerId = req.user.id
+
+    const metrics = await Project.aggregate([
+      {
+        $match: { owner: ownerId }
+      },
+      {
+        $group: {
+          _id: "$status",
+          totalProjects: { $sum: 1 },
+          totalBudget: { $sum: "$budget" }
+        }
+      }
+    ])
+
+    // Total general
+    const totalStats = await Project.aggregate([
+      { $match: { owner: ownerId } },
+      {
+        $group: {
+          _id: null,
+          totalProjects: { $sum: 1 },
+          totalBudget: { $sum: "$budget" }
+        }
+      }
+    ])
+
+    return success(res, 200, {
+      summary: totalStats[0] || { totalProjects: 0, totalBudget: 0 },
+      byStatus: metrics
+    })
+
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
 }
