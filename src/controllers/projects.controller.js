@@ -22,7 +22,7 @@ export const createProject = async (req, res) => {
         const clientExists = await Client.findOne(
             {
                 _id: client,
-                owner: req.user.id
+                owner: req.user._id
             }
         )
         
@@ -39,7 +39,7 @@ export const createProject = async (req, res) => {
             startDate,
             endDate,
             client,
-            owner: req.user.id
+            owner: req.user._id
         })
 
         return success(res, 201, project)
@@ -56,7 +56,7 @@ export const getProjects = async (req, res)=>{
     try {
         
         const projects = await Project.find({
-            owner: req.user.id
+            owner: req.user._id
         })
         .populate("client", "name email company")
         .sort({ createdAt: -1 })
@@ -80,7 +80,7 @@ export const getProjectById = async (req, res) => {
         }
         const project = await Project.findOne({
             _id: id,
-            owner: req.user.id
+            owner: req.user._id
         }).populate("client", "name email company")
         .select("-__v -owner")
 
@@ -117,7 +117,7 @@ export const updateProject = async (req, res)=>{
         //verifico que el proyecto exista y pertenezca al usuario autenticado
         const project = await Project.findOne({
             _id:id,
-            owner: req.user.id
+            owner: req.user._id
         })
         if(!project){
             return fail(res, 404, "Proyecto no encontrado")
@@ -154,7 +154,7 @@ export const updateProject = async (req, res)=>{
 
 export const getDashboardMetrics = async (req, res) => {
   try {
-    const ownerId = req.user.id
+    const ownerId = req.user._id
 
     const metrics = await Project.aggregate([
       {

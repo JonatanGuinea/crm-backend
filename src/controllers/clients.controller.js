@@ -17,7 +17,7 @@ export const createClient = async (req, res) => {
       phone,
       company,
       notes,
-      owner: req.user.id
+      owner: req.user._id
     })
 
     return success(res, 201, client)
@@ -34,7 +34,7 @@ export const createClient = async (req, res) => {
     //OBTENER TODOS LOS CLIENTES
 export const getClients = async (req, res) => {
   try {
-    const clients = await Client.find({ owner: req.user.id }).lean()
+    const clients = await Client.find({ owner: req.user._id }).lean()
     return success(res, 200, clients)
 
   } catch (error) {
@@ -55,7 +55,7 @@ export const getClientById = async (req, res) => {
 
     const client = await Client.findOne({
       _id: id,
-      owner: req.user.id
+      owner: req.user._id
     })
 
     if (!client)
@@ -77,7 +77,7 @@ export const updateClient = async (req, res) => {
       return fail(res, 400, "ID inválido")
 
     const updatedClient = await Client.findOneAndUpdate(
-      { _id: id, owner: req.user.id },
+      { _id: id, owner: req.user._id },
       req.body,
       { new: true, runValidators: true }
     )
@@ -103,7 +103,7 @@ export const deleteClient = async (req, res) => {
 
     const deletedClient = await Client.findOneAndDelete({
       _id: id,
-      owner: req.user.id
+      owner: req.user._id
     })
 
     if (!deletedClient)
