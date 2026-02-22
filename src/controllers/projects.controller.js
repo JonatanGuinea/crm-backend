@@ -3,7 +3,7 @@ import Project from '../models/project.model.js';
 import Client from '../models/client.model.js'; 
 import { success, fail } from '../utils/response.js';
 
-
+//funcion para crear un nuevo proyecto
 export const createProject = async (req, res) => {
     try {
         //Obtengo datos del body
@@ -51,6 +51,7 @@ export const createProject = async (req, res) => {
     }
 }
 
+//Funcion para obtener todos los proyectos del usuario autenticado
 
 export const getProjects = async (req, res)=>{
     try {
@@ -70,6 +71,8 @@ export const getProjects = async (req, res)=>{
 
 }
 
+
+//Funcion para obtener un proyecto por su ID, asegurando que pertenezca al usuario autenticado
 export const getProjectById = async (req, res) => {
     try {
         const { id } = req.params
@@ -89,4 +92,62 @@ export const getProjectById = async (req, res) => {
     } catch (error) {
         return fail(res, 500, error.message)
     }   
+}
+
+//Funcion para actualizar un proyecto por su ID, asegurando que pertenezca al usuario autenticado
+
+const allowedtransitions = {
+    pending: ["approved", "cancelled"],
+    approved: ["in_progress", "cancelled"],
+    in_progress: ["finished"],
+    finished: [],
+    cancelled: []
+}
+
+
+export const updateProject = async (req, res)=>{
+    try {
+        const {id} = req.params
+        const {title, description, status, budget, startDate, endDate} = req.body
+
+        //verifico que el ID del proyecto sea válido
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return fail(res, 400, "ID de proyecto no es válido")
+        }
+
+        //verifico que el proyecto exista y pertenezca al usuario autenticado
+        const project = await Project.findOne({
+            _id:id,
+            owner: req.user.id
+        })
+        if(!project){
+            return fail(res, 404, "Proyecto no encontrado")
+        }
+
+        //validar transición de estado
+
+        if(status && status !== project.status){
+            const allowed = allowedtransitions[project.status]
+
+            if(!allowed.includes(status)){
+                return fail(res, 400, `Transición de estado no permitida. Estado actual: ${project.status}. Estados permitidos: ${allowed.join(", ")}`)
+            }
+            
+            project.status = status
+        }
+
+         // 4️⃣ Actualización controlada
+            if (title !== undefined) project.title = title
+            if (description !== undefined) project.description = description
+            if (budget !== undefined) project.budget = budget
+            if (startDate !== undefined) project.startDate = startDate
+            if (endDate !== undefined) project.endDate = endDate
+
+        await project.save()
+        return success(res, 200, project)
+        
+
+    } catch (error) {
+        return fail(res, 500, error.message)
+    }
 }
