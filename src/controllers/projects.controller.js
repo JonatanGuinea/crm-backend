@@ -190,3 +190,25 @@ export const getDashboardMetrics = async (req, res) => {
     return fail(res, 500, error.message)
   }
 }
+
+//Función para eliminar un proyecto por su ID, asegurando que pertenezca al usuario autenticado
+export const deleteProject = async (req, res) => {
+    try {
+        const {id} = req.params
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+
+            return fail(res, 400, "ID de proyecto no es válido")
+        }
+
+        const project = await Project.findOneAndDelete({
+            _id: id,
+            owner: req.user._id
+        })
+        if (!project) {
+            return fail(res, 404, "Proyecto no encontrado")
+        }
+        return success(res, 200, project)
+    } catch (error) {
+        return fail(res, 500, error.message)
+    }
+}
