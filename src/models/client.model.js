@@ -1,32 +1,55 @@
-import mongoose from 'mongoose';
+import mongoose from 'mongoose'
 
-
-const clientSchema = new mongoose.Schema({
-    name:{
-        type: String,
-        required: true
+const clientSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true
     },
-    email:{
-        type: String,
-    },
-    phone:{
-        type: String,
-    },
-    company:{
-        type: String,
-    },
-    notes:{
-        type: String,
-    },
-    owner:{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
+    email: String,
+    phone: String,
+    organization: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Organization',
+      required: true,
+      index: true
     }
-},{
-    timestamps: true
-})
+  },
+  { timestamps: true }
+)
+
+export default mongoose.model('Client', clientSchema)
 
 
-const Client = mongoose.model('Client', clientSchema);
-export default Client;
+// import mongoose from 'mongoose';
+
+
+// const clientSchema = new mongoose.Schema({
+//     name:{
+//         type: String,
+//         required: true
+//     },
+//     email:{
+//         type: String,
+//     },
+//     phone:{
+//         type: String,
+//     },
+//     company:{
+//         type: String,
+//     },
+//     notes:{
+//         type: String,
+//     },
+//     owner:{
+//         type: mongoose.Schema.Types.ObjectId,
+//         ref: 'User',
+//         required: true
+//     }
+// },{
+//     timestamps: true
+// })
+
+
+// const Client = mongoose.model('Client', clientSchema);
+// export default Client;

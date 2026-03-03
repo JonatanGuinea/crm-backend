@@ -9,7 +9,11 @@ export const createClient = async (req, res) => {
   try {
     const { name, email, phone, company, notes } = req.body
 
-    if (!name) return fail(res, 400, "El nombre es obligatorio")
+    if (!name)
+      return fail(res, 400, "El nombre es obligatorio")
+
+    if (!req.user.activeOrganization)
+      return fail(res, 400, "Organización activa requerida")
 
     const client = await Client.create({
       name,
@@ -17,7 +21,7 @@ export const createClient = async (req, res) => {
       phone,
       company,
       notes,
-      owner: req.user._id
+      organization: req.user.activeOrganization
     })
 
     return success(res, 201, client)
@@ -34,7 +38,11 @@ export const createClient = async (req, res) => {
     //OBTENER TODOS LOS CLIENTES
 export const getClients = async (req, res) => {
   try {
-    const clients = await Client.find({ owner: req.user._id }).lean()
+
+    const clients = await Client.find({
+      organization: req.user.activeOrganization
+    }).lean()
+
     return success(res, 200, clients)
 
   } catch (error) {
@@ -55,7 +63,7 @@ export const getClientById = async (req, res) => {
 
     const client = await Client.findOne({
       _id: id,
-      owner: req.user._id
+      organization: req.user.activeOrganization
     })
 
     if (!client)
@@ -68,7 +76,6 @@ export const getClientById = async (req, res) => {
   }
 }
 
-
 export const updateClient = async (req, res) => {
   try {
     const { id } = req.params
@@ -76,8 +83,14 @@ export const updateClient = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id))
       return fail(res, 400, "ID inválido")
 
+    // Nunca permitir cambiar organization
+    delete req.body.organization
+
     const updatedClient = await Client.findOneAndUpdate(
-      { _id: id, owner: req.user._id },
+      {
+        _id: id,
+        organization: req.user.activeOrganization
+      },
       req.body,
       { new: true, runValidators: true }
     )
@@ -103,7 +116,7 @@ export const deleteClient = async (req, res) => {
 
     const deletedClient = await Client.findOneAndDelete({
       _id: id,
-      owner: req.user._id
+      organization: req.user.activeOrganization
     })
 
     if (!deletedClient)

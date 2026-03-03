@@ -15,8 +15,12 @@ export const auth = (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
 
     req.user = {
-      ...decoded,
-      _id: new mongoose.Types.ObjectId(decoded.id)
+      _id: new mongoose.Types.ObjectId(decoded.id),
+      activeOrganization: decoded.activeOrganization
+        ? new mongoose.Types.ObjectId(decoded.activeOrganization)
+        : null,
+      role: decoded.role,
+      isSystemAdmin: decoded.isSystemAdmin
     }
 
     next()
@@ -24,3 +28,4 @@ export const auth = (req, res, next) => {
     return fail(res, 401, 'Token inválido')
   }
 }
+
