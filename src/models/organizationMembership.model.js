@@ -15,7 +15,13 @@ const membershipSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: ['owner', 'admin', 'member'],
-      default: 'member'
+      default: 'member',
+      required: true
+    },
+    status: {
+      type: String,
+      enum: ['active', 'invited', 'disabled'],
+      default: 'active'
     }
   },
   { timestamps: true }
@@ -23,5 +29,7 @@ const membershipSchema = new mongoose.Schema(
 
 // Evita duplicados
 membershipSchema.index({ user: 1, organization: 1 }, { unique: true })
+membershipSchema.index({ user: 1 })
+membershipSchema.index({ organization: 1 })
 
 export default mongoose.model('OrganizationMembership', membershipSchema)

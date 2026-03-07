@@ -86,12 +86,22 @@ export const updateClient = async (req, res) => {
     // Nunca permitir cambiar organization
     delete req.body.organization
 
+    const allowedFields = ["name", "email", "phone", "company", "notes"]
+
+    const updates = {}
+    
+    for (const key of allowedFields) {
+      if (req.body[key] !== undefined) {
+        updates[key] = req.body[key]
+      }
+    }
+
     const updatedClient = await Client.findOneAndUpdate(
       {
         _id: id,
         organization: req.user.activeOrganization
       },
-      req.body,
+      updates,
       { new: true, runValidators: true }
     )
 

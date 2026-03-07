@@ -1,55 +1,52 @@
-import mongoose from 'mongoose'
+import mongoose from "mongoose"
 
 const clientSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true
+      required: true,
+      trim: true
     },
-    email: String,
-    phone: String,
+
+    email: {
+      type: String,
+      lowercase: true,
+      trim: true,
+      match: [/^\S+@\S+\.\S+$/, "Email inválido"]
+    },
+
+    phone: {
+      type: String,
+      trim: true
+    },
+
+    company: {
+      type: String,
+      trim: true
+    },
+
+    notes: {
+      type: String,
+      trim: true
+    },
+
     organization: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Organization',
+      ref: "Organization",
       required: true,
       index: true
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true
     }
   },
   { timestamps: true }
 )
 
-export default mongoose.model('Client', clientSchema)
+clientSchema.index({ organization: 1, createdAt: -1 })
+clientSchema.index({ organization: 1, name: 1 })
 
 
-// import mongoose from 'mongoose';
-
-
-// const clientSchema = new mongoose.Schema({
-//     name:{
-//         type: String,
-//         required: true
-//     },
-//     email:{
-//         type: String,
-//     },
-//     phone:{
-//         type: String,
-//     },
-//     company:{
-//         type: String,
-//     },
-//     notes:{
-//         type: String,
-//     },
-//     owner:{
-//         type: mongoose.Schema.Types.ObjectId,
-//         ref: 'User',
-//         required: true
-//     }
-// },{
-//     timestamps: true
-// })
-
-
-// const Client = mongoose.model('Client', clientSchema);
-// export default Client;
+export default mongoose.model("Client", clientSchema)

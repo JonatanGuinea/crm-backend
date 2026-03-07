@@ -4,37 +4,53 @@ import { comparePassword } from '../utils/passwordHash.js'
 import { success, fail } from '../utils/response.js'
 import { generateTempToken } from '../utils/jwt.js'
 
+
 export const login = async (req, res) => {
   try {
+
     const { email, password } = req.body
 
-    // 1️⃣ Buscar usuario
-    const user = await User.findOne({ email })
-
-    if (!user) {
-      return fail(res, 401, 'Credenciales inválidas')
+    if (!email || !password) {
+      return fail(res, 400, "Email y contraseña son requeridos")
     }
 
-    // 2️⃣ Validar contraseña usando tu helper
+    const normalizedEmail = email.toLowerCase()
+
+    const user = await User
+      .findOne({ email: normalizedEmail })
+      .select('+password')
+      .lean()
+
+    if (!user) {
+      return fail(res, 401, "Credenciales inválidas")
+    }
+
     const isMatch = await comparePassword(password, user.password)
 
     if (!isMatch) {
-      return fail(res, 401, 'Credenciales inválidas')
+      return fail(res, 401, "Credenciales inválidas")
     }
 
-    // 3️⃣ Obtener memberships del usuario
+    delete user.password
+
     const memberships = await OrganizationMembership
       .find({ user: user._id })
-      .populate('organization', 'name')
+      .populate("organization", "name")
+      .lean()
 
-    // 4️⃣ Formatear organizaciones
-    const organizations = memberships.map(m => ({
-      id: m.organization._id,
-      name: m.organization.name,
-      role: m.role
-    }))
+    if (!memberships.length) {
+      return fail(res, 403, "El usuario no pertenece a ninguna organización")
+    }
 
-     const tempToken = generateTempToken(user)
+    const organizations = memberships
+      .filter(m => m.organization)
+      .map(m => ({
+        id: m.organization._id,
+        name: m.organization.name,
+        role: m.role
+      }))
+
+    const tempToken = generateTempToken(user)
 
     return success(res, 200, {
       user: {

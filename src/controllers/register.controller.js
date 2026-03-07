@@ -40,7 +40,7 @@ export const register = async (req, res) => {
       role: 'owner'
     })
 
-    const token = generateToken(
+    const token = generateTempToken(
       user,
       organization._id,
       'owner'
