@@ -1,11 +1,26 @@
-import mongoose from 'mongoose';
-import Project from '../models/project.model.js';
-import Client from '../models/client.model.js'; 
-import { success, fail } from '../utils/response.js';
+import mongoose from "mongoose";
+import Project from "../models/project.model.js";
+import Client from "../models/client.model.js";
+import { success, fail } from "../utils/response.js";
 
-//funcion para crear un nuevo proyecto
+
+// Estados permitidos y transiciones
+const allowedTransitions = {
+  pending: ["approved", "cancelled"],
+  approved: ["in_progress", "cancelled"],
+  in_progress: ["finished"],
+  finished: [],
+  cancelled: []
+};
+
+
+// Crear proyecto
 export const createProject = async (req, res) => {
   try {
+
+    const orgId = req.user.activeOrganization
+    const userId = req.user.id
+
     const { title, description, budget, startDate, endDate, client } = req.body
 
     if (!title || !client) {
@@ -16,10 +31,10 @@ export const createProject = async (req, res) => {
       return fail(res, 400, "ID de cliente no es válido")
     }
 
-    // 🔐 Cliente debe pertenecer a la organización activa
-    const clientExists = await Client.findOne({
+    // Verificar que el cliente pertenece a la organización
+    const clientExists = await Client.exists({
       _id: client,
-      organization: req.user.activeOrganization
+      organization: orgId
     })
 
     if (!clientExists) {
@@ -33,8 +48,8 @@ export const createProject = async (req, res) => {
       startDate,
       endDate,
       client,
-      organization: req.user.activeOrganization,
-      createdBy: req.user._id
+      organization: orgId,
+      createdBy: userId
     })
 
     return success(res, 201, project)
@@ -44,15 +59,19 @@ export const createProject = async (req, res) => {
   }
 }
 
-//Funcion para obtener todos los proyectos del usuario autenticado
 
+// Obtener todos los proyectos
 export const getProjects = async (req, res) => {
   try {
+
+    const orgId = req.user.activeOrganization
+
     const projects = await Project.find({
-      organization: req.user.activeOrganization
+      organization: orgId
     })
       .populate("client", "name email")
       .sort({ createdAt: -1 })
+      .lean()
 
     return success(res, 200, projects)
 
@@ -62,9 +81,11 @@ export const getProjects = async (req, res) => {
 }
 
 
-//Funcion para obtener un proyecto por su ID, asegurando que pertenezca al usuario autenticado
+// Obtener proyecto por ID
 export const getProjectById = async (req, res) => {
   try {
+
+    const orgId = req.user.activeOrganization
     const { id } = req.params
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -73,10 +94,11 @@ export const getProjectById = async (req, res) => {
 
     const project = await Project.findOne({
       _id: id,
-      organization: req.user.activeOrganization
+      organization: orgId
     })
       .populate("client", "name email")
       .select("-__v")
+      .lean()
 
     if (!project) {
       return fail(res, 404, "Proyecto no encontrado")
@@ -89,21 +111,22 @@ export const getProjectById = async (req, res) => {
   }
 }
 
-//Funcion para actualizar un proyecto por su ID, asegurando que pertenezca al usuario autenticado
 
-const allowedtransitions = {
-    pending: ["approved", "cancelled"],
-    approved: ["in_progress", "cancelled"],
-    in_progress: ["finished"],
-    finished: [],
-    cancelled: []
-}
-
-//Función para actualizar un proyecto por su ID, asegurando que pertenezca al usuario autenticado
+// Actualizar proyecto
 export const updateProject = async (req, res) => {
   try {
+
+    const orgId = req.user.activeOrganization
     const { id } = req.params
-    const { title, description, status, budget, startDate, endDate } = req.body
+
+    const {
+      title,
+      description,
+      status,
+      budget,
+      startDate,
+      endDate
+    } = req.body
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return fail(res, 400, "ID de proyecto no es válido")
@@ -111,15 +134,21 @@ export const updateProject = async (req, res) => {
 
     const project = await Project.findOne({
       _id: id,
-      organization: req.user.activeOrganization
+      organization: orgId
     })
 
     if (!project) {
       return fail(res, 404, "Proyecto no encontrado")
     }
 
+    // Validación de cambio de estado
     if (status && status !== project.status) {
-      const allowed = allowedtransitions[project.status]
+
+      if (!allowedTransitions[project.status]) {
+        return fail(res, 400, "Estado actual inválido")
+      }
+
+      const allowed = allowedTransitions[project.status]
 
       if (!allowed.includes(status)) {
         return fail(
@@ -148,9 +177,11 @@ export const updateProject = async (req, res) => {
 }
 
 
+// Métricas del dashboard
 export const getDashboardMetrics = async (req, res) => {
   try {
-    const orgId = req.user.activeOrganization
+
+    const orgId = new mongoose.Types.ObjectId(req.user.activeOrganization)
 
     const metrics = await Project.aggregate([
       { $match: { organization: orgId } },
@@ -184,9 +215,12 @@ export const getDashboardMetrics = async (req, res) => {
   }
 }
 
-//Función para eliminar un proyecto por su ID, asegurando que pertenezca al usuario autenticado
+
+// Eliminar proyecto
 export const deleteProject = async (req, res) => {
   try {
+
+    const orgId = req.user.activeOrganization
     const { id } = req.params
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -195,14 +229,16 @@ export const deleteProject = async (req, res) => {
 
     const project = await Project.findOneAndDelete({
       _id: id,
-      organization: req.user.activeOrganization
+      organization: orgId
     })
 
     if (!project) {
       return fail(res, 404, "Proyecto no encontrado")
     }
 
-    return success(res, 200, project)
+    return success(res, 200, {
+      message: "Proyecto eliminado correctamente"
+    })
 
   } catch (error) {
     return fail(res, 500, error.message)

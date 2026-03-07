@@ -1,105 +1,68 @@
-import mongoose from 'mongoose'
+import mongoose from "mongoose"
 
 const projectSchema = new mongoose.Schema(
   {
     title: {
       type: String,
       required: true,
-      trim:true
+      trim: true
     },
+
     description: {
-      type: String
+      type: String,
+      trim: true
     },
+
     budget: {
       type: Number,
-      default: 0
+      default: 0,
+      min: 0
     },
+
     status: {
       type: String,
       enum: ["pending", "approved", "in_progress", "finished", "cancelled"],
-      default: 'pending'
+      default: "pending",
+      index: true
     },
+
     client: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Client'
+      ref: "Client",
+      required: true
     },
+
     organization: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Organization',
+      ref: "Organization",
       required: true,
       index: true
     },
+
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true
     },
+
     startDate: {
-        type: Date
-    },
-    
-    endDate: {
-        type: Date
+      type: Date
     },
 
+    endDate: {
+      type: Date
+    }
   },
-  { timestamps: true }
+  {
+    timestamps: true
+  }
 )
 
-export default mongoose.model('Project', projectSchema)
 
+// Índices compuestos (MUY importantes para SaaS multi-tenant)
 
+projectSchema.index({ organization: 1, createdAt: -1 })
+projectSchema.index({ organization: 1, status: 1 })
+projectSchema.index({ organization: 1, client: 1 })
 
-
-// import mongoose from "mongoose"
-
-// const projectSchema = new mongoose.Schema(
-//     {
-//         title: {
-//             type: String,
-//             required: true,
-//             trim: true
-//         },
-    
-//         description: {
-//             type: String
-//         },
-    
-//         status: {
-//             type: String,
-//             enum: ["pending", "approved", "in_progress", "finished", "cancelled"],
-//             default: "pending"
-//         },
-    
-//         budget: {
-//             type: Number,
-//             min: 0
-//         },
-    
-//         startDate: {
-//             type: Date
-//         },
-    
-//         endDate: {
-//             type: Date
-//         },
-    
-//         client: {
-//             type: mongoose.Schema.Types.ObjectId,
-//             ref: "Client",
-//             required: true
-//         },
-    
-//         owner: {
-//             type: mongoose.Schema.Types.ObjectId,
-//             ref: "User",
-//             required: true
-//         }
-//     },
-//     {
-//         timestamps: true
-//     }
-// )
-
-// const Project = mongoose.model("Project", projectSchema)
-// export default Project;
+export default mongoose.model("Project", projectSchema)
