@@ -33,8 +33,8 @@ export const switchOrganization = async (req, res) => {
     )
 
     return success(res, 200, {
-        token,
-        role: membership.role
+      token,
+      role: membership.role
     })
 
   } catch (error) {

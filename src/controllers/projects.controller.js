@@ -19,7 +19,7 @@ export const createProject = async (req, res) => {
   try {
 
     const orgId = req.user.activeOrganization
-    const userId = req.user.id
+    const userId = req.user.activeOrganization
 
     const { title, description, budget, startDate, endDate, client } = req.body
 

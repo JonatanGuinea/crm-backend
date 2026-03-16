@@ -21,7 +21,8 @@ export const createClient = async (req, res) => {
       phone,
       company,
       notes,
-      organization: req.user.activeOrganization
+      organization: req.user.activeOrganization,
+      createdBy: req.user.activeOrganization
     })
 
     return success(res, 201, client)
@@ -38,7 +39,6 @@ export const createClient = async (req, res) => {
     //OBTENER TODOS LOS CLIENTES
 export const getClients = async (req, res) => {
   try {
-
     const clients = await Client.find({
       organization: req.user.activeOrganization
     }).lean()
