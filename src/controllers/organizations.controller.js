@@ -12,10 +12,23 @@ export const createOrganization = async (req, res) => {
       return fail(res, 400, 'El nombre es requerido')
     }
 
+     const organizationsCount = await OrganizationMembership.countDocuments({
+      user: userId,
+      role: 'owner'
+    })
+
+    if (organizationsCount >= 5) {
+      return fail(res, 403, 'Tu plan solo permite cinco organizaciones')
+    }
+    const slug = organizationName
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]+/g, '')
     // crear organización
     const organization = await Organization.create({
       name,
-      owner: userId
+      owner: userId,
+      slug
     })
 
     // crear membership owner
@@ -59,7 +72,19 @@ export const getOrganizations = async (req, res) => {
   }
 }
 
+export const getOrganizationBySlug = async (req, res) => {
 
+  const { slug } = req.params
+
+  const organization = await Organization.findOne({ slug })
+
+  if (!organization) {
+    return fail(res, 404, 'Organización no encontrada')
+  }
+
+  return success(res, 200, organization)
+
+}
 
 export const updateOrganization = async (req, res) => {
   try {
@@ -86,33 +111,22 @@ export const updateOrganization = async (req, res) => {
 
 
 
-import express from 'express'
-import { auth } from '../middlewares/auth.js'
-import { authorize } from '../middlewares/authorize.js'
+export const deleteOrganization = async (req, res) => {
 
-import {
-  createOrganization,
-  getOrganizations,
-  updateOrganization,
-  deleteOrganization
-} from '../controllers/organization.controller.js'
+  try {
 
-const router = express.Router()
+    const { id } = req.params
 
-router.post('/', auth, createOrganization)
+    await Organization.deleteOne({ _id: id })
 
-router.get('/', auth, getOrganizations)
+    await OrganizationMembership.deleteMany({
+      organization: id
+    })
 
-router.patch('/:id',
-  auth,
-  authorize('owner'),
-  updateOrganization
-)
+    return success(res, 200, 'Organization deleted')
 
-router.delete('/:id',
-  auth,
-  authorize('owner'),
-  deleteOrganization
-)
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
 
-export default router
+}
