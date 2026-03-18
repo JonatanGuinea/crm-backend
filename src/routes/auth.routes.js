@@ -9,7 +9,6 @@ import { selectOrganization } from "../controllers/selectOrganization.controller
 import { requireAuth } from "../middlewares/requireAuth.middleware.js";
 import {auth} from "../middlewares/auth.middleware.js"
 import { requireRole } from "../middlewares/RBAC.middleware.js";
-import { authorize } from "../middlewares/authorize.middleware.js";
 
 
 

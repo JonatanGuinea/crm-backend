@@ -1,20 +1,28 @@
 import jwt from 'jsonwebtoken'
+import OrganizationMembership from '../models/organizationMembership.model'
 
 export const generateTempToken = (user) => {
   return jwt.sign(
-    { id: user._id },
+    {
+      uid: user._id,
+      type: 'temp'
+    },
     process.env.JWT_SECRET,
     { expiresIn: '5m' }
   )
 }
 
-export const generateAccessToken = (user, organizationId, role) => {
+
+
+
+
+export const generateAccessToken = (user, membership) => {
   return jwt.sign(
     {
-      id: user._id,
-      activeOrganization: organizationId,
-      role,
-      isSystemAdmin: user.isSystemAdmin
+      uid: user._id,
+      org: membership.organization,
+      role: membership.role,
+      isSystemAdmin: user.isSystemAdmin || false
     },
     process.env.JWT_SECRET,
     { expiresIn: '24h' }

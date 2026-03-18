@@ -1,6 +1,5 @@
 import express from 'express'
 import { auth } from '../middlewares/auth.middleware.js'
-import { authorize } from '../middlewares/authorize.middleware.js'
 
 import {
   createOrganization,
@@ -19,13 +18,11 @@ router.get('/:slug', auth, getOrganizationBySlug)
 
 router.patch('/:id',
   auth,
-  authorize('owner'),
   updateOrganization
 )
 
 router.delete('/:id',
   auth,
-  authorize('owner'),
   deleteOrganization
 )
 

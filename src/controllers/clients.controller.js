@@ -12,7 +12,7 @@ export const createClient = async (req, res) => {
     if (!name)
       return fail(res, 400, "El nombre es obligatorio")
 
-    if (!req.user.activeOrganization)
+    if (!req.user.organizationId)
       return fail(res, 400, "Organización activa requerida")
 
     const client = await Client.create({
@@ -21,8 +21,8 @@ export const createClient = async (req, res) => {
       phone,
       company,
       notes,
-      organization: req.user.activeOrganization,
-      createdBy: req.user.activeOrganization
+      organization: req.user.organizationId,
+      createdBy: req.user.id
     })
 
     return success(res, 201, client)
@@ -40,7 +40,7 @@ export const createClient = async (req, res) => {
 export const getClients = async (req, res) => {
   try {
     const clients = await Client.find({
-      organization: req.user.activeOrganization
+      organization: req.user.organizationId
     }).lean()
 
     return success(res, 200, clients)
@@ -63,7 +63,7 @@ export const getClientById = async (req, res) => {
 
     const client = await Client.findOne({
       _id: id,
-      organization: req.user.activeOrganization
+      organization: req.user.organizationId
     })
 
     if (!client)
@@ -99,7 +99,7 @@ export const updateClient = async (req, res) => {
     const updatedClient = await Client.findOneAndUpdate(
       {
         _id: id,
-        organization: req.user.activeOrganization
+        organization: req.user.organizationId
       },
       updates,
       { new: true, runValidators: true }
@@ -126,7 +126,7 @@ export const deleteClient = async (req, res) => {
 
     const deletedClient = await Client.findOneAndDelete({
       _id: id,
-      organization: req.user.activeOrganization
+      organization: req.user.organizationId
     })
 
     if (!deletedClient)

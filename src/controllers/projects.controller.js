@@ -18,8 +18,8 @@ const allowedTransitions = {
 export const createProject = async (req, res) => {
   try {
 
-    const orgId = req.user.activeOrganization
-    const userId = req.user.activeOrganization
+    const orgId = req.user.organizationId
+    const userId = req.user.id
 
     const { title, description, budget, startDate, endDate, client } = req.body
 
@@ -64,7 +64,7 @@ export const createProject = async (req, res) => {
 export const getProjects = async (req, res) => {
   try {
 
-    const orgId = req.user.activeOrganization
+    const orgId = req.user.organizationId
 
     const projects = await Project.find({
       organization: orgId
@@ -85,7 +85,7 @@ export const getProjects = async (req, res) => {
 export const getProjectById = async (req, res) => {
   try {
 
-    const orgId = req.user.activeOrganization
+    const orgId = req.user.organizationId
     const { id } = req.params
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -116,7 +116,7 @@ export const getProjectById = async (req, res) => {
 export const updateProject = async (req, res) => {
   try {
 
-    const orgId = req.user.activeOrganization
+    const orgId = req.user.organizationId
     const { id } = req.params
 
     const {
@@ -181,7 +181,7 @@ export const updateProject = async (req, res) => {
 export const getDashboardMetrics = async (req, res) => {
   try {
 
-    const orgId = new mongoose.Types.ObjectId(req.user.activeOrganization)
+    const orgId = new mongoose.Types.ObjectId(req.user.organizationId)
 
     const metrics = await Project.aggregate([
       { $match: { organization: orgId } },
@@ -220,7 +220,7 @@ export const getDashboardMetrics = async (req, res) => {
 export const deleteProject = async (req, res) => {
   try {
 
-    const orgId = req.user.activeOrganization
+    const orgId = req.user.organizationId
     const { id } = req.params
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
