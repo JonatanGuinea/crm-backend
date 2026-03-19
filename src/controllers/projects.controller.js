@@ -3,7 +3,6 @@ import Project from "../models/project.model.js";
 import Client from "../models/client.model.js";
 import { success, fail } from "../utils/response.js";
 
-
 // Estados permitidos y transiciones
 const allowedTransitions = {
   pending: ["approved", "cancelled"],
@@ -13,11 +12,9 @@ const allowedTransitions = {
   cancelled: []
 };
 
-
 // Crear proyecto
 export const createProject = async (req, res) => {
   try {
-
     const orgId = req.user.organizationId
     const userId = req.user.id
 
@@ -31,7 +28,6 @@ export const createProject = async (req, res) => {
       return fail(res, 400, "ID de cliente no es válido")
     }
 
-    // Verificar que el cliente pertenece a la organización
     const clientExists = await Client.exists({
       _id: client,
       organization: orgId
@@ -59,16 +55,12 @@ export const createProject = async (req, res) => {
   }
 }
 
-
-// Obtener todos los proyectos
+// Obtener todos
 export const getProjects = async (req, res) => {
   try {
-
     const orgId = req.user.organizationId
 
-    const projects = await Project.find({
-      organization: orgId
-    })
+    const projects = await Project.find({ organization: orgId })
       .populate("client", "name email")
       .sort({ createdAt: -1 })
       .lean()
@@ -80,11 +72,9 @@ export const getProjects = async (req, res) => {
   }
 }
 
-
-// Obtener proyecto por ID
+// Obtener por ID
 export const getProjectById = async (req, res) => {
   try {
-
     const orgId = req.user.organizationId
     const { id } = req.params
 
@@ -111,22 +101,11 @@ export const getProjectById = async (req, res) => {
   }
 }
 
-
 // Actualizar proyecto
 export const updateProject = async (req, res) => {
   try {
-
     const orgId = req.user.organizationId
     const { id } = req.params
-
-    const {
-      title,
-      description,
-      status,
-      budget,
-      startDate,
-      endDate
-    } = req.body
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return fail(res, 400, "ID de proyecto no es válido")
@@ -141,14 +120,11 @@ export const updateProject = async (req, res) => {
       return fail(res, 404, "Proyecto no encontrado")
     }
 
-    // Validación de cambio de estado
+    const { status } = req.body
+
+    // Validación de estado
     if (status && status !== project.status) {
-
-      if (!allowedTransitions[project.status]) {
-        return fail(res, 400, "Estado actual inválido")
-      }
-
-      const allowed = allowedTransitions[project.status]
+      const allowed = allowedTransitions[project.status] || []
 
       if (!allowed.includes(status)) {
         return fail(
@@ -161,11 +137,14 @@ export const updateProject = async (req, res) => {
       project.status = status
     }
 
-    if (title !== undefined) project.title = title
-    if (description !== undefined) project.description = description
-    if (budget !== undefined) project.budget = budget
-    if (startDate !== undefined) project.startDate = startDate
-    if (endDate !== undefined) project.endDate = endDate
+    // Campos permitidos
+    const allowedFields = ["title", "description", "budget", "startDate", "endDate"]
+
+    for (const key of allowedFields) {
+      if (req.body[key] !== undefined) {
+        project[key] = req.body[key]
+      }
+    }
 
     await project.save()
 
@@ -176,12 +155,18 @@ export const updateProject = async (req, res) => {
   }
 }
 
-
-// Métricas del dashboard
+// Dashboard
 export const getDashboardMetrics = async (req, res) => {
   try {
+      console.log(req.user);
+      
+    const orgIdString = req.user.organizationId
 
-    const orgId = new mongoose.Types.ObjectId(req.user.organizationId)
+    if (!orgIdString || !mongoose.Types.ObjectId.isValid(orgIdString)) {
+      return fail(res, 400, "Organización inválida")
+    }
+
+    const orgId = new mongoose.Types.ObjectId(orgIdString)
 
     const metrics = await Project.aggregate([
       { $match: { organization: orgId } },
@@ -189,7 +174,7 @@ export const getDashboardMetrics = async (req, res) => {
         $group: {
           _id: "$status",
           totalProjects: { $sum: 1 },
-          totalBudget: { $sum: "$budget" }
+          totalBudget: { $sum: { $ifNull: ["$budget", 0] } }
         }
       }
     ])
@@ -200,7 +185,7 @@ export const getDashboardMetrics = async (req, res) => {
         $group: {
           _id: null,
           totalProjects: { $sum: 1 },
-          totalBudget: { $sum: "$budget" }
+          totalBudget: { $sum: { $ifNull: ["$budget", 0] } }
         }
       }
     ])
@@ -215,11 +200,9 @@ export const getDashboardMetrics = async (req, res) => {
   }
 }
 
-
-// Eliminar proyecto
+// Eliminar
 export const deleteProject = async (req, res) => {
   try {
-
     const orgId = req.user.organizationId
     const { id } = req.params
 

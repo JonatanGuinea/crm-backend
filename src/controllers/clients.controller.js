@@ -1,10 +1,8 @@
 import mongoose from 'mongoose';
 import Client from '../models/client.model.js';
-import {success, fail} from '../utils/response.js'
+import { success, fail } from '../utils/response.js';
 
-
-//CREAR CLIENTE
-
+// Crear cliente
 export const createClient = async (req, res) => {
   try {
     const { name, email, phone, company, notes } = req.body
@@ -32,11 +30,7 @@ export const createClient = async (req, res) => {
   }
 }
 
-
-
-//OBTENER CLIENTES
-
-    //OBTENER TODOS LOS CLIENTES
+// Obtener todos
 export const getClients = async (req, res) => {
   try {
     const clients = await Client.find({
@@ -50,10 +44,7 @@ export const getClients = async (req, res) => {
   }
 }
 
-
-
-    //OBTENER UN CLIENTE POR ID
-
+// Obtener por ID
 export const getClientById = async (req, res) => {
   try {
     const { id } = req.params
@@ -64,7 +55,7 @@ export const getClientById = async (req, res) => {
     const client = await Client.findOne({
       _id: id,
       organization: req.user.organizationId
-    })
+    }).lean()
 
     if (!client)
       return fail(res, 404, "Cliente no encontrado")
@@ -76,6 +67,7 @@ export const getClientById = async (req, res) => {
   }
 }
 
+// Actualizar
 export const updateClient = async (req, res) => {
   try {
     const { id } = req.params
@@ -83,13 +75,12 @@ export const updateClient = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id))
       return fail(res, 400, "ID inválido")
 
-    // Nunca permitir cambiar organization
     delete req.body.organization
 
     const allowedFields = ["name", "email", "phone", "company", "notes"]
 
     const updates = {}
-    
+
     for (const key of allowedFields) {
       if (req.body[key] !== undefined) {
         updates[key] = req.body[key]
@@ -103,7 +94,7 @@ export const updateClient = async (req, res) => {
       },
       updates,
       { new: true, runValidators: true }
-    )
+    ).lean()
 
     if (!updatedClient)
       return fail(res, 404, "Cliente no encontrado")
@@ -115,8 +106,7 @@ export const updateClient = async (req, res) => {
   }
 }
 
-
-
+// Eliminar
 export const deleteClient = async (req, res) => {
   try {
     const { id } = req.params

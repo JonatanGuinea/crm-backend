@@ -4,6 +4,7 @@ import { fail } from '../utils/response.js'
 export const requireMembership = async (req, res, next) => {
   try {
 
+    // 🔥 bypass para system admin
     if (req.user.isSystemAdmin) {
       return next()
     }
@@ -16,13 +17,15 @@ export const requireMembership = async (req, res, next) => {
 
     const membership = await OrganizationMembership.findOne({
       user: id,
-      organization: organizationId
-    })
+      organization: organizationId,
+      status: 'active'
+    }).lean()
 
     if (!membership) {
       return fail(res, 403, 'No perteneces a esta organización')
     }
 
+    // 🔥 útil para otros middlewares (RBAC)
     req.membership = membership
 
     next()

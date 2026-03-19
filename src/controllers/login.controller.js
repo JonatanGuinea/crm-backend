@@ -2,8 +2,7 @@ import User from '../models/user.model.js'
 import OrganizationMembership from '../models/organizationMembership.model.js'
 import { comparePassword } from '../utils/passwordHash.js'
 import { success, fail } from '../utils/response.js'
-import { generateTempToken } from '../utils/jwt.js'
-
+import { generateAccessToken } from '../utils/jwt.js'
 
 export const login = async (req, res) => {
   try {
@@ -19,7 +18,6 @@ export const login = async (req, res) => {
     const user = await User
       .findOne({ email: normalizedEmail })
       .select('+password')
-      .lean()
 
     if (!user) {
       return fail(res, 401, "Credenciales inválidas")
@@ -31,8 +29,7 @@ export const login = async (req, res) => {
       return fail(res, 401, "Credenciales inválidas")
     }
 
-    delete user.password
-
+    // 🔍 obtener memberships
     const memberships = await OrganizationMembership
       .find({ user: user._id })
       .populate("organization", "name")
@@ -42,6 +39,7 @@ export const login = async (req, res) => {
       return fail(res, 403, "El usuario no pertenece a ninguna organización")
     }
 
+    // 🔥 lista para frontend
     const organizations = memberships
       .filter(m => m.organization)
       .map(m => ({
@@ -50,7 +48,10 @@ export const login = async (req, res) => {
         role: m.role
       }))
 
-    const tempToken = generateTempToken(user)
+    // 🔥 elegimos una por defecto (la primera)
+    const membership = memberships[0]
+
+    const token = generateAccessToken(user, membership)
 
     return success(res, 200, {
       user: {
@@ -60,7 +61,7 @@ export const login = async (req, res) => {
         isSystemAdmin: user.isSystemAdmin
       },
       organizations,
-      tempToken
+      token
     })
 
   } catch (error) {

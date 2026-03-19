@@ -1,5 +1,4 @@
 import jwt from 'jsonwebtoken'
-import OrganizationMembership from '../models/organizationMembership.model'
 
 export const generateTempToken = (user) => {
   return jwt.sign(
@@ -28,6 +27,5 @@ export const generateAccessToken = (user, membership) => {
     { expiresIn: '24h' }
   )
 }
-
 
 

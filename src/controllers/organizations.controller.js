@@ -58,6 +58,9 @@ export const getOrganizations = async (req, res) => {
       .populate('organization', 'name plan')
       .lean()
 
+      if (memberships.length === 0) {
+        return success(res, 200, req.user)
+      }
     const organizations = memberships.map(m => ({
       id: m.organization._id,
       name: m.organization.name,

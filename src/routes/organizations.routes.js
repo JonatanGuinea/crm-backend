@@ -9,21 +9,22 @@ import {
   deleteOrganization
 } from '../controllers/organizations.controller.js'
 
+import { requireMembership } from '../middlewares/requireMembership.middleware.js'
+
 const router = express.Router()
 
-router.post('/', auth, createOrganization)
 
-router.get('/', auth, getOrganizations)
+router.get('/', auth,requireMembership, getOrganizations)
 router.get('/:slug', auth, getOrganizationBySlug)
+
+router.post('/', auth, createOrganization)
 
 router.patch('/:id',
   auth,
   updateOrganization
 )
 
-router.delete('/:id',
-  auth,
-  deleteOrganization
+router.delete('/:id', auth, deleteOrganization
 )
 
 export default router

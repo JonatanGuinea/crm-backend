@@ -2,6 +2,7 @@ import mongoose from "mongoose"
 import { generateAccessToken } from "../utils/jwt.js"
 import { success, fail } from "../utils/response.js"
 import OrganizationMembership from "../models/organizationMembership.model.js"
+import User from "../models/user.model.js"
 
 export const switchOrganization = async (req, res) => {
   try {
@@ -17,20 +18,25 @@ export const switchOrganization = async (req, res) => {
       return fail(res, 400, "ID de organización inválido")
     }
 
+    // 🔍 validar membership
     const membership = await OrganizationMembership.findOne({
       user: userId,
       organization: organizationId
-    }).lean()
+    })
 
     if (!membership) {
       return fail(res, 403, "No perteneces a esta organización")
     }
 
-    const token = generateAccessToken(
-      req.user,
-      organizationId,
-      membership.role
-    )
+    // 🔥 traer usuario REAL
+    const user = await User.findById(userId)
+
+    if (!user) {
+      return fail(res, 404, "Usuario no encontrado")
+    }
+
+    // 🔐 generar token correcto
+    const token = generateAccessToken(user, membership)
 
     return success(res, 200, {
       token,
