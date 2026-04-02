@@ -158,8 +158,6 @@ export const updateProject = async (req, res) => {
 // Dashboard
 export const getDashboardMetrics = async (req, res) => {
   try {
-      console.log(req.user);
-      
     const orgIdString = req.user.organizationId
 
     if (!orgIdString || !mongoose.Types.ObjectId.isValid(orgIdString)) {

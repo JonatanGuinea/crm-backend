@@ -20,10 +20,20 @@ export const createOrganization = async (req, res) => {
     if (organizationsCount >= 5) {
       return fail(res, 403, 'Tu plan solo permite cinco organizaciones')
     }
-    const slug = organizationName
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w-]+/g, '')
+
+    let baseSlug = name
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w-]+/g, '')
+
+    let slug = baseSlug
+    let counter = 1
+
+    while (await Organization.findOne({ slug })) {
+      slug = `${baseSlug}-${counter++}`
+    }
+
     // crear organización
     const organization = await Organization.create({
       name,
@@ -59,7 +69,7 @@ export const getOrganizations = async (req, res) => {
       .lean()
 
       if (memberships.length === 0) {
-        return success(res, 200, req.user)
+        return success(res, 200, [])
       }
     const organizations = memberships.map(m => ({
       id: m.organization._id,
@@ -76,28 +86,43 @@ export const getOrganizations = async (req, res) => {
 }
 
 export const getOrganizationBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params
 
-  const { slug } = req.params
+    const organization = await Organization.findOne({ slug })
 
-  const organization = await Organization.findOne({ slug })
+    if (!organization) {
+      return fail(res, 404, 'Organización no encontrada')
+    }
 
-  if (!organization) {
-    return fail(res, 404, 'Organización no encontrada')
+    return success(res, 200, organization)
+  } catch (error) {
+    return fail(res, 500, error.message)
   }
-
-  return success(res, 200, organization)
-
 }
 
 export const updateOrganization = async (req, res) => {
   try {
 
     const { id } = req.params
-    const { name, plan } = req.body
+    const { name } = req.body
+
+    if (!req.user.isSystemAdmin) {
+      const membership = await OrganizationMembership.findOne({
+        user: req.user.id,
+        organization: id,
+        status: 'active',
+        role: { $in: ['owner', 'admin'] }
+      })
+
+      if (!membership) {
+        return fail(res, 403, 'No tienes permisos para modificar esta organización')
+      }
+    }
 
     const organization = await Organization.findByIdAndUpdate(
       id,
-      { name, plan },
+      { name },
       { new: true }
     )
 
@@ -119,6 +144,19 @@ export const deleteOrganization = async (req, res) => {
   try {
 
     const { id } = req.params
+
+    if (!req.user.isSystemAdmin) {
+      const membership = await OrganizationMembership.findOne({
+        user: req.user.id,
+        organization: id,
+        status: 'active',
+        role: 'owner'
+      })
+
+      if (!membership) {
+        return fail(res, 403, 'Solo el dueño puede eliminar la organización')
+      }
+    }
 
     await Organization.deleteOne({ _id: id })
 

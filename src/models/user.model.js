@@ -16,7 +16,8 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true
+      required: true,
+      select: false
     },
     isSystemAdmin: {
       type: Boolean,
@@ -27,34 +28,3 @@ const userSchema = new mongoose.Schema(
 )
 
 export default mongoose.model('User', userSchema)
-
-// import mongoose from "mongoose";
-
-// const userSchema = new mongoose.Schema({
-//     name: {
-//         type: String,
-//         required: true,
-//         },
-//     email: {
-//         type: String,
-//         required: true,
-//         unique: true,
-//         },
-//     password: {
-//         type: String,
-//         required: true,
-//         },
-
-//     role: {
-//         type: String,
-//         enum: ['admin', 'user'],
-//         default: 'user'
-//         }
-// }, 
-
-//     {timestamps: true,}
-
-// );
-
-// const User = mongoose.model("User", userSchema);
-// export default User;

@@ -122,7 +122,7 @@ export const deleteClient = async (req, res) => {
     if (!deletedClient)
       return fail(res, 404, "Cliente no encontrado")
 
-    return success(res, 200, "Cliente eliminado correctamente")
+    return success(res, 200, { message: "Cliente eliminado correctamente" })
 
   } catch (error) {
     return fail(res, 500, error.message)

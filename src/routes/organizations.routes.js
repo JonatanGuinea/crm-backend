@@ -1,4 +1,4 @@
-import express from 'express'
+import { Router } from 'express'
 import { auth } from '../middlewares/auth.middleware.js'
 
 import {
@@ -11,7 +11,7 @@ import {
 
 import { requireMembership } from '../middlewares/requireMembership.middleware.js'
 
-const router = express.Router()
+const router = Router()
 
 
 router.get('/', auth,requireMembership, getOrganizations)
