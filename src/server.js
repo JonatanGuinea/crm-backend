@@ -1,13 +1,17 @@
-import dotenv from 'dotenv'
+import './env.js'
 import app from './app.js'
-import { connectDB } from './config/db.js'
-
-dotenv.config()
+import prisma from './config/db.js'
 
 const PORT = process.env.PORT || 3000
 
-connectDB()
-
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en puerto ${PORT}`)
-})
+prisma.$connect()
+  .then(() => {
+    console.log('PostgreSQL conectado')
+    app.listen(PORT, () => {
+      console.log(`Servidor corriendo en puerto ${PORT}`)
+    })
+  })
+  .catch((error) => {
+    console.error('Error de conexión:', error.message)
+    process.exit(1)
+  })

@@ -1,13 +1,10 @@
-import User from '../models/user.model.js'
-import Organization from '../models/organization.model.js'
-import OrganizationMembership from '../models/organizationMembership.model.js'
+import prisma from '../config/db.js'
 import { hashPassword } from '../utils/passwordHash.js'
 import { generateAccessToken } from '../utils/jwt.js'
 import { success, fail } from '../utils/response.js'
 
 export const register = async (req, res) => {
   try {
-
     const name = req.body.name?.trim()
     const email = req.body.email?.trim().toLowerCase()
     const password = req.body.password
@@ -17,12 +14,11 @@ export const register = async (req, res) => {
       return fail(res, 400, 'Todos los campos son obligatorios')
     }
 
-    const existingUser = await User.findOne({ email })
+    const existingUser = await prisma.user.findUnique({ where: { email } })
     if (existingUser) {
       return fail(res, 400, 'El usuario ya existe')
     }
 
-    // 🔥 slug único
     let baseSlug = organizationName
       .toLowerCase()
       .trim()
@@ -32,42 +28,39 @@ export const register = async (req, res) => {
     let slug = baseSlug
     let counter = 1
 
-    while (await Organization.findOne({ slug })) {
+    while (await prisma.organization.findFirst({ where: { slug } })) {
       slug = `${baseSlug}-${counter++}`
     }
 
     const hashedPassword = await hashPassword(password)
 
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword
+    const user = await prisma.user.create({
+      data: { name, email, password: hashedPassword }
     })
 
-    const organization = await Organization.create({
-      name: organizationName,
-      owner: user._id,
-      slug
+    const organization = await prisma.organization.create({
+      data: { name: organizationName, ownerId: user.id, slug }
     })
 
-    // 👇 usa este objeto directamente
-    const membership = await OrganizationMembership.create({
-      user: user._id,
-      organization: organization._id,
-      role: 'owner'
+    const membership = await prisma.organizationMembership.create({
+      data: {
+        userId: user.id,
+        organizationId: organization.id,
+        role: 'owner'
+      }
     })
 
     const token = generateAccessToken(user, membership)
 
     return success(res, 201, {
       user: {
-        id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
         isSystemAdmin: user.isSystemAdmin
       },
       organization: {
-        id: organization._id,
+        id: organization.id,
         name: organization.name,
         role: membership.role
       },

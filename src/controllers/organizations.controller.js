@@ -1,10 +1,8 @@
-import Organization from '../models/organization.model.js'
-import OrganizationMembership from '../models/organizationMembership.model.js'
+import prisma from '../config/db.js'
 import { success, fail } from '../utils/response.js'
 
 export const createOrganization = async (req, res) => {
   try {
-
     const { name } = req.body
     const userId = req.user.id
 
@@ -12,9 +10,8 @@ export const createOrganization = async (req, res) => {
       return fail(res, 400, 'El nombre es requerido')
     }
 
-     const organizationsCount = await OrganizationMembership.countDocuments({
-      user: userId,
-      role: 'owner'
+    const organizationsCount = await prisma.organizationMembership.count({
+      where: { userId, role: 'owner' }
     })
 
     if (organizationsCount >= 5) {
@@ -30,23 +27,21 @@ export const createOrganization = async (req, res) => {
     let slug = baseSlug
     let counter = 1
 
-    while (await Organization.findOne({ slug })) {
+    while (await prisma.organization.findFirst({ where: { slug } })) {
       slug = `${baseSlug}-${counter++}`
     }
 
-    // crear organización
-    const organization = await Organization.create({
-      name,
-      owner: userId,
-      slug
+    const organization = await prisma.organization.create({
+      data: { name, ownerId: userId, slug }
     })
 
-    // crear membership owner
-    await OrganizationMembership.create({
-      user: userId,
-      organization: organization._id,
-      role: 'owner',
-      status: 'active'
+    await prisma.organizationMembership.create({
+      data: {
+        userId,
+        organizationId: organization.id,
+        role: 'owner',
+        status: 'active'
+      }
     })
 
     return success(res, 201, organization)
@@ -54,25 +49,23 @@ export const createOrganization = async (req, res) => {
   } catch (error) {
     return fail(res, 500, error.message)
   }
-
 }
-
 
 export const getOrganizations = async (req, res) => {
   try {
-
     const userId = req.user.id
 
-    const memberships = await OrganizationMembership
-      .find({ user: userId, status: 'active' })
-      .populate('organization', 'name plan')
-      .lean()
+    const memberships = await prisma.organizationMembership.findMany({
+      where: { userId, status: 'active' },
+      include: { organization: { select: { id: true, name: true, plan: true } } }
+    })
 
-      if (memberships.length === 0) {
-        return success(res, 200, [])
-      }
+    if (memberships.length === 0) {
+      return success(res, 200, [])
+    }
+
     const organizations = memberships.map(m => ({
-      id: m.organization._id,
+      id: m.organization.id,
       name: m.organization.name,
       plan: m.organization.plan,
       role: m.role
@@ -89,7 +82,7 @@ export const getOrganizationBySlug = async (req, res) => {
   try {
     const { slug } = req.params
 
-    const organization = await Organization.findOne({ slug })
+    const organization = await prisma.organization.findUnique({ where: { slug } })
 
     if (!organization) {
       return fail(res, 404, 'Organización no encontrada')
@@ -103,16 +96,17 @@ export const getOrganizationBySlug = async (req, res) => {
 
 export const updateOrganization = async (req, res) => {
   try {
-
     const { id } = req.params
     const { name } = req.body
 
     if (!req.user.isSystemAdmin) {
-      const membership = await OrganizationMembership.findOne({
-        user: req.user.id,
-        organization: id,
-        status: 'active',
-        role: { $in: ['owner', 'admin'] }
+      const membership = await prisma.organizationMembership.findFirst({
+        where: {
+          userId: req.user.id,
+          organizationId: id,
+          status: 'active',
+          role: { in: ['owner', 'admin'] }
+        }
       })
 
       if (!membership) {
@@ -120,37 +114,33 @@ export const updateOrganization = async (req, res) => {
       }
     }
 
-    const organization = await Organization.findByIdAndUpdate(
-      id,
-      { name },
-      { new: true }
-    )
-
-    if (!organization) {
-      return fail(res, 404, 'Organización no encontrada')
-    }
+    const organization = await prisma.organization.update({
+      where: { id },
+      data: { name }
+    })
 
     return success(res, 200, organization)
 
   } catch (error) {
+    if (error.code === 'P2025') {
+      return fail(res, 404, 'Organización no encontrada')
+    }
     return fail(res, 500, error.message)
   }
 }
 
-
-
 export const deleteOrganization = async (req, res) => {
-
   try {
-
     const { id } = req.params
 
     if (!req.user.isSystemAdmin) {
-      const membership = await OrganizationMembership.findOne({
-        user: req.user.id,
-        organization: id,
-        status: 'active',
-        role: 'owner'
+      const membership = await prisma.organizationMembership.findFirst({
+        where: {
+          userId: req.user.id,
+          organizationId: id,
+          status: 'active',
+          role: 'owner'
+        }
       })
 
       if (!membership) {
@@ -158,16 +148,14 @@ export const deleteOrganization = async (req, res) => {
       }
     }
 
-    await Organization.deleteOne({ _id: id })
+    await prisma.organization.delete({ where: { id } })
 
-    await OrganizationMembership.deleteMany({
-      organization: id
-    })
-
-    return success(res, 200, 'Organization deleted')
+    return success(res, 200, { message: 'Organización eliminada correctamente' })
 
   } catch (error) {
+    if (error.code === 'P2025') {
+      return fail(res, 404, 'Organización no encontrada')
+    }
     return fail(res, 500, error.message)
   }
-
 }

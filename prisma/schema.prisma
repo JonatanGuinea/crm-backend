@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  password      String
+  isSystemAdmin Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  ownedOrganizations Organization[]
+  memberships        OrganizationMembership[]
+  clients            Client[]
+  projects           Project[]
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  plan      Plan     @default(free)
+  ownerId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner       User                     @relation(fields: [ownerId], references: [id])
+  memberships OrganizationMembership[]
+  clients     Client[]
+  projects    Project[]
+
+  @@index([name])
+}
+
+enum Plan {
+  free
+  pro
+  enterprise
+}
+
+model OrganizationMembership {
+  id             String           @id @default(cuid())
+  userId         String
+  organizationId String
+  role           Role
+  status         MembershipStatus @default(active)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([userId])
+  @@index([organizationId])
+}
+
+enum Role {
+  owner
+  admin
+  member
+}
+
+enum MembershipStatus {
+  active
+  invited
+  disabled
+}
+
+model Client {
+  id             String   @id @default(cuid())
+  name           String
+  email          String?
+  phone          String?
+  company        String?
+  notes          String?
+  organizationId String
+  createdById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation(fields: [createdById], references: [id])
+  projects     Project[]
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([organizationId, name])
+}
+
+model Project {
+  id             String        @id @default(cuid())
+  title          String
+  description    String?
+  budget         Float?
+  status         ProjectStatus @default(pending)
+  startDate      DateTime?
+  endDate        DateTime?
+  clientId       String
+  organizationId String
+  createdById    String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  client       Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation(fields: [createdById], references: [id])
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([organizationId, status])
+  @@index([organizationId, clientId])
+}
+
+enum ProjectStatus {
+  pending
+  approved
+  in_progress
+  finished
+  cancelled
+}

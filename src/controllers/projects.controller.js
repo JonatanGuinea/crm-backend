@@ -1,18 +1,14 @@
-import mongoose from "mongoose";
-import Project from "../models/project.model.js";
-import Client from "../models/client.model.js";
-import { success, fail } from "../utils/response.js";
+import prisma from '../config/db.js'
+import { success, fail } from '../utils/response.js'
 
-// Estados permitidos y transiciones
 const allowedTransitions = {
   pending: ["approved", "cancelled"],
   approved: ["in_progress", "cancelled"],
   in_progress: ["finished"],
   finished: [],
   cancelled: []
-};
+}
 
-// Crear proyecto
 export const createProject = async (req, res) => {
   try {
     const orgId = req.user.organizationId
@@ -24,28 +20,26 @@ export const createProject = async (req, res) => {
       return fail(res, 400, "Titulo del proyecto y cliente son requeridos")
     }
 
-    if (!mongoose.Types.ObjectId.isValid(client)) {
-      return fail(res, 400, "ID de cliente no es válido")
-    }
-
-    const clientExists = await Client.exists({
-      _id: client,
-      organization: orgId
+    const clientExists = await prisma.client.findFirst({
+      where: { id: client, organizationId: orgId },
+      select: { id: true }
     })
 
     if (!clientExists) {
       return fail(res, 404, "Cliente no encontrado en esta organización")
     }
 
-    const project = await Project.create({
-      title,
-      description,
-      budget,
-      startDate,
-      endDate,
-      client,
-      organization: orgId,
-      createdBy: userId
+    const project = await prisma.project.create({
+      data: {
+        title,
+        description,
+        budget: budget != null ? parseFloat(budget) : null,
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
+        clientId: client,
+        organizationId: orgId,
+        createdById: userId
+      }
     })
 
     return success(res, 201, project)
@@ -55,15 +49,15 @@ export const createProject = async (req, res) => {
   }
 }
 
-// Obtener todos
 export const getProjects = async (req, res) => {
   try {
     const orgId = req.user.organizationId
 
-    const projects = await Project.find({ organization: orgId })
-      .populate("client", "name email")
-      .sort({ createdAt: -1 })
-      .lean()
+    const projects = await prisma.project.findMany({
+      where: { organizationId: orgId },
+      include: { client: { select: { id: true, name: true, email: true } } },
+      orderBy: { createdAt: 'desc' }
+    })
 
     return success(res, 200, projects)
 
@@ -72,23 +66,15 @@ export const getProjects = async (req, res) => {
   }
 }
 
-// Obtener por ID
 export const getProjectById = async (req, res) => {
   try {
     const orgId = req.user.organizationId
     const { id } = req.params
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return fail(res, 400, "ID de proyecto no es válido")
-    }
-
-    const project = await Project.findOne({
-      _id: id,
-      organization: orgId
+    const project = await prisma.project.findFirst({
+      where: { id, organizationId: orgId },
+      include: { client: { select: { id: true, name: true, email: true } } }
     })
-      .populate("client", "name email")
-      .select("-__v")
-      .lean()
 
     if (!project) {
       return fail(res, 404, "Proyecto no encontrado")
@@ -101,19 +87,13 @@ export const getProjectById = async (req, res) => {
   }
 }
 
-// Actualizar proyecto
 export const updateProject = async (req, res) => {
   try {
     const orgId = req.user.organizationId
     const { id } = req.params
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return fail(res, 400, "ID de proyecto no es válido")
-    }
-
-    const project = await Project.findOne({
-      _id: id,
-      organization: orgId
+    const project = await prisma.project.findFirst({
+      where: { id, organizationId: orgId }
     })
 
     if (!project) {
@@ -121,8 +101,8 @@ export const updateProject = async (req, res) => {
     }
 
     const { status } = req.body
+    const updates = {}
 
-    // Validación de estado
     if (status && status !== project.status) {
       const allowed = allowedTransitions[project.status] || []
 
@@ -134,63 +114,60 @@ export const updateProject = async (req, res) => {
         )
       }
 
-      project.status = status
+      updates.status = status
     }
 
-    // Campos permitidos
     const allowedFields = ["title", "description", "budget", "startDate", "endDate"]
 
     for (const key of allowedFields) {
       if (req.body[key] !== undefined) {
-        project[key] = req.body[key]
+        updates[key] = req.body[key]
       }
     }
 
-    await project.save()
+    const updated = await prisma.project.update({
+      where: { id },
+      data: updates
+    })
 
-    return success(res, 200, project)
+    return success(res, 200, updated)
 
   } catch (error) {
     return fail(res, 500, error.message)
   }
 }
 
-// Dashboard
 export const getDashboardMetrics = async (req, res) => {
   try {
-    const orgIdString = req.user.organizationId
+    const orgId = req.user.organizationId
 
-    if (!orgIdString || !mongoose.Types.ObjectId.isValid(orgIdString)) {
+    if (!orgId) {
       return fail(res, 400, "Organización inválida")
     }
 
-    const orgId = new mongoose.Types.ObjectId(orgIdString)
+    const byStatus = await prisma.project.groupBy({
+      by: ['status'],
+      where: { organizationId: orgId },
+      _count: { status: true },
+      _sum: { budget: true }
+    })
 
-    const metrics = await Project.aggregate([
-      { $match: { organization: orgId } },
-      {
-        $group: {
-          _id: "$status",
-          totalProjects: { $sum: 1 },
-          totalBudget: { $sum: { $ifNull: ["$budget", 0] } }
-        }
-      }
-    ])
-
-    const totalStats = await Project.aggregate([
-      { $match: { organization: orgId } },
-      {
-        $group: {
-          _id: null,
-          totalProjects: { $sum: 1 },
-          totalBudget: { $sum: { $ifNull: ["$budget", 0] } }
-        }
-      }
-    ])
+    const totals = await prisma.project.aggregate({
+      where: { organizationId: orgId },
+      _count: { _all: true },
+      _sum: { budget: true }
+    })
 
     return success(res, 200, {
-      summary: totalStats[0] || { totalProjects: 0, totalBudget: 0 },
-      byStatus: metrics
+      summary: {
+        totalProjects: totals._count._all,
+        totalBudget: totals._sum.budget || 0
+      },
+      byStatus: byStatus.map(s => ({
+        _id: s.status,
+        totalProjects: s._count.status,
+        totalBudget: s._sum.budget || 0
+      }))
     })
 
   } catch (error) {
@@ -198,28 +175,22 @@ export const getDashboardMetrics = async (req, res) => {
   }
 }
 
-// Eliminar
 export const deleteProject = async (req, res) => {
   try {
     const orgId = req.user.organizationId
     const { id } = req.params
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return fail(res, 400, "ID de proyecto no es válido")
-    }
-
-    const project = await Project.findOneAndDelete({
-      _id: id,
-      organization: orgId
+    const project = await prisma.project.findFirst({
+      where: { id, organizationId: orgId }
     })
 
     if (!project) {
       return fail(res, 404, "Proyecto no encontrado")
     }
 
-    return success(res, 200, {
-      message: "Proyecto eliminado correctamente"
-    })
+    await prisma.project.delete({ where: { id } })
+
+    return success(res, 200, { message: "Proyecto eliminado correctamente" })
 
   } catch (error) {
     return fail(res, 500, error.message)

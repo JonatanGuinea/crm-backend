@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken'
 export const generateTempToken = (user) => {
   return jwt.sign(
     {
-      uid: user._id,
+      uid: user.id,
       type: 'temp'
     },
     process.env.JWT_SECRET,
@@ -11,15 +11,11 @@ export const generateTempToken = (user) => {
   )
 }
 
-
-
-
-
 export const generateAccessToken = (user, membership) => {
   return jwt.sign(
     {
-      uid: user._id,
-      org: membership.organization,
+      uid: user.id,
+      org: membership.organizationId,
       role: membership.role,
       isSystemAdmin: user.isSystemAdmin || false
     },
@@ -27,5 +23,3 @@ export const generateAccessToken = (user, membership) => {
     { expiresIn: '24h' }
   )
 }
-
-

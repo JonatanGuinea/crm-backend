@@ -1,10 +1,8 @@
-import OrganizationMembership from '../models/organizationMembership.model.js'
+import prisma from '../config/db.js'
 import { fail } from '../utils/response.js'
 
 export const requireMembership = async (req, res, next) => {
   try {
-
-    // 🔥 bypass para system admin
     if (req.user.isSystemAdmin) {
       return next()
     }
@@ -15,17 +13,18 @@ export const requireMembership = async (req, res, next) => {
       return fail(res, 403, 'No hay organización activa')
     }
 
-    const membership = await OrganizationMembership.findOne({
-      user: id,
-      organization: organizationId,
-      status: 'active'
-    }).lean()
+    const membership = await prisma.organizationMembership.findFirst({
+      where: {
+        userId: id,
+        organizationId,
+        status: 'active'
+      }
+    })
 
     if (!membership) {
       return fail(res, 403, 'No perteneces a esta organización')
     }
 
-    // 🔥 útil para otros middlewares (RBAC)
     req.membership = membership
 
     next()

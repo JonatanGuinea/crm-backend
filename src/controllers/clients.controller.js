@@ -1,8 +1,6 @@
-import mongoose from 'mongoose';
-import Client from '../models/client.model.js';
-import { success, fail } from '../utils/response.js';
+import prisma from '../config/db.js'
+import { success, fail } from '../utils/response.js'
 
-// Crear cliente
 export const createClient = async (req, res) => {
   try {
     const { name, email, phone, company, notes } = req.body
@@ -13,14 +11,16 @@ export const createClient = async (req, res) => {
     if (!req.user.organizationId)
       return fail(res, 400, "Organización activa requerida")
 
-    const client = await Client.create({
-      name,
-      email,
-      phone,
-      company,
-      notes,
-      organization: req.user.organizationId,
-      createdBy: req.user.id
+    const client = await prisma.client.create({
+      data: {
+        name,
+        email,
+        phone,
+        company,
+        notes,
+        organizationId: req.user.organizationId,
+        createdById: req.user.id
+      }
     })
 
     return success(res, 201, client)
@@ -30,12 +30,12 @@ export const createClient = async (req, res) => {
   }
 }
 
-// Obtener todos
 export const getClients = async (req, res) => {
   try {
-    const clients = await Client.find({
-      organization: req.user.organizationId
-    }).lean()
+    const clients = await prisma.client.findMany({
+      where: { organizationId: req.user.organizationId },
+      orderBy: { createdAt: 'desc' }
+    })
 
     return success(res, 200, clients)
 
@@ -44,18 +44,13 @@ export const getClients = async (req, res) => {
   }
 }
 
-// Obtener por ID
 export const getClientById = async (req, res) => {
   try {
     const { id } = req.params
 
-    if (!mongoose.Types.ObjectId.isValid(id))
-      return fail(res, 400, "ID inválido")
-
-    const client = await Client.findOne({
-      _id: id,
-      organization: req.user.organizationId
-    }).lean()
+    const client = await prisma.client.findFirst({
+      where: { id, organizationId: req.user.organizationId }
+    })
 
     if (!client)
       return fail(res, 404, "Cliente no encontrado")
@@ -67,18 +62,18 @@ export const getClientById = async (req, res) => {
   }
 }
 
-// Actualizar
 export const updateClient = async (req, res) => {
   try {
     const { id } = req.params
 
-    if (!mongoose.Types.ObjectId.isValid(id))
-      return fail(res, 400, "ID inválido")
+    const existing = await prisma.client.findFirst({
+      where: { id, organizationId: req.user.organizationId }
+    })
 
-    delete req.body.organization
+    if (!existing)
+      return fail(res, 404, "Cliente no encontrado")
 
     const allowedFields = ["name", "email", "phone", "company", "notes"]
-
     const updates = {}
 
     for (const key of allowedFields) {
@@ -87,17 +82,10 @@ export const updateClient = async (req, res) => {
       }
     }
 
-    const updatedClient = await Client.findOneAndUpdate(
-      {
-        _id: id,
-        organization: req.user.organizationId
-      },
-      updates,
-      { new: true, runValidators: true }
-    ).lean()
-
-    if (!updatedClient)
-      return fail(res, 404, "Cliente no encontrado")
+    const updatedClient = await prisma.client.update({
+      where: { id },
+      data: updates
+    })
 
     return success(res, 200, updatedClient)
 
@@ -106,21 +94,18 @@ export const updateClient = async (req, res) => {
   }
 }
 
-// Eliminar
 export const deleteClient = async (req, res) => {
   try {
     const { id } = req.params
 
-    if (!mongoose.Types.ObjectId.isValid(id))
-      return fail(res, 400, "ID inválido")
-
-    const deletedClient = await Client.findOneAndDelete({
-      _id: id,
-      organization: req.user.organizationId
+    const existing = await prisma.client.findFirst({
+      where: { id, organizationId: req.user.organizationId }
     })
 
-    if (!deletedClient)
+    if (!existing)
       return fail(res, 404, "Cliente no encontrado")
+
+    await prisma.client.delete({ where: { id } })
 
     return success(res, 200, { message: "Cliente eliminado correctamente" })
 
