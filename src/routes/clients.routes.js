@@ -13,42 +13,14 @@ import { requireRole } from '../middlewares/RBAC.middleware.js'
 
 const router = Router()
 
-router.post(
-  '/',
-  auth,
-  requireMembership,
-  requireRole('owner', 'admin'),
-  createClient
-)
+router.post('/', auth, requireMembership, requireRole('owner', 'admin'),createClient)
 
-router.get(
-  '/',
-  auth,
-  requireMembership,
-  getClients
-)
+router.get( '/', auth, requireMembership, getClients)
 
-router.get(
-  '/:id',
-  auth,
-  requireMembership,
-  getClientById
-)
+router.get( '/:id', auth, requireMembership, getClientById)
 
-router.put(
-  '/:id',
-  auth,
-  requireMembership,
-  requireRole('owner', 'admin'),
-  updateClient
-)
+router.put('/:id', auth, requireMembership, requireRole('owner', 'admin'), updateClient)
 
-router.delete(
-  '/:id',
-  auth,
-  requireMembership,
-  requireRole('owner'),
-  deleteClient
-)
+router.delete('/:id', auth, requireMembership, requireRole('owner'), deleteClient)
 
 export default router

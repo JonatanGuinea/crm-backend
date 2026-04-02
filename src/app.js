@@ -17,18 +17,4 @@ app.use('/api/organizations', organizationsRoutes)
 
 
 
-
-//PRUEBA DE FUNCIONAMIENTO DE AUTH
-// app.get('/health', (req, res) => {
-//   res.json({ status: 'ok' })
-// })
-
-// app.get('/api/protected', auth, (req, res) => {
-//   res.json({
-//     message: 'Ruta protegida',
-//     user: req.user
-//   })
-// })
-
-
 export default app
