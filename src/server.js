@@ -1,7 +1,9 @@
-import 'dotenv/config'
+import dotenv from 'dotenv';
 
 import app from './app.js'
 import prisma from './config/db.js'
+
+dotenv.config()
 
 
 const PORT = process.env.PORT || 3000
@@ -11,7 +13,6 @@ prisma.$connect()
     console.log('PostgreSQL conectado')
     app.listen(PORT, () => {
       console.log(`Servidor corriendo en puerto ${PORT}`)
-      console.log('JWT_SECRET:', process.env.JWT_SECRET)
     })
   })
   .catch((error) => {
