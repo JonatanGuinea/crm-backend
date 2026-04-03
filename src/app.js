@@ -1,5 +1,7 @@
 import express from 'express'
 
+
+
 import authRoutes from './routes/auth.routes.js'
 import clientsRoutes from './routes/clients.routes.js'
 import projectsRoutes from './routes/projects.routes.js'

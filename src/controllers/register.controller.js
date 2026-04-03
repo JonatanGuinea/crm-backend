@@ -52,6 +52,7 @@ export const register = async (req, res) => {
 
     const token = generateAccessToken(user, membership)
 
+    
     return success(res, 201, {
       user: {
         id: user.id,
@@ -71,3 +72,4 @@ export const register = async (req, res) => {
     return fail(res, 500, error.message)
   }
 }
+

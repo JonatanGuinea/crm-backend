@@ -99,24 +99,28 @@ export const updateOrganization = async (req, res) => {
     const { id } = req.params
     const { name } = req.body
 
-    if (!req.user.isSystemAdmin) {
-      const membership = await prisma.organizationMembership.findFirst({
-        where: {
-          userId: req.user.id,
-          organizationId: id,
-          status: 'active',
-          role: { in: ['owner', 'admin'] }
-        }
-      })
-
-      if (!membership) {
-        return fail(res, 403, 'No tienes permisos para modificar esta organización')
-      }
+    if (!name?.trim()) {
+      return fail(res, 400, 'El nombre es requerido')
     }
+
+    const updates = { name: name.trim() }
+
+    const newSlug = name
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w-]+/g, '')
+
+    const slugConflict = await prisma.organization.findFirst({
+      where: { slug: newSlug, NOT: { id } }
+    })
+
+    updates.slug = slugConflict ? `${newSlug}-${Date.now()}` : newSlug
 
     const organization = await prisma.organization.update({
       where: { id },
-      data: { name }
+      data: updates,
+      select: { id: true, name: true, slug: true, plan: true, updatedAt: true }
     })
 
     return success(res, 200, organization)
