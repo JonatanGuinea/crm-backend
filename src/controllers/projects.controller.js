@@ -131,11 +131,19 @@ export const updateProject = async (req, res) => {
 
     const allowedFields = ["title", "description", "budget", "startDate", "endDate"]
 
-    for (const key of allowedFields) {
-      if (req.body[key] !== undefined) {
-        updates[key] = req.body[key]
-      }
+for (const key of allowedFields) {
+  if (req.body[key] !== undefined) {
+
+    if (key === "startDate" || key === "endDate") {
+      updates[key] = req.body[key] ? new Date(req.body[key]) : null
+    } else if (key === "budget") {
+      updates[key] = req.body[key] != null ? parseFloat(req.body[key]) : null
+    } else {
+      updates[key] = req.body[key]
     }
+
+  }
+}
 
     const updated = await prisma.project.update({
       where: { id },
