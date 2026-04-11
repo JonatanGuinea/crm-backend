@@ -25,6 +25,7 @@ model User {
   quotes             Quote[]
   invoices           Invoice[]
   notifications      Notification[]
+  attachments        Attachment[]
 }
 
 model Organization {
@@ -43,6 +44,7 @@ model Organization {
   quotes        Quote[]
   invoices      Invoice[]
   notifications Notification[]
+  attachments   Attachment[]
 
   @@index([name])
 }
@@ -242,6 +244,36 @@ model InvoiceItem {
 
   invoiceId String
   invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+// ─── Attachments ─────────────────────────────────────────────────────────────
+
+enum AttachmentEntity {
+  client
+  project
+  quote
+  invoice
+}
+
+model Attachment {
+  id          String           @id @default(cuid())
+  filename    String
+  storedName  String
+  url         String
+  mimetype    String
+  size        Int
+  entityType  AttachmentEntity
+  entityId    String
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedById   String
+  uploadedBy     User         @relation(fields: [uploadedById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([organizationId])
 }
 
 // ─── Notifications ────────────────────────────────────────────────────────────
