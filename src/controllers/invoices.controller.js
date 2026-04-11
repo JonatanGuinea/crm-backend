@@ -1,5 +1,6 @@
 import prisma from '../config/db.js'
 import { success, fail } from '../utils/response.js'
+import { notify } from '../services/notifications.service.js'
 
 const allowedTransitions = {
   draft: ['sent', 'cancelled'],
@@ -164,6 +165,17 @@ export const updateInvoice = async (req, res) => {
         )
       }
       updates.status = status
+
+      if (status === 'paid') {
+        await notify({
+          type: 'invoice_paid',
+          title: 'Factura pagada',
+          message: `La factura #${invoice.number} "${invoice.title}" fue marcada como pagada`,
+          userId: invoice.createdById,
+          orgId,
+          refId: invoice.id
+        })
+      }
     }
 
     for (const key of ['title', 'notes', 'currency']) {

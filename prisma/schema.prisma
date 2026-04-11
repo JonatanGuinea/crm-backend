@@ -24,6 +24,7 @@ model User {
   projects           Project[]
   quotes             Quote[]
   invoices           Invoice[]
+  notifications      Notification[]
 }
 
 model Organization {
@@ -39,8 +40,9 @@ model Organization {
   memberships OrganizationMembership[]
   clients     Client[]
   projects    Project[]
-  quotes      Quote[]
-  invoices    Invoice[]
+  quotes        Quote[]
+  invoices      Invoice[]
+  notifications Notification[]
 
   @@index([name])
 }
@@ -240,4 +242,36 @@ model InvoiceItem {
 
   invoiceId String
   invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+enum NotificationType {
+  invoice_overdue
+  invoice_paid
+  quote_expiring
+  quote_approved
+  quote_rejected
+  project_deadline
+  member_joined
+}
+
+model Notification {
+  id      String           @id @default(cuid())
+  type    NotificationType
+  title   String
+  message String
+  read    Boolean          @default(false)
+  refId   String
+
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([type, userId, organizationId, refId])
+  @@index([userId, organizationId, read])
+  @@index([userId, organizationId, createdAt(sort: Desc)])
 }

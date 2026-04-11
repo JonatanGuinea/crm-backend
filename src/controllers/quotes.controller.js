@@ -1,5 +1,6 @@
 import prisma from '../config/db.js'
 import { success, fail } from '../utils/response.js'
+import { notify } from '../services/notifications.service.js'
 
 const allowedTransitions = {
   draft: ['sent', 'expired'],
@@ -152,6 +153,17 @@ export const updateQuote = async (req, res) => {
         )
       }
       updates.status = status
+
+      if (['approved', 'rejected'].includes(status)) {
+        await notify({
+          type: status === 'approved' ? 'quote_approved' : 'quote_rejected',
+          title: status === 'approved' ? 'Presupuesto aprobado' : 'Presupuesto rechazado',
+          message: `El presupuesto #${quote.number} "${quote.title}" fue ${status === 'approved' ? 'aprobado' : 'rechazado'}`,
+          userId: quote.createdById,
+          orgId,
+          refId: quote.id
+        })
+      }
     }
 
     for (const key of ['title', 'notes', 'currency']) {

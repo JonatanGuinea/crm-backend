@@ -8,6 +8,7 @@ import projectsRoutes from './routes/projects.routes.js'
 import organizationsRoutes from './routes/organizations.routes.js'
 import quotesRoutes from './routes/quotes.routes.js'
 import invoicesRoutes from './routes/invoices.routes.js'
+import notificationsRoutes from './routes/notifications.routes.js'
 
 const app = express()
 
@@ -19,6 +20,7 @@ app.use('/api/projects', projectsRoutes)
 app.use('/api/organizations', organizationsRoutes)
 app.use('/api/quotes', quotesRoutes)
 app.use('/api/invoices', invoicesRoutes)
+app.use('/api/notifications', notificationsRoutes)
 
 
 

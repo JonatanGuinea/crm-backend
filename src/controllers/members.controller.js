@@ -2,6 +2,7 @@
 import prisma from '../config/db.js'
 import { generateTempToken, generateAccessToken } from '../utils/jwt.js'
 import { success, fail } from '../utils/response.js'
+import { notify } from '../services/notifications.service.js'
 
 export const inviteUser = async (req, res) => {
   try {
@@ -111,6 +112,21 @@ export const acceptInvite = async (req, res) => {
 
     const user = await prisma.user.findUnique({ where: { id: req.user.id } })
     const token = generateAccessToken(user, updated)
+
+    const org = await prisma.organization.findUnique({
+      where: { id: membership.organizationId },
+      select: { ownerId: true }
+    })
+    if (org && org.ownerId !== user.id) {
+      await notify({
+        type: 'member_joined',
+        title: 'Nuevo miembro',
+        message: `${user.name} aceptó la invitación y se unió a la organización`,
+        userId: org.ownerId,
+        orgId: membership.organizationId,
+        refId: membershipId
+      })
+    }
 
     return success(res, 200, {
       message: 'Invitación aceptada',
