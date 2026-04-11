@@ -1,5 +1,6 @@
 import prisma from '../config/db.js'
-import { success, fail } from '../utils/response.js'
+import { success, fail, paginated } from '../utils/response.js'
+import { parsePagination, buildPaginationMeta } from '../utils/paginate.js'
 
 export const createClient = async (req, res) => {
   try {
@@ -32,12 +33,20 @@ export const createClient = async (req, res) => {
 
 export const getClients = async (req, res) => {
   try {
-    const clients = await prisma.client.findMany({
-      where: { organizationId: req.user.organizationId },
-      orderBy: { createdAt: 'desc' }
-    })
+    const orgId = req.user.organizationId
+    const { name, company } = req.query
+    const { page, limit, skip } = parsePagination(req.query)
 
-    return success(res, 200, clients)
+    const where = { organizationId: orgId }
+    if (name) where.name = { contains: name, mode: 'insensitive' }
+    if (company) where.company = { contains: company, mode: 'insensitive' }
+
+    const [clients, total] = await Promise.all([
+      prisma.client.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take: limit }),
+      prisma.client.count({ where })
+    ])
+
+    return paginated(res, clients, buildPaginationMeta(total, page, limit))
 
   } catch (error) {
     return fail(res, 500, error.message)

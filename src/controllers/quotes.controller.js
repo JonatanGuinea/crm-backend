@@ -1,5 +1,6 @@
 import prisma from '../config/db.js'
-import { success, fail } from '../utils/response.js'
+import { success, fail, paginated } from '../utils/response.js'
+import { parsePagination, buildPaginationMeta } from '../utils/paginate.js'
 import { notify } from '../services/notifications.service.js'
 
 const allowedTransitions = {
@@ -91,21 +92,27 @@ export const getQuotes = async (req, res) => {
   try {
     const orgId = req.user.organizationId
     const { status, clientId } = req.query
+    const { page, limit, skip } = parsePagination(req.query)
 
     const where = { organizationId: orgId }
     if (status) where.status = status
     if (clientId) where.clientId = clientId
 
-    const quotes = await prisma.quote.findMany({
-      where,
-      include: {
-        client: { select: { id: true, name: true } },
-        project: { select: { id: true, title: true } }
-      },
-      orderBy: { createdAt: 'desc' }
-    })
+    const [quotes, total] = await Promise.all([
+      prisma.quote.findMany({
+        where,
+        include: {
+          client: { select: { id: true, name: true } },
+          project: { select: { id: true, title: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit
+      }),
+      prisma.quote.count({ where })
+    ])
 
-    return success(res, 200, quotes)
+    return paginated(res, quotes, buildPaginationMeta(total, page, limit))
   } catch (error) {
     return fail(res, 500, error.message)
   }

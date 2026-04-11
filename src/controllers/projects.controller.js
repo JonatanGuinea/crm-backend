@@ -1,5 +1,6 @@
 import prisma from '../config/db.js'
-import { success, fail } from '../utils/response.js'
+import { success, fail, paginated } from '../utils/response.js'
+import { parsePagination, buildPaginationMeta } from '../utils/paginate.js'
 
 const allowedTransitions = {
   pending: ["approved", "cancelled"],
@@ -52,14 +53,25 @@ export const createProject = async (req, res) => {
 export const getProjects = async (req, res) => {
   try {
     const orgId = req.user.organizationId
+    const { status, clientId } = req.query
+    const { page, limit, skip } = parsePagination(req.query)
 
-    const projects = await prisma.project.findMany({
-      where: { organizationId: orgId },
-      include: { client: { select: { id: true, name: true, email: true } } },
-      orderBy: { createdAt: 'desc' }
-    })
+    const where = { organizationId: orgId }
+    if (status) where.status = status
+    if (clientId) where.clientId = clientId
 
-    return success(res, 200, projects)
+    const [projects, total] = await Promise.all([
+      prisma.project.findMany({
+        where,
+        include: { client: { select: { id: true, name: true, email: true } } },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit
+      }),
+      prisma.project.count({ where })
+    ])
+
+    return paginated(res, projects, buildPaginationMeta(total, page, limit))
 
   } catch (error) {
     return fail(res, 500, error.message)
