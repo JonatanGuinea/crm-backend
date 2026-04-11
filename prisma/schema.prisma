@@ -1,3 +1,5 @@
+
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -20,6 +22,8 @@ model User {
   memberships        OrganizationMembership[]
   clients            Client[]
   projects           Project[]
+  quotes             Quote[]
+  invoices           Invoice[]
 }
 
 model Organization {
@@ -35,6 +39,8 @@ model Organization {
   memberships OrganizationMembership[]
   clients     Client[]
   projects    Project[]
+  quotes      Quote[]
+  invoices    Invoice[]
 
   @@index([name])
 }
@@ -89,6 +95,8 @@ model Client {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdBy    User         @relation(fields: [createdById], references: [id])
   projects     Project[]
+  quotes       Quote[]
+  invoices     Invoice[]
 
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([organizationId, name])
@@ -111,6 +119,8 @@ model Project {
   client       Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdBy    User         @relation(fields: [createdById], references: [id])
+  quotes       Quote[]
+  invoices     Invoice[]
 
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([organizationId, status])
@@ -123,4 +133,111 @@ enum ProjectStatus {
   in_progress
   finished
   cancelled
+}
+
+// ─── Billing ──────────────────────────────────────────────────────────────────
+
+enum QuoteStatus {
+  draft
+  sent
+  approved
+  rejected
+  expired
+}
+
+enum InvoiceStatus {
+  draft
+  sent
+  paid
+  overdue
+  cancelled
+}
+
+model Quote {
+  id         String      @id @default(cuid())
+  number     Int
+  title      String
+  status     QuoteStatus @default(draft)
+  notes      String?
+  validUntil DateTime?
+  subtotal   Float
+  taxRate    Float       @default(0)
+  total      Float
+  currency   String      @default("USD")
+
+  clientId       String
+  client         Client       @relation(fields: [clientId], references: [id])
+  projectId      String?
+  project        Project?     @relation(fields: [projectId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdById    String
+  createdBy      User         @relation(fields: [createdById], references: [id])
+
+  items    QuoteItem[]
+  invoices Invoice[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, number])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([organizationId, status])
+  @@index([organizationId, clientId])
+}
+
+model QuoteItem {
+  id          String @id @default(cuid())
+  description String
+  quantity    Float
+  unitPrice   Float
+  amount      Float
+
+  quoteId String
+  quote   Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+}
+
+model Invoice {
+  id      String        @id @default(cuid())
+  number  Int
+  title   String
+  status  InvoiceStatus @default(draft)
+  notes   String?
+  dueDate DateTime?
+  subtotal Float
+  taxRate  Float        @default(0)
+  total    Float
+  currency String       @default("USD")
+
+  clientId       String
+  client         Client       @relation(fields: [clientId], references: [id])
+  projectId      String?
+  project        Project?     @relation(fields: [projectId], references: [id])
+  quoteId        String?
+  quote          Quote?       @relation(fields: [quoteId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdById    String
+  createdBy      User         @relation(fields: [createdById], references: [id])
+
+  items InvoiceItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, number])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([organizationId, status])
+  @@index([organizationId, clientId])
+}
+
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  description String
+  quantity    Float
+  unitPrice   Float
+  amount      Float
+
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 }
