@@ -12,6 +12,7 @@ import invoicesRoutes from './routes/invoices.routes.js'
 import notificationsRoutes from './routes/notifications.routes.js'
 import attachmentsRoutes from './routes/attachments.routes.js'
 import searchRoutes from './routes/search.routes.js'
+import profileRoutes from './routes/profile.routes.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -30,6 +31,7 @@ app.use('/api/invoices', invoicesRoutes)
 app.use('/api/notifications', notificationsRoutes)
 app.use('/api/attachments', attachmentsRoutes)
 app.use('/api/search', searchRoutes)
+app.use('/api/profile', profileRoutes)
 
 
 
