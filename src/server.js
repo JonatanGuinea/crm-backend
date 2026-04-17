@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import app from './app.js'
 import prisma from './config/db.js'
 
-dotenv.config()
+dotenv.config({ override: true })
 
 
 const PORT = process.env.PORT || 3000
