@@ -13,6 +13,7 @@ import {
   deleteQuote,
   createInvoiceFromQuote
 } from '../controllers/quotes.controller.js'
+import { downloadQuotePdf } from '../controllers/pdf.controller.js'
 
 const router = Router()
 
@@ -67,6 +68,13 @@ router.post(
   requireMembership,
   requireRole('owner', 'admin'),
   createInvoiceFromQuote
+)
+
+router.get(
+  '/:id/pdf',
+  auth,
+  requireMembership,
+  downloadQuotePdf
 )
 
 export default router

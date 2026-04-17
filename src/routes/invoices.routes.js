@@ -12,6 +12,7 @@ import {
   updateInvoice,
   deleteInvoice
 } from '../controllers/invoices.controller.js'
+import { downloadInvoicePdf } from '../controllers/pdf.controller.js'
 
 const router = Router()
 
@@ -58,6 +59,13 @@ router.delete(
   requireMembership,
   requireRole('owner'),
   deleteInvoice
+)
+
+router.get(
+  '/:id/pdf',
+  auth,
+  requireMembership,
+  downloadInvoicePdf
 )
 
 export default router
