@@ -1,12 +1,18 @@
+import path from 'path'
+import fs from 'fs'
+import { fileURLToPath } from 'url'
 import prisma from '../config/db.js'
 import { comparePassword, hashPassword } from '../utils/passwordHash.js'
 import { success, fail } from '../utils/response.js'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const uploadsDir = path.join(__dirname, '..', '..', 'uploads')
 
 export const getProfile = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: { id: true, name: true, email: true }
+      select: { id: true, name: true, email: true, avatar: true }
     })
 
     if (!user) return fail(res, 404, 'Usuario no encontrado')
@@ -28,7 +34,7 @@ export const updateProfile = async (req, res) => {
     const updated = await prisma.user.update({
       where: { id: req.user.id },
       data: { name: name.trim() },
-      select: { id: true, name: true, email: true }
+      select: { id: true, name: true, email: true, avatar: true }
     })
 
     return success(res, 200, updated)
@@ -66,6 +72,34 @@ export const changePassword = async (req, res) => {
     })
 
     return success(res, 200, { message: 'Contraseña actualizada correctamente' })
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
+
+export const uploadAvatar = async (req, res) => {
+  try {
+    if (!req.file) {
+      return fail(res, 400, 'No se recibió ninguna imagen')
+    }
+
+    // Borrar avatar anterior si existe
+    const current = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { avatar: true }
+    })
+    if (current?.avatar) {
+      const oldPath = path.join(uploadsDir, current.avatar)
+      fs.unlink(oldPath, () => {}) // silencioso si no existe
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { avatar: req.file.filename },
+      select: { id: true, name: true, email: true, avatar: true }
+    })
+
+    return success(res, 200, updated)
   } catch (error) {
     return fail(res, 500, error.message)
   }
