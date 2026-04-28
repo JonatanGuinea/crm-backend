@@ -4,6 +4,88 @@ import { generateTempToken, generateAccessToken } from '../utils/jwt.js'
 import { success, fail } from '../utils/response.js'
 import { notify } from '../services/notifications.service.js'
 
+export const getPendingInvitations = async (req, res) => {
+  try {
+    const memberships = await prisma.organizationMembership.findMany({
+      where: { userId: req.user.id, status: 'invited' },
+      include: { organization: { select: { id: true, name: true } } },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    const invitations = memberships.map(m => ({
+      membershipId: m.id,
+      organization: m.organization,
+      role: m.role,
+      invitedAt: m.createdAt
+    }))
+
+    return success(res, 200, invitations)
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
+
+export const acceptInvitationById = async (req, res) => {
+  try {
+    const { membershipId } = req.params
+
+    const membership = await prisma.organizationMembership.findUnique({
+      where: { id: membershipId }
+    })
+
+    if (!membership) return fail(res, 404, 'Invitación no encontrada')
+    if (membership.userId !== req.user.id) return fail(res, 403, 'Esta invitación no te pertenece')
+    if (membership.status !== 'invited') return fail(res, 400, 'Esta invitación ya fue procesada')
+
+    const updated = await prisma.organizationMembership.update({
+      where: { id: membershipId },
+      data: { status: 'active' }
+    })
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } })
+    const token = generateAccessToken(user, updated)
+
+    const org = await prisma.organization.findUnique({
+      where: { id: membership.organizationId },
+      select: { ownerId: true }
+    })
+    if (org && org.ownerId !== user.id) {
+      await notify({
+        type: 'member_joined',
+        title: 'Nuevo miembro',
+        message: `${user.name} aceptó la invitación y se unió a la organización`,
+        userId: org.ownerId,
+        orgId: membership.organizationId,
+        refId: membershipId
+      })
+    }
+
+    return success(res, 200, { message: 'Invitación aceptada', token, role: updated.role })
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
+
+export const declineInvitation = async (req, res) => {
+  try {
+    const { membershipId } = req.params
+
+    const membership = await prisma.organizationMembership.findUnique({
+      where: { id: membershipId }
+    })
+
+    if (!membership) return fail(res, 404, 'Invitación no encontrada')
+    if (membership.userId !== req.user.id) return fail(res, 403, 'Esta invitación no te pertenece')
+    if (membership.status !== 'invited') return fail(res, 400, 'Esta invitación ya fue procesada')
+
+    await prisma.organizationMembership.delete({ where: { id: membershipId } })
+
+    return success(res, 200, { message: 'Invitación rechazada' })
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
+
 export const inviteUser = async (req, res) => {
   try {
     const { id: organizationId } = req.params
