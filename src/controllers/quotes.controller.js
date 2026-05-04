@@ -295,19 +295,34 @@ export const createInvoiceFromQuote = async (req, res) => {
 export const getQuotesDashboard = async (req, res) => {
   try {
     const orgId = req.user.organizationId
+    const now = new Date()
+    const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
 
-    const byStatus = await prisma.quote.groupBy({
-      by: ['status'],
-      where: { organizationId: orgId },
-      _count: { status: true },
-      _sum: { total: true }
-    })
-
-    const totals = await prisma.quote.aggregate({
-      where: { organizationId: orgId },
-      _count: { _all: true },
-      _sum: { total: true }
-    })
+    const [byStatus, totals, expiringSoon] = await Promise.all([
+      prisma.quote.groupBy({
+        by: ['status'],
+        where: { organizationId: orgId },
+        _count: { status: true },
+        _sum: { total: true }
+      }),
+      prisma.quote.aggregate({
+        where: { organizationId: orgId },
+        _count: { _all: true },
+        _sum: { total: true }
+      }),
+      prisma.quote.findMany({
+        where: {
+          organizationId: orgId,
+          status: { in: ['draft', 'sent'] },
+          validUntil: { gte: now, lte: in7Days }
+        },
+        select: {
+          id: true, number: true, title: true, validUntil: true, total: true,
+          client: { select: { id: true, name: true } }
+        },
+        orderBy: { validUntil: 'asc' }
+      })
+    ])
 
     return success(res, 200, {
       summary: {
@@ -318,7 +333,8 @@ export const getQuotesDashboard = async (req, res) => {
         status: s.status,
         count: s._count.status,
         total: s._sum.total || 0
-      }))
+      })),
+      expiringSoon
     })
   } catch (error) {
     return fail(res, 500, error.message)
