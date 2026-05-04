@@ -9,6 +9,7 @@ import {
   getInvoices,
   getInvoiceById,
   getInvoicesDashboard,
+  getInvoicesMonthly,
   updateInvoice,
   deleteInvoice
 } from '../controllers/invoices.controller.js'
@@ -36,6 +37,13 @@ router.get(
   auth,
   requireMembership,
   getInvoicesDashboard
+)
+
+router.get(
+  '/monthly',
+  auth,
+  requireMembership,
+  getInvoicesMonthly
 )
 
 router.get(

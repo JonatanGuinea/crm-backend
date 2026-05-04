@@ -305,3 +305,46 @@ export const getInvoicesDashboard = async (req, res) => {
     return fail(res, 500, error.message)
   }
 }
+
+export const getInvoicesMonthly = async (req, res) => {
+  try {
+    const orgId = req.user.organizationId
+    const now = new Date()
+    const since = new Date(now.getFullYear(), now.getMonth() - 11, 1)
+
+    const invoices = await prisma.invoice.findMany({
+      where: {
+        organizationId: orgId,
+        status: { in: ['paid', 'sent', 'overdue'] },
+        createdAt: { gte: since }
+      },
+      select: { total: true, status: true, createdAt: true }
+    })
+
+    // Construir los 6 meses como estructura base
+    const months = []
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      months.push({
+        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+        label: d.toLocaleDateString('es-AR', { month: 'short', year: '2-digit' }),
+        paid: 0,
+        issued: 0
+      })
+    }
+
+    const monthMap = Object.fromEntries(months.map(m => [m.key, m]))
+
+    for (const inv of invoices) {
+      const d = new Date(inv.createdAt)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      if (!monthMap[key]) continue
+      monthMap[key].issued += inv.total
+      if (inv.status === 'paid') monthMap[key].paid += inv.total
+    }
+
+    return success(res, 200, months)
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
