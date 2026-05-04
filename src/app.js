@@ -14,6 +14,7 @@ import attachmentsRoutes from './routes/attachments.routes.js'
 import searchRoutes from './routes/search.routes.js'
 import profileRoutes from './routes/profile.routes.js'
 import invitationsRoutes from './routes/invitations.routes.js'
+import activityRoutes from './routes/activity.routes.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -34,6 +35,7 @@ app.use('/api/attachments', attachmentsRoutes)
 app.use('/api/search', searchRoutes)
 app.use('/api/profile', profileRoutes)
 app.use('/api/invitations', invitationsRoutes)
+app.use('/api/activity', activityRoutes)
 
 
 
