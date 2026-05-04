@@ -165,18 +165,34 @@ export const getDashboardMetrics = async (req, res) => {
       return fail(res, 400, "Organización inválida")
     }
 
-    const byStatus = await prisma.project.groupBy({
-      by: ['status'],
-      where: { organizationId: orgId },
-      _count: { status: true },
-      _sum: { budget: true }
-    })
+    const now = new Date()
+    const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
 
-    const totals = await prisma.project.aggregate({
-      where: { organizationId: orgId },
-      _count: { _all: true },
-      _sum: { budget: true }
-    })
+    const [byStatus, totals, upcomingProjects] = await Promise.all([
+      prisma.project.groupBy({
+        by: ['status'],
+        where: { organizationId: orgId },
+        _count: { status: true },
+        _sum: { budget: true }
+      }),
+      prisma.project.aggregate({
+        where: { organizationId: orgId },
+        _count: { _all: true },
+        _sum: { budget: true }
+      }),
+      prisma.project.findMany({
+        where: {
+          organizationId: orgId,
+          status: { in: ['approved', 'in_progress'] },
+          endDate: { gte: now, lte: in7Days }
+        },
+        select: {
+          id: true, title: true, status: true, endDate: true, budget: true,
+          client: { select: { id: true, name: true } }
+        },
+        orderBy: { endDate: 'asc' }
+      })
+    ])
 
     return success(res, 200, {
       summary: {
@@ -187,7 +203,8 @@ export const getDashboardMetrics = async (req, res) => {
         _id: s.status,
         totalProjects: s._count.status,
         totalBudget: s._sum.budget || 0
-      }))
+      })),
+      upcomingProjects
     })
 
   } catch (error) {

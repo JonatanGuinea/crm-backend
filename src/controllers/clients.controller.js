@@ -109,7 +109,7 @@ export const getTopClients = async (req, res) => {
 
     const invoicesByClient = await prisma.invoice.groupBy({
       by: ['clientId'],
-      where: { organizationId: orgId, status: { in: ['paid', 'sent', 'overdue'] } },
+      where: { organizationId: orgId, status: 'paid' },
       _sum: { total: true },
       orderBy: { _sum: { total: 'desc' } },
       take: 5
