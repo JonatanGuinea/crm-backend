@@ -4,7 +4,8 @@ import {
   getClients,
   getClientById,
   updateClient,
-  deleteClient
+  deleteClient,
+  getTopClients
 } from '../controllers/clients.controller.js'
 
 import { auth } from '../middlewares/auth.middleware.js'
@@ -15,6 +16,7 @@ const router = Router()
 
 router.post('/', auth, requireMembership, requireRole('owner', 'admin'),createClient)
 
+router.get('/top', auth, requireMembership, getTopClients)
 router.get( '/', auth, requireMembership, getClients)
 
 router.get( '/:id', auth, requireMembership, getClientById)

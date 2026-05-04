@@ -103,6 +103,37 @@ export const updateClient = async (req, res) => {
   }
 }
 
+export const getTopClients = async (req, res) => {
+  try {
+    const orgId = req.user.organizationId
+
+    const invoicesByClient = await prisma.invoice.groupBy({
+      by: ['clientId'],
+      where: { organizationId: orgId, status: { in: ['paid', 'sent', 'overdue'] } },
+      _sum: { total: true },
+      orderBy: { _sum: { total: 'desc' } },
+      take: 5
+    })
+
+    const clientIds = invoicesByClient.map(r => r.clientId)
+    const clients = await prisma.client.findMany({
+      where: { id: { in: clientIds } },
+      select: { id: true, name: true, company: true }
+    })
+
+    const clientMap = Object.fromEntries(clients.map(c => [c.id, c]))
+
+    const result = invoicesByClient.map(r => ({
+      client: clientMap[r.clientId] ?? { id: r.clientId, name: 'Desconocido' },
+      total: r._sum.total || 0
+    }))
+
+    return success(res, 200, result)
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
+
 export const deleteClient = async (req, res) => {
   try {
     const { id } = req.params
