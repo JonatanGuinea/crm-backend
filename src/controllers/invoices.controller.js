@@ -5,7 +5,7 @@ import { notify } from '../services/notifications.service.js'
 
 const allowedTransitions = {
   draft: ['sent', 'cancelled'],
-  sent: ['paid', 'overdue', 'cancelled'],
+  sent: ['paid', 'cancelled'],
   paid: [],
   overdue: ['paid', 'cancelled'],
   cancelled: []
@@ -250,32 +250,50 @@ export const deleteInvoice = async (req, res) => {
 export const getInvoicesDashboard = async (req, res) => {
   try {
     const orgId = req.user.organizationId
+    const now = new Date()
 
-    const byStatus = await prisma.invoice.groupBy({
-      by: ['status'],
-      where: { organizationId: orgId },
-      _count: { status: true },
-      _sum: { total: true }
-    })
-
-    const totals = await prisma.invoice.aggregate({
-      where: { organizationId: orgId },
-      _count: { _all: true },
-      _sum: { total: true }
-    })
+    const [byStatus, totals, overdueAgg] = await Promise.all([
+      prisma.invoice.groupBy({
+        by: ['status'],
+        where: { organizationId: orgId },
+        _count: { status: true },
+        _sum: { total: true }
+      }),
+      prisma.invoice.aggregate({
+        where: { organizationId: orgId },
+        _count: { _all: true },
+        _sum: { total: true }
+      }),
+      // Vencidas: enviadas con fecha de vencimiento pasada
+      prisma.invoice.aggregate({
+        where: { organizationId: orgId, status: 'sent', dueDate: { lt: now } },
+        _count: { _all: true },
+        _sum: { total: true }
+      })
+    ])
 
     const paid = byStatus.find(s => s.status === 'paid')
-    const overdue = byStatus.find(s => s.status === 'overdue')
-    const pending = byStatus.filter(s => ['draft', 'sent'].includes(s.status))
-    const pendingTotal = pending.reduce((acc, s) => acc + (s._sum.total || 0), 0)
+    const draft = byStatus.find(s => s.status === 'draft')
+    const sent = byStatus.find(s => s.status === 'sent')
+    const overdueStatus = byStatus.find(s => s.status === 'overdue')
+
+    // "Vencidas" = las ya marcadas en BD + sent con dueDate pasada aún no procesadas
+    const overdueTotal = (overdueStatus?._sum.total || 0) + (overdueAgg._sum.total || 0)
+    const overdueCount = (overdueStatus?._count.status || 0) + (overdueAgg._count._all || 0)
+    // "Enviadas" = sent sin vencer
+    const sentTotal = (sent?._sum.total || 0) - (overdueAgg._sum.total || 0)
+    const sentCount = (sent?._count.status || 0) - (overdueAgg._count._all || 0)
 
     return success(res, 200, {
       summary: {
         totalInvoices: totals._count._all,
         totalValue: totals._sum.total || 0,
         paid: paid?._sum.total || 0,
-        overdue: overdue?._sum.total || 0,
-        pending: pendingTotal
+        overdue: overdueTotal,
+        overdueCount,
+        sent: sentTotal,
+        sentCount,
+        pending: draft?._sum.total || 0
       },
       byStatus: byStatus.map(s => ({
         status: s.status,
