@@ -166,7 +166,9 @@ export const getDashboardMetrics = async (req, res) => {
     }
 
     const now = new Date()
+    now.setUTCHours(0, 0, 0, 0)
     const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+    in7Days.setUTCHours(23, 59, 59, 999)
 
     const [byStatus, totals, upcomingProjects] = await Promise.all([
       prisma.project.groupBy({

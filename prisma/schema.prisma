@@ -46,6 +46,7 @@ model Organization {
   invoices      Invoice[]
   notifications Notification[]
   attachments   Attachment[]
+  installments  Installment[]
 
   @@index([name])
 }
@@ -156,6 +157,7 @@ enum InvoiceStatus {
   paid
   overdue
   cancelled
+  partial
 }
 
 model Quote {
@@ -179,8 +181,8 @@ model Quote {
   createdById    String
   createdBy      User         @relation(fields: [createdById], references: [id])
 
-  items    QuoteItem[]
-  invoices Invoice[]
+  items        QuoteItem[]
+  invoices     Invoice[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -225,7 +227,8 @@ model Invoice {
   createdById    String
   createdBy      User         @relation(fields: [createdById], references: [id])
 
-  items InvoiceItem[]
+  items        InvoiceItem[]
+  installments Installment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -245,6 +248,28 @@ model InvoiceItem {
 
   invoiceId String
   invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+// ─── Installments ────────────────────────────────────────────────────────────
+
+model Installment {
+  id        String   @id @default(cuid())
+  number    Int
+  amount    Float
+  dueDate   DateTime
+  status    String   @default("pending")
+  paidAt    DateTime?
+
+  invoiceId      String
+  invoice        Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([invoiceId])
+  @@index([organizationId])
 }
 
 // ─── Attachments ─────────────────────────────────────────────────────────────

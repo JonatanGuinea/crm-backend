@@ -6,6 +6,7 @@ import { notify } from '../services/notifications.service.js'
 const allowedTransitions = {
   draft: ['sent', 'cancelled'],
   sent: ['paid', 'cancelled'],
+  partial: [],
   paid: [],
   overdue: ['paid', 'cancelled'],
   cancelled: []
@@ -252,7 +253,7 @@ export const getInvoicesDashboard = async (req, res) => {
     const orgId = req.user.organizationId
     const now = new Date()
 
-    const [byStatus, totals, overdueAgg] = await Promise.all([
+    const [byStatus, totals, overdueAgg, pendingInstallmentsAgg, paidInstallmentsAgg, upcomingInstallments] = await Promise.all([
       prisma.invoice.groupBy({
         by: ['status'],
         where: { organizationId: orgId },
@@ -269,6 +270,28 @@ export const getInvoicesDashboard = async (req, res) => {
         where: { organizationId: orgId, status: 'sent', dueDate: { lt: now } },
         _count: { _all: true },
         _sum: { total: true }
+      }),
+      // Cuotas pendientes de pago
+      prisma.installment.aggregate({
+        where: { organizationId: orgId, status: 'pending' },
+        _sum: { amount: true },
+        _count: { _all: true }
+      }),
+      // Cuotas ya cobradas (de facturas aún en partial)
+      prisma.installment.aggregate({
+        where: { organizationId: orgId, status: 'paid', invoice: { status: 'partial' } },
+        _sum: { amount: true }
+      }),
+      // Próximas cuotas a cobrar
+      prisma.installment.findMany({
+        where: { organizationId: orgId, status: 'pending' },
+        orderBy: { dueDate: 'asc' },
+        take: 6,
+        include: {
+          invoice: {
+            select: { id: true, number: true, title: true, currency: true, client: { select: { id: true, name: true } } }
+          }
+        }
       })
     ])
 
@@ -288,13 +311,16 @@ export const getInvoicesDashboard = async (req, res) => {
       summary: {
         totalInvoices: totals._count._all,
         totalValue: totals._sum.total || 0,
-        paid: paid?._sum.total || 0,
+        paid: (paid?._sum.total || 0) + (paidInstallmentsAgg._sum.amount || 0),
         overdue: overdueTotal,
         overdueCount,
         sent: sentTotal,
         sentCount,
-        pending: draft?._sum.total || 0
+        pending: draft?._sum.total || 0,
+        pendingInstallments: pendingInstallmentsAgg._sum.amount || 0,
+        pendingInstallmentsCount: pendingInstallmentsAgg._count._all || 0
       },
+      upcomingInstallments,
       byStatus: byStatus.map(s => ({
         status: s.status,
         count: s._count.status,
@@ -312,16 +338,27 @@ export const getInvoicesMonthly = async (req, res) => {
     const now = new Date()
     const since = new Date(now.getFullYear(), now.getMonth() - 11, 1)
 
-    const invoices = await prisma.invoice.findMany({
-      where: {
-        organizationId: orgId,
-        status: { in: ['paid', 'sent', 'overdue'] },
-        createdAt: { gte: since }
-      },
-      select: { total: true, status: true, createdAt: true }
-    })
+    const [invoices, paidInstallments] = await Promise.all([
+      prisma.invoice.findMany({
+        where: {
+          organizationId: orgId,
+          status: { in: ['paid', 'sent', 'overdue', 'partial'] },
+          createdAt: { gte: since }
+        },
+        select: { total: true, status: true, createdAt: true }
+      }),
+      // Cuotas cobradas de facturas aún en partial (paidAt = mes en que se cobró)
+      prisma.installment.findMany({
+        where: {
+          organizationId: orgId,
+          status: 'paid',
+          paidAt: { gte: since },
+          invoice: { status: 'partial' }
+        },
+        select: { amount: true, paidAt: true }
+      })
+    ])
 
-    // Construir los 6 meses como estructura base
     const months = []
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
@@ -341,6 +378,14 @@ export const getInvoicesMonthly = async (req, res) => {
       if (!monthMap[key]) continue
       monthMap[key].issued += inv.total
       if (inv.status === 'paid') monthMap[key].paid += inv.total
+    }
+
+    // Sumar cuotas cobradas al mes en que se pagaron
+    for (const inst of paidInstallments) {
+      const d = new Date(inst.paidAt)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      if (!monthMap[key]) continue
+      monthMap[key].paid += inst.amount
     }
 
     return success(res, 200, months)

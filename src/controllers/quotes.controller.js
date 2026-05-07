@@ -296,7 +296,9 @@ export const getQuotesDashboard = async (req, res) => {
   try {
     const orgId = req.user.organizationId
     const now = new Date()
+    now.setUTCHours(0, 0, 0, 0)
     const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+    in7Days.setUTCHours(23, 59, 59, 999)
 
     const [byStatus, totals, expiringSoon] = await Promise.all([
       prisma.quote.groupBy({
