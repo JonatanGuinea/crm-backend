@@ -115,7 +115,8 @@ export const getInvoices = async (req, res) => {
         include: {
           client: { select: { id: true, name: true } },
           project: { select: { id: true, title: true } },
-          quote: { select: { id: true, number: true } }
+          quote: { select: { id: true, number: true } },
+          _count: { select: { installments: { where: { status: 'pending' } } } }
         },
         orderBy: { createdAt: 'desc' },
         skip,
