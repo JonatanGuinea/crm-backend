@@ -254,7 +254,9 @@ export const getInvoicesDashboard = async (req, res) => {
     const orgId = req.user.organizationId
     const now = new Date()
 
-    const [byStatus, totals, overdueAgg, pendingInstallmentsAgg, paidInstallmentsAgg, upcomingInstallments] = await Promise.all([
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+
+    const [byStatus, totals, overdueAgg, pendingInstallmentsAgg, paidInstallmentsAgg, upcomingInstallments, expensesMonth] = await Promise.all([
       prisma.invoice.groupBy({
         by: ['status'],
         where: { organizationId: orgId },
@@ -293,6 +295,11 @@ export const getInvoicesDashboard = async (req, res) => {
             select: { id: true, number: true, title: true, currency: true, client: { select: { id: true, name: true } } }
           }
         }
+      }),
+      // Egresos del mes actual
+      prisma.expense.aggregate({
+        where: { organizationId: orgId, date: { gte: startOfMonth } },
+        _sum: { amount: true }
       })
     ])
 
@@ -319,7 +326,8 @@ export const getInvoicesDashboard = async (req, res) => {
         sentCount,
         pending: draft?._sum.total || 0,
         pendingInstallments: pendingInstallmentsAgg._sum.amount || 0,
-        pendingInstallmentsCount: pendingInstallmentsAgg._count._all || 0
+        pendingInstallmentsCount: pendingInstallmentsAgg._count._all || 0,
+        expensesMonth: expensesMonth._sum.amount || 0
       },
       upcomingInstallments,
       byStatus: byStatus.map(s => ({
@@ -339,7 +347,7 @@ export const getInvoicesMonthly = async (req, res) => {
     const now = new Date()
     const since = new Date(now.getFullYear(), now.getMonth() - 11, 1)
 
-    const [invoices, paidInstallments] = await Promise.all([
+    const [invoices, paidInstallments, expenses] = await Promise.all([
       prisma.invoice.findMany({
         where: {
           organizationId: orgId,
@@ -357,6 +365,10 @@ export const getInvoicesMonthly = async (req, res) => {
           invoice: { status: 'partial' }
         },
         select: { amount: true, paidAt: true }
+      }),
+      prisma.expense.findMany({
+        where: { organizationId: orgId, date: { gte: since } },
+        select: { amount: true, date: true }
       })
     ])
 
@@ -367,7 +379,8 @@ export const getInvoicesMonthly = async (req, res) => {
         key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
         label: d.toLocaleDateString('es-AR', { month: 'short', year: '2-digit' }),
         paid: 0,
-        issued: 0
+        issued: 0,
+        expenses: 0
       })
     }
 
@@ -387,6 +400,14 @@ export const getInvoicesMonthly = async (req, res) => {
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       if (!monthMap[key]) continue
       monthMap[key].paid += inst.amount
+    }
+
+    // Sumar egresos por mes
+    for (const exp of expenses) {
+      const d = new Date(exp.date)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      if (!monthMap[key]) continue
+      monthMap[key].expenses += exp.amount
     }
 
     return success(res, 200, months)

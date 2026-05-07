@@ -27,6 +27,7 @@ model User {
   invoices           Invoice[]
   notifications      Notification[]
   attachments        Attachment[]
+  expenses           Expense[]
 }
 
 model Organization {
@@ -44,9 +45,11 @@ model Organization {
   projects    Project[]
   quotes        Quote[]
   invoices      Invoice[]
-  notifications Notification[]
-  attachments   Attachment[]
-  installments  Installment[]
+  notifications      Notification[]
+  attachments        Attachment[]
+  installments       Installment[]
+  expenseCategories  ExpenseCategory[]
+  expenses           Expense[]
 
   @@index([name])
 }
@@ -270,6 +273,40 @@ model Installment {
 
   @@index([invoiceId])
   @@index([organizationId])
+}
+
+// ─── Expenses ────────────────────────────────────────────────────────────────
+
+model ExpenseCategory {
+  id             String   @id @default(cuid())
+  name           String
+  isDefault      Boolean  @default(false)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  expenses       Expense[]
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model Expense {
+  id             String   @id @default(cuid())
+  title          String
+  amount         Float
+  date           DateTime
+  notes          String?
+  categoryId     String
+  category       ExpenseCategory @relation(fields: [categoryId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdById    String
+  createdBy      User @relation(fields: [createdById], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId, date(sort: Desc)])
+  @@index([organizationId, categoryId])
 }
 
 // ─── Attachments ─────────────────────────────────────────────────────────────
