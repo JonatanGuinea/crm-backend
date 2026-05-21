@@ -103,7 +103,8 @@ export const getQuotes = async (req, res) => {
         where,
         include: {
           client: { select: { id: true, name: true } },
-          project: { select: { id: true, title: true } }
+          project: { select: { id: true, title: true } },
+          _count: { select: { invoices: true } }
         },
         orderBy: { createdAt: 'desc' },
         skip,
