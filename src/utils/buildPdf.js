@@ -1,15 +1,28 @@
 import PDFDocument from 'pdfkit'
 
 const COLORS = {
-  primary: '#4F46E5',   // indigo
-  text: '#111827',
-  muted: '#6B7280',
-  border: '#E5E7EB',
-  rowAlt: '#F9FAFB',
+  headerBg:   '#1E293B',
+  headerText: '#FFFFFF',
+  accent:     '#0EA5E9',
+  accentMuted:'#E0F2FE',
+  text:       '#1E293B',
+  muted:      '#64748B',
+  border:     '#E2E8F0',
+  rowAlt:     '#F8FAFC',
+  totalBg:    '#1E293B',
+  totalText:  '#FFFFFF',
+  labelBg:    '#F1F5F9',
 }
 
-function fmt(n) {
-  return `$${Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+const STATUS_LABELS = {
+  draft: 'Borrador', sent: 'Enviado', approved: 'Aprobado',
+  rejected: 'Rechazado', expired: 'Vencido',
+  paid: 'Pagado', overdue: 'Vencido', cancelled: 'Cancelado', partial: 'Cuotas pendientes'
+}
+
+function fmt(n, currency = '') {
+  const sym = currency === 'USD' ? 'US$' : '$'
+  return `${sym}${Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function fmtDate(d) {
@@ -19,173 +32,193 @@ function fmtDate(d) {
 
 /**
  * @param {'quote'|'invoice'} type
- * @param {object} data  — el objeto completo del quote/invoice (con items, client, project, organization)
- * @returns {PDFDocument}
+ * @param {object} data — quote/invoice con items, client, project, organization
  */
 export function buildPdf(type, data) {
-  const doc = new PDFDocument({ margin: 50, size: 'A4' })
+  const doc = new PDFDocument({ margin: 0, size: 'A4' })
 
   const isQuote = type === 'quote'
   const docLabel = isQuote ? 'PRESUPUESTO' : 'FACTURA'
-  const pageWidth = doc.page.width
-  const contentWidth = pageWidth - 100  // margins 50 each side
+  const pageW = doc.page.width   // 595
+  const pageH = doc.page.height  // 842
+  const pad = 48
 
-  // ── Header ──────────────────────────────────────────────────────────────
-  doc
-    .font('Helvetica-Bold')
-    .fontSize(20)
-    .fillColor(COLORS.primary)
-    .text(data.organization?.name || 'Mi organización', 50, 50)
+  // ── Header band ─────────────────────────────────────────────────────────
+  const headerH = 72
+  doc.rect(0, 0, pageW, headerH).fillColor(COLORS.headerBg).fill()
 
+  // Org name (left)
   doc
-    .font('Helvetica-Bold')
-    .fontSize(20)
-    .fillColor(COLORS.text)
-    .text(`${docLabel} #${data.number}`, 50, 50, { align: 'right', width: contentWidth })
+    .font('Helvetica-Bold').fontSize(16).fillColor(COLORS.headerText)
+    .text(data.organization?.name || 'Organización', pad, 24, { width: 260 })
 
+  // Doc label + number (right)
   doc
-    .font('Helvetica')
-    .fontSize(10)
-    .fillColor(COLORS.muted)
-    .text(fmtDate(data.createdAt), 50, 76, { align: 'right', width: contentWidth })
+    .font('Helvetica-Bold').fontSize(15).fillColor(COLORS.headerText)
+    .text(`${docLabel}`, pageW - pad - 200, 18, { width: 200, align: 'right' })
+  doc
+    .font('Helvetica').fontSize(12).fillColor('#94A3B8')
+    .text(`N° ${data.number}`, pageW - pad - 200, 38, { width: 200, align: 'right' })
 
-  // Divider
-  doc
-    .moveTo(50, 100)
-    .lineTo(pageWidth - 50, 100)
-    .lineWidth(1)
-    .strokeColor(COLORS.primary)
-    .stroke()
+  // ── Info section (client left, doc details right) ────────────────────────
+  const infoTop = headerH + 24
+  const colW = (pageW - pad * 2 - 20) / 2
 
-  // ── Client + Doc info ────────────────────────────────────────────────────
-  const infoTop = 115
-  const halfWidth = contentWidth / 2 - 10
-
-  // Client block (left)
+  // Left: client block
   doc
-    .font('Helvetica-Bold').fontSize(9).fillColor(COLORS.muted)
-    .text('CLIENTE', 50, infoTop)
+    .font('Helvetica-Bold').fontSize(7).fillColor(COLORS.muted)
+    .text('CLIENTE', pad, infoTop)
   doc
-    .font('Helvetica-Bold').fontSize(12).fillColor(COLORS.text)
-    .text(data.client?.name || '—', 50, infoTop + 14)
+    .font('Helvetica-Bold').fontSize(13).fillColor(COLORS.text)
+    .text(data.client?.name || '—', pad, infoTop + 11, { width: colW })
 
   let clientY = infoTop + 30
-  const clientDetails = [
+  const clientLines = [
     data.client?.company,
+    data.client?.cuit ? `CUIL/CUIT: ${data.client.cuit}` : null,
     data.client?.email,
     data.client?.phone,
+    data.client?.address,
   ].filter(Boolean)
-  clientDetails.forEach(line => {
-    doc.font('Helvetica').fontSize(10).fillColor(COLORS.muted).text(line, 50, clientY)
-    clientY += 14
+  clientLines.forEach(line => {
+    doc.font('Helvetica').fontSize(9).fillColor(COLORS.muted).text(line, pad, clientY, { width: colW })
+    clientY += 13
   })
 
-  // Doc info block (right)
-  const rightX = 50 + halfWidth + 20
+  // Right: doc info block
+  const rightX = pad + colW + 20
   const infoRows = isQuote
     ? [
-        ['Estado', data.status],
-        ['Moneda', data.currency],
-        data.project ? ['Proyecto', data.project.title] : null,
+        ['Fecha',        fmtDate(data.createdAt)],
+        ['Estado',       STATUS_LABELS[data.status] || data.status],
+        ['Moneda',       data.currency],
+        data.project    ? ['Proyecto',    data.project.title]      : null,
         data.validUntil ? ['Válido hasta', fmtDate(data.validUntil)] : null,
       ].filter(Boolean)
     : [
-        ['Estado', data.status],
-        ['Moneda', data.currency],
-        data.project ? ['Proyecto', data.project.title] : null,
-        data.dueDate ? ['Vencimiento', fmtDate(data.dueDate)] : null,
+        ['Fecha',        fmtDate(data.createdAt)],
+        ['Estado',       STATUS_LABELS[data.status] || data.status],
+        ['Moneda',       data.currency],
+        data.project  ? ['Proyecto',     data.project.title]    : null,
+        data.dueDate  ? ['Vencimiento',  fmtDate(data.dueDate)] : null,
       ].filter(Boolean)
 
   let rowY = infoTop
   infoRows.forEach(([label, value]) => {
-    doc.font('Helvetica-Bold').fontSize(9).fillColor(COLORS.muted).text(label.toUpperCase(), rightX, rowY)
-    doc.font('Helvetica').fontSize(10).fillColor(COLORS.text).text(String(value), rightX + 90, rowY)
-    rowY += 18
+    doc
+      .font('Helvetica-Bold').fontSize(7).fillColor(COLORS.muted)
+      .text(label.toUpperCase(), rightX, rowY, { width: 85 })
+    doc
+      .font('Helvetica').fontSize(9).fillColor(COLORS.text)
+      .text(String(value), rightX + 90, rowY, { width: colW - 90 })
+    rowY += 16
   })
+
+  // Divider
+  const divY = Math.max(clientY, rowY) + 16
+  doc.moveTo(pad, divY).lineTo(pageW - pad, divY).lineWidth(0.5).strokeColor(COLORS.border).stroke()
 
   // ── Items table ──────────────────────────────────────────────────────────
-  const tableTop = Math.max(clientY, rowY) + 24
+  const tableTop = divY + 16
+  const tableW = pageW - pad * 2
+  const colDesc = tableW * 0.46
+  const colQty  = tableW * 0.12
+  const colUnit = tableW * 0.20
+  const colAmt  = tableW * 0.22
 
-  // Table header
-  doc
-    .rect(50, tableTop, contentWidth, 22)
-    .fillColor(COLORS.primary)
-    .fill()
+  const xDesc = pad
+  const xQty  = pad + colDesc
+  const xUnit = pad + colDesc + colQty
+  const xAmt  = pad + colDesc + colQty + colUnit
 
-  doc.font('Helvetica-Bold').fontSize(9).fillColor('#FFFFFF')
-  doc.text('DESCRIPCIÓN',    58, tableTop + 7)
-  doc.text('CANT.',          330, tableTop + 7)
-  doc.text('PRECIO UNIT.',   380, tableTop + 7)
-  doc.text('TOTAL',          460, tableTop + 7, { width: contentWidth - 410, align: 'right' })
+  // Header row
+  doc.rect(pad, tableTop, tableW, 24).fillColor(COLORS.headerBg).fill()
+  doc.font('Helvetica-Bold').fontSize(8).fillColor(COLORS.headerText)
+  doc.text('DESCRIPCIÓN',  xDesc + 6, tableTop + 8, { width: colDesc - 8 })
+  doc.text('CANT.',        xQty,      tableTop + 8, { width: colQty,  align: 'right' })
+  doc.text('PRECIO UNIT.', xUnit,     tableTop + 8, { width: colUnit, align: 'right' })
+  doc.text('TOTAL',        xAmt,      tableTop + 8, { width: colAmt - 6, align: 'right' })
 
-  // Table rows
-  let y = tableTop + 22
-  data.items?.forEach((item, i) => {
+  // Item rows
+  let y = tableTop + 24
+  const rowH = 22
+  ;(data.items || []).forEach((item, i) => {
     const bg = i % 2 === 0 ? '#FFFFFF' : COLORS.rowAlt
-    doc.rect(50, y, contentWidth, 20).fillColor(bg).fill()
+    doc.rect(pad, y, tableW, rowH).fillColor(bg).fill()
     doc.font('Helvetica').fontSize(9).fillColor(COLORS.text)
-    doc.text(item.description, 58, y + 6, { width: 265, ellipsis: true })
-    doc.text(String(item.quantity), 330, y + 6, { width: 45 })
-    doc.text(fmt(item.unitPrice), 380, y + 6, { width: 75 })
-    doc.text(fmt(item.amount), 460, y + 6, { width: contentWidth - 410, align: 'right' })
-    y += 20
+    doc.text(item.description, xDesc + 6, y + 7, { width: colDesc - 12, ellipsis: true })
+    doc.text(String(item.quantity), xQty, y + 7, { width: colQty, align: 'right' })
+    doc.text(fmt(item.unitPrice), xUnit, y + 7, { width: colUnit, align: 'right' })
+    doc.text(fmt(item.amount), xAmt, y + 7, { width: colAmt - 6, align: 'right' })
+    y += rowH
   })
 
-  // Border around table
-  doc
-    .rect(50, tableTop, contentWidth, y - tableTop)
-    .lineWidth(0.5)
-    .strokeColor(COLORS.border)
-    .stroke()
+  // Table border
+  doc.rect(pad, tableTop, tableW, y - tableTop).lineWidth(0.5).strokeColor(COLORS.border).stroke()
 
-  // ── Totals ───────────────────────────────────────────────────────────────
-  y += 12
-  const subtotal = Number(data.subtotal)
-  const total = Number(data.total)
+  // ── Notes / scope ────────────────────────────────────────────────────────
+  if (data.notes) {
+    y += 20
+    doc
+      .font('Helvetica-Bold').fontSize(8).fillColor(COLORS.muted)
+      .text('ALCANCE / NOTAS', pad, y)
+    y += 13
+    doc
+      .font('Helvetica').fontSize(9).fillColor(COLORS.text)
+      .text(data.notes, pad, y, { width: tableW, lineGap: 2 })
+    y = doc.y + 12
+  } else {
+    y += 20
+  }
+
+  // ── Bottom section: totals (right) ──────────────────────────────────────
+  const subtotal  = Number(data.subtotal)
+  const total     = Number(data.total)
   const taxAmount = total - subtotal
-  const totalsX = pageWidth - 50 - 200
-  const totalsLabelW = 120
-  const totalsValueW = 80
 
-  function totalRow(label, value, bold = false) {
+  // Totals box (right-aligned)
+  const boxW  = 220
+  const boxX  = pageW - pad - boxW
+  const lineH = 20
+
+  let ty = y
+
+  function totalsLine(label, value, bold = false) {
     doc
       .font(bold ? 'Helvetica-Bold' : 'Helvetica')
-      .fontSize(bold ? 11 : 10)
+      .fontSize(bold ? 10 : 9)
       .fillColor(bold ? COLORS.text : COLORS.muted)
-      .text(label, totalsX, y, { width: totalsLabelW, align: 'right' })
-      .text(value, totalsX + totalsLabelW + 8, y, { width: totalsValueW, align: 'right' })
-    y += bold ? 18 : 16
+      .text(label, boxX, ty, { width: 115, align: 'right' })
+      .text(value,  boxX + 120, ty, { width: boxW - 120, align: 'right' })
+    ty += lineH
   }
 
-  totalRow('Subtotal:', fmt(subtotal))
+  totalsLine('Subtotal:', fmt(subtotal))
   if (data.taxRate > 0) {
-    totalRow(`IVA (${data.taxRate}%):`, fmt(taxAmount))
+    totalsLine(`IVA (${data.taxRate}%):`, fmt(taxAmount))
   }
 
-  // Divider before total
+  // Divider
+  doc.moveTo(boxX, ty).lineTo(pageW - pad, ty).lineWidth(0.5).strokeColor(COLORS.border).stroke()
+  ty += 6
+
+  // Total highlighted box
+  const totalBoxH = 36
+  doc.rect(boxX, ty, boxW, totalBoxH).fillColor(COLORS.totalBg).fill()
   doc
-    .moveTo(totalsX, y).lineTo(pageWidth - 50, y)
-    .lineWidth(0.5).strokeColor(COLORS.border).stroke()
-  y += 6
-  totalRow(`Total ${data.currency}:`, fmt(total), true)
-
-  // ── Notes ────────────────────────────────────────────────────────────────
-  if (data.notes) {
-    y += 16
-    doc.font('Helvetica-Bold').fontSize(9).fillColor(COLORS.muted).text('NOTAS', 50, y)
-    y += 14
-    doc.font('Helvetica').fontSize(10).fillColor(COLORS.text).text(data.notes, 50, y, { width: contentWidth })
-  }
+    .font('Helvetica').fontSize(8).fillColor('#94A3B8')
+    .text(`TOTAL ${data.currency}`, boxX + 10, ty + 6, { width: 90 })
+  doc
+    .font('Helvetica-Bold').fontSize(15).fillColor(COLORS.totalText)
+    .text(fmt(total, data.currency), boxX + 10, ty + 14, { width: boxW - 20, align: 'right' })
 
   // ── Footer ───────────────────────────────────────────────────────────────
   doc
-    .font('Helvetica')
-    .fontSize(8)
-    .fillColor(COLORS.muted)
+    .font('Helvetica').fontSize(7.5).fillColor(COLORS.muted)
     .text(
-      `${docLabel} #${data.number} · Generado el ${fmtDate(new Date())}`,
-      50, doc.page.height - 40,
-      { align: 'center', width: contentWidth }
+      `${docLabel} N° ${data.number}  ·  Generado el ${fmtDate(new Date())}`,
+      pad, pageH - 30,
+      { align: 'center', width: pageW - pad * 2 }
     )
 
   doc.end()

@@ -17,6 +17,7 @@ import invitationsRoutes from './routes/invitations.routes.js'
 import activityRoutes from './routes/activity.routes.js'
 import installmentsRoutes from './routes/installments.routes.js'
 import expensesRoutes from './routes/expenses.routes.js'
+import publicRoutes from './routes/public.routes.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -40,7 +41,6 @@ app.use('/api/invitations', invitationsRoutes)
 app.use('/api/activity', activityRoutes)
 app.use('/api/installments', installmentsRoutes)
 app.use('/api/expenses', expensesRoutes)
-
-
+app.use('/api/public', publicRoutes)
 
 export default app
