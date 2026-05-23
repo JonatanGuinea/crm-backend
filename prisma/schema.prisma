@@ -95,6 +95,8 @@ model Client {
   email          String?
   phone          String?
   company        String?
+  address        String?
+  cuit           String?
   notes          String?
   organizationId String
   createdById    String

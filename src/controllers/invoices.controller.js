@@ -253,41 +253,43 @@ export const getInvoicesDashboard = async (req, res) => {
   try {
     const orgId = req.user.organizationId
     const now = new Date()
+    const { currency } = req.query
 
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const currencyFilter = currency ? { currency } : {}
 
     const [byStatus, totals, overdueAgg, pendingInstallmentsAgg, paidInstallmentsAgg, upcomingInstallments, expensesMonth] = await Promise.all([
       prisma.invoice.groupBy({
         by: ['status'],
-        where: { organizationId: orgId },
+        where: { organizationId: orgId, ...currencyFilter },
         _count: { status: true },
         _sum: { total: true }
       }),
       prisma.invoice.aggregate({
-        where: { organizationId: orgId },
+        where: { organizationId: orgId, ...currencyFilter },
         _count: { _all: true },
         _sum: { total: true }
       }),
       // Vencidas: enviadas con fecha de vencimiento pasada
       prisma.invoice.aggregate({
-        where: { organizationId: orgId, status: 'sent', dueDate: { lt: now } },
+        where: { organizationId: orgId, status: 'sent', dueDate: { lt: now }, ...currencyFilter },
         _count: { _all: true },
         _sum: { total: true }
       }),
       // Cuotas pendientes de pago
       prisma.installment.aggregate({
-        where: { organizationId: orgId, status: 'pending' },
+        where: { organizationId: orgId, status: 'pending', ...(currency ? { invoice: { currency } } : {}) },
         _sum: { amount: true },
         _count: { _all: true }
       }),
       // Cuotas ya cobradas (de facturas aún en partial)
       prisma.installment.aggregate({
-        where: { organizationId: orgId, status: 'paid', invoice: { status: 'partial' } },
+        where: { organizationId: orgId, status: 'paid', invoice: { status: 'partial', ...(currency ? { currency } : {}) } },
         _sum: { amount: true }
       }),
       // Próximas cuotas a cobrar
       prisma.installment.findMany({
-        where: { organizationId: orgId, status: 'pending' },
+        where: { organizationId: orgId, status: 'pending', ...(currency ? { invoice: { currency } } : {}) },
         orderBy: { dueDate: 'asc' },
         take: 6,
         include: {
@@ -296,7 +298,7 @@ export const getInvoicesDashboard = async (req, res) => {
           }
         }
       }),
-      // Egresos del mes actual
+      // Egresos del mes actual (sin filtro de moneda — los egresos no tienen currency)
       prisma.expense.aggregate({
         where: { organizationId: orgId, date: { gte: startOfMonth } },
         _sum: { amount: true }
@@ -346,13 +348,16 @@ export const getInvoicesMonthly = async (req, res) => {
     const orgId = req.user.organizationId
     const now = new Date()
     const since = new Date(now.getFullYear(), now.getMonth() - 11, 1)
+    const { currency } = req.query
+    const currencyFilter = currency ? { currency } : {}
 
     const [invoices, paidInstallments, expenses] = await Promise.all([
       prisma.invoice.findMany({
         where: {
           organizationId: orgId,
           status: { in: ['paid', 'sent', 'overdue', 'partial'] },
-          createdAt: { gte: since }
+          createdAt: { gte: since },
+          ...currencyFilter
         },
         select: { total: true, status: true, createdAt: true }
       }),
@@ -362,7 +367,7 @@ export const getInvoicesMonthly = async (req, res) => {
           organizationId: orgId,
           status: 'paid',
           paidAt: { gte: since },
-          invoice: { status: 'partial' }
+          invoice: { status: 'partial', ...(currency ? { currency } : {}) }
         },
         select: { amount: true, paidAt: true }
       }),

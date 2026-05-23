@@ -311,16 +311,18 @@ export const getQuotesDashboard = async (req, res) => {
     now.setUTCHours(0, 0, 0, 0)
     const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
     in7Days.setUTCHours(23, 59, 59, 999)
+    const { currency } = req.query
+    const currencyFilter = currency ? { currency } : {}
 
     const [byStatus, totals, expiringSoon] = await Promise.all([
       prisma.quote.groupBy({
         by: ['status'],
-        where: { organizationId: orgId },
+        where: { organizationId: orgId, ...currencyFilter },
         _count: { status: true },
         _sum: { total: true }
       }),
       prisma.quote.aggregate({
-        where: { organizationId: orgId },
+        where: { organizationId: orgId, ...currencyFilter },
         _count: { _all: true },
         _sum: { total: true }
       }),
@@ -328,7 +330,8 @@ export const getQuotesDashboard = async (req, res) => {
         where: {
           organizationId: orgId,
           status: { in: ['draft', 'sent'] },
-          validUntil: { gte: now, lte: in7Days }
+          validUntil: { gte: now, lte: in7Days },
+          ...currencyFilter
         },
         select: {
           id: true, number: true, title: true, validUntil: true, total: true,
