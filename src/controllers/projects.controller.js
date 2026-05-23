@@ -227,6 +227,18 @@ export const deleteProject = async (req, res) => {
       return fail(res, 404, "Proyecto no encontrado")
     }
 
+    const [quoteCount, invoiceCount] = await Promise.all([
+      prisma.quote.count({ where: { projectId: id } }),
+      prisma.invoice.count({ where: { projectId: id } })
+    ])
+
+    if (quoteCount > 0 || invoiceCount > 0) {
+      const parts = []
+      if (quoteCount > 0) parts.push(`${quoteCount} presupuesto${quoteCount > 1 ? 's' : ''}`)
+      if (invoiceCount > 0) parts.push(`${invoiceCount} factura${invoiceCount > 1 ? 's' : ''}`)
+      return fail(res, 400, `No se puede eliminar el proyecto porque tiene ${parts.join(' y ')} asociado${parts.length > 1 ? 's' : ''}`)
+    }
+
     await prisma.project.delete({ where: { id } })
 
     return success(res, 200, { message: "Proyecto eliminado correctamente" })

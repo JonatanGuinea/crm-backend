@@ -145,6 +145,20 @@ export const deleteClient = async (req, res) => {
     if (!existing)
       return fail(res, 404, "Cliente no encontrado")
 
+    const [projectCount, quoteCount, invoiceCount] = await Promise.all([
+      prisma.project.count({ where: { clientId: id } }),
+      prisma.quote.count({ where: { clientId: id } }),
+      prisma.invoice.count({ where: { clientId: id } })
+    ])
+
+    if (projectCount > 0 || quoteCount > 0 || invoiceCount > 0) {
+      const parts = []
+      if (projectCount > 0) parts.push(`${projectCount} proyecto${projectCount > 1 ? 's' : ''}`)
+      if (quoteCount > 0) parts.push(`${quoteCount} presupuesto${quoteCount > 1 ? 's' : ''}`)
+      if (invoiceCount > 0) parts.push(`${invoiceCount} factura${invoiceCount > 1 ? 's' : ''}`)
+      return fail(res, 400, `No se puede eliminar el cliente porque tiene ${parts.join(', ')} asociado${parts.length > 1 ? 's' : ''}`)
+    }
+
     await prisma.client.delete({ where: { id } })
 
     return success(res, 200, { message: "Cliente eliminado correctamente" })

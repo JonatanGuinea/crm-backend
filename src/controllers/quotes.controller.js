@@ -45,9 +45,10 @@ export const createQuote = async (req, res) => {
     if (projectId) {
       const projectExists = await prisma.project.findFirst({
         where: { id: projectId, organizationId: orgId },
-        select: { id: true }
+        select: { id: true, clientId: true }
       })
       if (!projectExists) return fail(res, 404, 'Proyecto no encontrado en esta organización')
+      if (projectExists.clientId !== clientId) return fail(res, 400, 'El proyecto no pertenece al cliente seleccionado')
     }
 
     const last = await prisma.quote.findFirst({
@@ -151,6 +152,16 @@ export const updateQuote = async (req, res) => {
 
     const updates = {}
     const { status, title, notes, validUntil, taxRate, currency, items } = req.body
+
+    if (quote.status === 'approved') {
+      const hasContentChange = [title, notes, validUntil, taxRate, currency, items].some(v => v !== undefined)
+      if (hasContentChange) {
+        const invoiceCount = await prisma.invoice.count({ where: { quoteId: id } })
+        if (invoiceCount > 0) {
+          return fail(res, 400, 'No se puede modificar un presupuesto aprobado que ya tiene facturas asociadas')
+        }
+      }
+    }
 
     if (status && status !== quote.status) {
       const allowed = allowedTransitions[quote.status] || []
