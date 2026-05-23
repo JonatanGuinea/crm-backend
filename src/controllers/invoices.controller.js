@@ -298,9 +298,9 @@ export const getInvoicesDashboard = async (req, res) => {
           }
         }
       }),
-      // Egresos del mes actual (sin filtro de moneda — los egresos no tienen currency)
+      // Egresos del mes actual
       prisma.expense.aggregate({
-        where: { organizationId: orgId, date: { gte: startOfMonth } },
+        where: { organizationId: orgId, date: { gte: startOfMonth }, ...currencyFilter },
         _sum: { amount: true }
       })
     ])
@@ -372,7 +372,7 @@ export const getInvoicesMonthly = async (req, res) => {
         select: { amount: true, paidAt: true }
       }),
       prisma.expense.findMany({
-        where: { organizationId: orgId, date: { gte: since } },
+        where: { organizationId: orgId, date: { gte: since }, ...currencyFilter },
         select: { amount: true, date: true }
       })
     ])

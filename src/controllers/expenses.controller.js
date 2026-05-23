@@ -100,7 +100,7 @@ export const createExpense = async (req, res) => {
   try {
     const orgId = req.user.organizationId
     const userId = req.user.id
-    const { title, amount, date, categoryId, notes } = req.body
+    const { title, amount, currency = 'USD', date, categoryId, notes } = req.body
 
     if (!title || !amount || !date || !categoryId) {
       return fail(res, 400, 'Título, monto, fecha y categoría son requeridos')
@@ -113,6 +113,7 @@ export const createExpense = async (req, res) => {
       data: {
         title,
         amount: parseFloat(amount),
+        currency,
         date: new Date(date),
         notes: notes || null,
         categoryId,
@@ -132,7 +133,7 @@ export const updateExpense = async (req, res) => {
   try {
     const orgId = req.user.organizationId
     const { id } = req.params
-    const { title, amount, date, categoryId, notes } = req.body
+    const { title, amount, currency, date, categoryId, notes } = req.body
 
     const expense = await prisma.expense.findFirst({ where: { id, organizationId: orgId } })
     if (!expense) return fail(res, 404, 'Egreso no encontrado')
@@ -140,6 +141,7 @@ export const updateExpense = async (req, res) => {
     const updates = {}
     if (title !== undefined) updates.title = title
     if (amount !== undefined) updates.amount = parseFloat(amount)
+    if (currency !== undefined) updates.currency = currency
     if (date !== undefined) updates.date = new Date(date)
     if (notes !== undefined) updates.notes = notes || null
     if (categoryId !== undefined) {

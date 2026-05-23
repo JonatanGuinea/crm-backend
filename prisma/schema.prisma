@@ -296,6 +296,7 @@ model Expense {
   id             String   @id @default(cuid())
   title          String
   amount         Float
+  currency       String   @default("USD")
   date           DateTime
   notes          String?
   categoryId     String
