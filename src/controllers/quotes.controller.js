@@ -361,7 +361,7 @@ export const getQuotesDashboard = async (req, res) => {
     twelveMonthsAgo.setDate(1)
     twelveMonthsAgo.setUTCHours(0, 0, 0, 0)
 
-    const [byStatus, totals, expiringSoon, recent, installments, monthlyRaw] = await Promise.all([
+    const [byStatus, totals, expiringSoon, recent, installments, monthlyRaw, monthlyExpenses] = await Promise.all([
       prisma.quote.groupBy({
         by: ['status'],
         where: { organizationId: orgId, ...currencyFilter },
@@ -421,6 +421,13 @@ export const getQuotesDashboard = async (req, res) => {
           createdAt: { gte: twelveMonthsAgo }
         },
         select: { createdAt: true, total: true, status: true }
+      }),
+      prisma.expense.findMany({
+        where: {
+          organizationId: orgId,
+          date: { gte: twelveMonthsAgo }
+        },
+        select: { date: true, amount: true }
       })
     ])
 
@@ -431,7 +438,7 @@ export const getQuotesDashboard = async (req, res) => {
       d.setMonth(d.getMonth() - i)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       const label = d.toLocaleDateString('es-AR', { month: 'short' })
-      monthlyMap[key] = { key, label, issued: 0, approved: 0 }
+      monthlyMap[key] = { key, label, issued: 0, approved: 0, expenses: 0 }
     }
     monthlyRaw.forEach(q => {
       const d = new Date(q.createdAt)
@@ -439,6 +446,13 @@ export const getQuotesDashboard = async (req, res) => {
       if (monthlyMap[key]) {
         monthlyMap[key].issued += Number(q.total) || 0
         if (q.status === 'approved') monthlyMap[key].approved += Number(q.total) || 0
+      }
+    })
+    monthlyExpenses.forEach(e => {
+      const d = new Date(e.date)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      if (monthlyMap[key]) {
+        monthlyMap[key].expenses += Number(e.amount) || 0
       }
     })
 
