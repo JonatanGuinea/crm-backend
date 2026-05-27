@@ -6,10 +6,11 @@ import { buildPdf } from '../utils/buildPdf.js'
 const router = Router()
 
 const quotePublicInclude = {
-  items: { orderBy: { createdAt: 'asc' } },
-  client: { select: { id: true, name: true, email: true, phone: true, company: true, address: true, cuit: true } },
+  items: true,
+  installments: { orderBy: { number: 'asc' } },
+  client: { select: { id: true, name: true, email: true, phone: true, company: true, address: true, cuit: true, website: true } },
   project: { select: { id: true, title: true } },
-  organization: { select: { id: true, name: true } }
+  organization: { select: { id: true, name: true, cuit: true, email: true, website: true, phone: true, address: true, logo: true } }
 }
 
 router.get('/quotes/:id', async (req, res) => {

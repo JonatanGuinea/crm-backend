@@ -1,9 +1,15 @@
 import prisma from '../config/db.js'
 import { success, fail } from '../utils/response.js'
+import path from 'path'
+import fs from 'fs'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const uploadsDir = path.join(__dirname, '..', '..', 'uploads')
 
 export const createOrganization = async (req, res) => {
   try {
-    const { name } = req.body
+    const { name, cuit, email, website, phone, address } = req.body
     const userId = req.user.id
 
     if (!name) {
@@ -32,7 +38,14 @@ export const createOrganization = async (req, res) => {
     }
 
     const organization = await prisma.organization.create({
-      data: { name, ownerId: userId, slug }
+      data: {
+        name, ownerId: userId, slug,
+        cuit:    cuit?.trim()    || null,
+        email:   email?.trim()   || null,
+        website: website?.trim() || null,
+        phone:   phone?.trim()   || null,
+        address: address?.trim() || null,
+      }
     })
 
     await prisma.organizationMembership.create({
@@ -57,7 +70,7 @@ export const getOrganizations = async (req, res) => {
 
     const memberships = await prisma.organizationMembership.findMany({
       where: { userId, status: 'active' },
-      include: { organization: { select: { id: true, name: true, plan: true } } }
+      include: { organization: { select: { id: true, name: true, plan: true, cuit: true, email: true, website: true, phone: true, address: true, logo: true } } }
     })
 
     if (memberships.length === 0) {
@@ -65,10 +78,16 @@ export const getOrganizations = async (req, res) => {
     }
 
     const organizations = memberships.map(m => ({
-      id: m.organization.id,
-      name: m.organization.name,
-      plan: m.organization.plan,
-      role: m.role
+      id:      m.organization.id,
+      name:    m.organization.name,
+      plan:    m.organization.plan,
+      cuit:    m.organization.cuit,
+      email:   m.organization.email,
+      website: m.organization.website,
+      phone:   m.organization.phone,
+      address: m.organization.address,
+      logo:    m.organization.logo,
+      role:    m.role
     }))
 
     return success(res, 200, organizations)
@@ -97,13 +116,21 @@ export const getOrganizationBySlug = async (req, res) => {
 export const updateOrganization = async (req, res) => {
   try {
     const { id } = req.params
-    const { name } = req.body
+    const { name, cuit, email, website } = req.body
 
     if (!name?.trim()) {
       return fail(res, 400, 'El nombre es requerido')
     }
 
-    const updates = { name: name.trim() }
+    const { phone, address } = req.body
+    const updates = {
+      name:    name.trim(),
+      cuit:    cuit?.trim()    || null,
+      email:   email?.trim()   || null,
+      website: website?.trim() || null,
+      phone:   phone?.trim()   || null,
+      address: address?.trim() || null,
+    }
 
     const newSlug = name
       .toLowerCase()
@@ -120,7 +147,7 @@ export const updateOrganization = async (req, res) => {
     const organization = await prisma.organization.update({
       where: { id },
       data: updates,
-      select: { id: true, name: true, slug: true, plan: true, updatedAt: true }
+      select: { id: true, name: true, slug: true, plan: true, cuit: true, email: true, website: true, phone: true, address: true, logo: true, updatedAt: true }
     })
 
     return success(res, 200, organization)
@@ -160,6 +187,28 @@ export const deleteOrganization = async (req, res) => {
     if (error.code === 'P2025') {
       return fail(res, 404, 'Organización no encontrada')
     }
+    return fail(res, 500, error.message)
+  }
+}
+
+export const uploadOrgLogo = async (req, res) => {
+  try {
+    const { id } = req.params
+    if (!req.file) return fail(res, 400, 'No se recibió ninguna imagen')
+
+    const current = await prisma.organization.findFirst({ where: { id }, select: { logo: true } })
+    if (current?.logo) {
+      fs.unlink(path.join(uploadsDir, current.logo), () => {})
+    }
+
+    const org = await prisma.organization.update({
+      where: { id },
+      data: { logo: req.file.filename },
+      select: { id: true, logo: true }
+    })
+
+    return success(res, 200, org)
+  } catch (error) {
     return fail(res, 500, error.message)
   }
 }

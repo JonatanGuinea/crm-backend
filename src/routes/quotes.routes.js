@@ -11,7 +11,8 @@ import {
   getQuotesDashboard,
   updateQuote,
   deleteQuote,
-  createInvoiceFromQuote
+  createInvoiceFromQuote,
+  sendQuote
 } from '../controllers/quotes.controller.js'
 import { downloadQuotePdf } from '../controllers/pdf.controller.js'
 
@@ -60,6 +61,14 @@ router.delete(
   requireMembership,
   requireRole('owner'),
   deleteQuote
+)
+
+router.post(
+  '/:id/send',
+  auth,
+  requireMembership,
+  requireRole('owner', 'admin'),
+  sendQuote
 )
 
 router.post(

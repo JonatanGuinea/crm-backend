@@ -8,8 +8,10 @@ import {
   getOrganizations,
   getOrganizationBySlug,
   updateOrganization,
-  deleteOrganization
+  deleteOrganization,
+  uploadOrgLogo
 } from '../controllers/organizations.controller.js'
+import { upload } from '../middlewares/upload.middleware.js'
 
 import {
   inviteUser,
@@ -28,6 +30,8 @@ router.post('/', auth, createOrganization)
 router.patch('/:id', auth, requireMembership, requireRole('owner', 'admin'), updateOrganization)
 
 router.delete('/:id', auth, deleteOrganization)
+
+router.post('/:id/logo', auth, requireMembership, requireRole('owner', 'admin'), upload.single('logo'), uploadOrgLogo)
 
 // Members
 router.post('/:id/members', auth, requireMembership, requireRole('owner', 'admin'), inviteUser)

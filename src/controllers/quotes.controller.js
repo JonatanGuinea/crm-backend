@@ -304,6 +304,47 @@ export const createInvoiceFromQuote = async (req, res) => {
   }
 }
 
+export const sendQuote = async (req, res) => {
+  try {
+    const orgId = req.user.organizationId
+    const { id } = req.params
+
+    const quote = await prisma.quote.findFirst({
+      where: { id, organizationId: orgId },
+      include: {
+        client: { select: { id: true, name: true, email: true } },
+        items: true
+      }
+    })
+    if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
+    if (quote.status !== 'draft') return fail(res, 400, 'Solo se pueden enviar presupuestos en borrador')
+    if (!quote.client?.email) return fail(res, 400, `El cliente "${quote.client?.name}" no tiene email asignado. Agregá un email desde el perfil del cliente antes de enviar.`)
+
+    // TODO: Implementar servicio de mensajería
+    // Cuando se defina el servicio (ej. Resend, SendGrid, Nodemailer), agregar aquí:
+    //
+    // await emailService.sendQuotePdf({
+    //   to: quote.client.email,
+    //   clientName: quote.client.name,
+    //   quoteId: id,
+    //   quoteNumber: quote.number,
+    //   quoteTitle: quote.title,
+    //   total: quote.total,
+    //   currency: quote.currency,
+    //   organizationId: orgId
+    // })
+
+    const updated = await prisma.quote.update({
+      where: { id },
+      data: { status: 'sent' }
+    })
+
+    return success(res, 200, updated)
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
+
 export const getQuotesDashboard = async (req, res) => {
   try {
     const orgId = req.user.organizationId
@@ -314,7 +355,13 @@ export const getQuotesDashboard = async (req, res) => {
     const { currency } = req.query
     const currencyFilter = currency ? { currency } : {}
 
-    const [byStatus, totals, expiringSoon] = await Promise.all([
+    // Últimos 12 meses para el gráfico
+    const twelveMonthsAgo = new Date(now)
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11)
+    twelveMonthsAgo.setDate(1)
+    twelveMonthsAgo.setUTCHours(0, 0, 0, 0)
+
+    const [byStatus, totals, expiringSoon, recent, installments, monthlyRaw] = await Promise.all([
       prisma.quote.groupBy({
         by: ['status'],
         where: { organizationId: orgId, ...currencyFilter },
@@ -338,20 +385,84 @@ export const getQuotesDashboard = async (req, res) => {
           client: { select: { id: true, name: true } }
         },
         orderBy: { validUntil: 'asc' }
+      }),
+      prisma.quote.findMany({
+        where: { organizationId: orgId, ...currencyFilter },
+        select: {
+          id: true, number: true, title: true, status: true, total: true, currency: true, createdAt: true,
+          client: { select: { id: true, name: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 5
+      }),
+      prisma.installment.findMany({
+        where: {
+          organizationId: orgId,
+          quoteId: { not: null },
+          status: 'pending',
+          dueDate: { gte: now }
+        },
+        select: {
+          id: true, number: true, amount: true, dueDate: true, status: true,
+          quote: {
+            select: {
+              id: true, number: true, currency: true,
+              client: { select: { id: true, name: true } }
+            }
+          }
+        },
+        orderBy: { dueDate: 'asc' },
+        take: 5
+      }),
+      prisma.quote.findMany({
+        where: {
+          organizationId: orgId,
+          ...currencyFilter,
+          createdAt: { gte: twelveMonthsAgo }
+        },
+        select: { createdAt: true, total: true, status: true }
       })
     ])
 
+    // Agrupar monthly
+    const monthlyMap = {}
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now)
+      d.setMonth(d.getMonth() - i)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const label = d.toLocaleDateString('es-AR', { month: 'short' })
+      monthlyMap[key] = { key, label, issued: 0, approved: 0 }
+    }
+    monthlyRaw.forEach(q => {
+      const d = new Date(q.createdAt)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      if (monthlyMap[key]) {
+        monthlyMap[key].issued += Number(q.total) || 0
+        if (q.status === 'approved') monthlyMap[key].approved += Number(q.total) || 0
+      }
+    })
+
+    const statusMap = {}
+    byStatus.forEach(s => { statusMap[s.status] = { count: s._count.status, total: s._sum.total || 0 } })
+
     return success(res, 200, {
       summary: {
-        totalQuotes: totals._count._all,
-        totalValue: totals._sum.total || 0
+        totalQuotes:  totals._count._all,
+        totalValue:   totals._sum.total  || 0,
+        draft:        statusMap.draft?.total      || 0,
+        sent:         statusMap.sent?.total       || 0,
+        approved:     statusMap.approved?.total   || 0,
+        rejected:     (statusMap.rejected?.total  || 0) + (statusMap.cancelled?.total || 0),
       },
       byStatus: byStatus.map(s => ({
         status: s.status,
-        count: s._count.status,
-        total: s._sum.total || 0
+        count:  s._count.status,
+        total:  s._sum.total || 0
       })),
-      expiringSoon
+      expiringSoon,
+      recent,
+      upcomingInstallments: installments,
+      monthly: Object.values(monthlyMap)
     })
   } catch (error) {
     return fail(res, 500, error.message)

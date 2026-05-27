@@ -9,9 +9,20 @@ export const register = async (req, res) => {
     const email = req.body.email?.trim().toLowerCase()
     const password = req.body.password
     const organizationName = req.body.organizationName?.trim()
+    const phone             = req.body.phone?.trim() || null
+    const address           = req.body.address?.trim() || null
+    const organizationEmail = req.body.organizationEmail?.trim() || null
 
     if (!name || !email || !password || !organizationName) {
       return fail(res, 400, 'Todos los campos son obligatorios')
+    }
+
+    if (!phone) {
+      return fail(res, 400, 'El teléfono de contacto de la empresa es obligatorio')
+    }
+
+    if (!organizationEmail) {
+      return fail(res, 400, 'El email de la empresa es obligatorio')
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email } })
@@ -35,11 +46,11 @@ export const register = async (req, res) => {
     const hashedPassword = await hashPassword(password)
 
     const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword }
+      data: { name, email, password: hashedPassword, phone }
     })
 
     const organization = await prisma.organization.create({
-      data: { name: organizationName, ownerId: user.id, slug }
+      data: { name: organizationName, ownerId: user.id, slug, phone, address, email: organizationEmail }
     })
 
     const membership = await prisma.organizationMembership.create({

@@ -15,6 +15,7 @@ model User {
   email         String   @unique
   password      String
   avatar        String?
+  phone         String?
   isSystemAdmin Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -35,6 +36,12 @@ model Organization {
   name      String
   slug      String   @unique
   plan      Plan     @default(free)
+  cuit      String?
+  email     String?
+  website   String?
+  phone     String?
+  address   String?
+  logo      String?
   ownerId   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -97,6 +104,7 @@ model Client {
   company        String?
   address        String?
   cuit           String?
+  website        String?
   notes          String?
   organizationId String
   createdById    String
@@ -188,6 +196,7 @@ model Quote {
 
   items        QuoteItem[]
   invoices     Invoice[]
+  installments Installment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -265,8 +274,10 @@ model Installment {
   status    String   @default("pending")
   paidAt    DateTime?
 
-  invoiceId      String
-  invoice        Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId      String?
+  invoice        Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  quoteId        String?
+  quote          Quote?        @relation(fields: [quoteId], references: [id], onDelete: Cascade)
   organizationId String
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -274,6 +285,7 @@ model Installment {
   updatedAt DateTime @updatedAt
 
   @@index([invoiceId])
+  @@index([quoteId])
   @@index([organizationId])
 }
 

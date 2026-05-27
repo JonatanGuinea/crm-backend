@@ -12,7 +12,7 @@ export const getProfile = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: { id: true, name: true, email: true, avatar: true }
+      select: { id: true, name: true, email: true, avatar: true, phone: true }
     })
 
     if (!user) return fail(res, 404, 'Usuario no encontrado')
@@ -25,7 +25,7 @@ export const getProfile = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
   try {
-    const { name } = req.body
+    const { name, phone } = req.body
 
     if (!name || !name.trim()) {
       return fail(res, 400, 'El nombre es requerido')
@@ -33,8 +33,8 @@ export const updateProfile = async (req, res) => {
 
     const updated = await prisma.user.update({
       where: { id: req.user.id },
-      data: { name: name.trim() },
-      select: { id: true, name: true, email: true, avatar: true }
+      data: { name: name.trim(), phone: phone?.trim() || null },
+      select: { id: true, name: true, email: true, avatar: true, phone: true }
     })
 
     return success(res, 200, updated)

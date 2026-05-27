@@ -11,9 +11,10 @@ export const downloadQuotePdf = async (req, res) => {
       where: { id, organizationId: orgId },
       include: {
         items: true,
-        client: { select: { id: true, name: true, email: true, phone: true, company: true } },
+        installments: { orderBy: { number: 'asc' } },
+        client: { select: { id: true, name: true, email: true, phone: true, company: true, address: true, cuit: true, website: true } },
         project: { select: { id: true, title: true } },
-        organization: { select: { id: true, name: true } }
+        organization: { select: { id: true, name: true, cuit: true, email: true, website: true, phone: true, address: true, logo: true } }
       }
     })
 
@@ -38,9 +39,9 @@ export const downloadInvoicePdf = async (req, res) => {
       where: { id, organizationId: orgId },
       include: {
         items: true,
-        client: { select: { id: true, name: true, email: true, phone: true, company: true } },
+        client: { select: { id: true, name: true, email: true, phone: true, company: true, address: true, cuit: true, website: true } },
         project: { select: { id: true, title: true } },
-        organization: { select: { id: true, name: true } }
+        organization: { select: { id: true, name: true, cuit: true, email: true, website: true, phone: true, address: true, logo: true } }
       }
     })
 
