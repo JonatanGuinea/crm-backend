@@ -4,20 +4,22 @@ import { dirname, join } from 'path'
 import { existsSync } from 'fs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const DEFAULT_LOGO_PATH = join(__dirname, '../assets/logo.png')
+const DEFAULT_LOGO_PATH       = join(__dirname, '../assets/logo.png')
+const DEFAULT_LOGO_LIGHT_PATH = join(__dirname, '../assets/logo-light.png')
 const UPLOADS_DIR = join(__dirname, '../../uploads')
 
 const C = {
-  dark:       '#0f172a',
-  teal:       '#14b8a6',
-  tealLight:  '#f0fdfa',
-  tealMid:    '#99f6e4',
-  white:      '#ffffff',
-  text:       '#1e293b',
-  soft:       '#64748b',
-  muted:      '#94a3b8',
-  border:     '#f1f5f9',
-  bg:         '#f8fafc',
+  slate800:  '#1e293b',
+  slate700:  '#334155',
+  slate400:  '#94a3b8',
+  slate300:  '#cbd5e1',
+  zinc50:    '#f8fafc',
+  zinc100:   '#f1f5f9',
+  zinc400:   '#94a3b8',
+  zinc500:   '#64748b',
+  zinc600:   '#475569',
+  zinc800:   '#1e293b',
+  white:     '#ffffff',
 }
 
 const STATUS_LABELS = {
@@ -43,325 +45,292 @@ export function buildPdf(type, data) {
   const pageH     = doc.page.height  // 842
   const pad       = 52
 
-  // Días de validez
   const validDays = (isQuote && data.validUntil && data.createdAt)
     ? Math.round((new Date(data.validUntil) - new Date(data.createdAt)) / (1000 * 60 * 60 * 24))
     : null
 
   // ─────────────────────────────────────────────────────────────────────────
-  // HEADER — full dark band
+  // HEADER — slate-800 band
   // ─────────────────────────────────────────────────────────────────────────
-  const headerH = 100
-  doc.rect(0, 0, pageW, headerH).fillColor(C.dark).fill()
+  const headerH = 110
+  doc.rect(0, 0, pageW, headerH).fillColor(C.slate800).fill()
 
-  // Teal accent bar — left edge
-  doc.rect(0, 0, 5, headerH).fillColor(C.teal).fill()
-
-  // Logo — org logo si existe, sino logo del CRM
-  const orgLogoPath = data.organization?.logo ? join(UPLOADS_DIR, data.organization.logo) : null
-  const logoPath = orgLogoPath && existsSync(orgLogoPath) ? orgLogoPath : DEFAULT_LOGO_PATH
-  doc.image(logoPath, pad, (headerH - 36) / 2, { height: 36, fit: [160, 36] })
-
-  // Doc type label
-  doc.font('Helvetica').fontSize(9).fillColor(C.teal)
-    .text(docLabel.toUpperCase(), pageW - pad - 180, 28, { width: 180, align: 'right', characterSpacing: 2 })
-
-  // Doc number — large with prefix
+  const org = data.organization || {}
   const numStr = String(data.number).padStart(3, '0')
-  doc.font('Helvetica-Bold').fontSize(26).fillColor(C.white)
-    .text(`${docPrefix}-${numStr}`, pageW - pad - 180, 40, { width: 180, align: 'right' })
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // SUBHEADER — org name + date strip
-  // ─────────────────────────────────────────────────────────────────────────
-  const subH = 32
-  doc.rect(0, headerH, pageW, subH).fillColor(C.tealLight).fill()
+  // Left: org logo (si existe y es PNG/JPEG) + doc label + title
+  const _rawLogoFile = data.organization?.logo || ''
+  const _logoExt = _rawLogoFile.split('.').pop()?.toLowerCase()
+  const _logoSupported = ['png', 'jpg', 'jpeg'].includes(_logoExt)
+  const orgLogoHeaderPath = _logoSupported ? join(UPLOADS_DIR, _rawLogoFile) : null
+  if (orgLogoHeaderPath && existsSync(orgLogoHeaderPath)) {
+    doc.image(orgLogoHeaderPath, pad, 18, { height: 36, fit: [150, 36] })
+    doc.font('Helvetica').fontSize(8).fillColor(C.slate400)
+      .text(docLabel.toUpperCase(), pad, 62, { characterSpacing: 1.5 })
+    if (data.title) {
+      doc.font('Helvetica-Bold').fontSize(13).fillColor(C.white)
+        .text(data.title, pad, 75, { width: pageW - pad * 2 - 185 })
+    }
+  } else {
+    doc.font('Helvetica').fontSize(8).fillColor(C.slate400)
+      .text(docLabel.toUpperCase(), pad, 22, { characterSpacing: 1.5 })
+    if (data.title) {
+      doc.font('Helvetica-Bold').fontSize(14).fillColor(C.white)
+        .text(data.title, pad, 35, { width: pageW - pad * 2 - 185 })
+    }
+  }
 
-  doc.font('Helvetica-Bold').fontSize(8).fillColor(C.teal)
-    .text((data.organization?.name || '').toUpperCase(), pad, headerH + 10,
-      { width: (pageW - pad * 2) / 2, characterSpacing: 1 })
-
-  doc.font('Helvetica').fontSize(8).fillColor(C.soft)
-    .text(`Generado el ${fmtDate(new Date())}`, pad, headerH + 10,
-      { width: pageW - pad * 2, align: 'right' })
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // INFO SECTION — 3 columns: CLIENTE | DETALLES | EMISOR
-  // ─────────────────────────────────────────────────────────────────────────
-  const infoTop  = headerH + subH + 28
-  const tableW0  = pageW - pad * 2          // 491
-  const colGap   = 14
-  const colC     = Math.floor(tableW0 * 0.37)  // ~182  cliente
-  const colD     = Math.floor(tableW0 * 0.24)  // ~118  detalles
-  const colO     = tableW0 - colC - colD - colGap * 2  // ~163  emisor
-
-  const xC   = pad
-  const xDet = xC + colC + colGap
-  const xO   = xDet + colD + colGap
-
-  // ── Separador vertical tenue entre columnas ──
-  const sepTop = infoTop - 4
-
-  // ── Columna CLIENTE ──
-  doc.font('Helvetica-Bold').fontSize(7).fillColor(C.teal)
-    .text('CLIENTE', xC, infoTop, { characterSpacing: 1.5 })
-
-  doc.font('Helvetica-Bold').fontSize(13).fillColor(C.text)
-    .text(data.client?.name || '—', xC, infoTop + 12, { width: colC })
-
-  let cy = infoTop + 30
+  // Right: EMISOR info (nombre grande + datos pequeños)
+  const eX = pageW - pad - 175
+  doc.font('Helvetica-Bold').fontSize(13).fillColor(C.white)
+    .text(org.name || '—', eX, 18, { width: 175, align: 'right' })
+  let ey = 36
   ;[
-    data.client?.company  ? ['Empresa',   data.client.company]  : null,
-    data.client?.cuit     ? ['CUIT/CUIL', data.client.cuit]     : null,
-    data.client?.phone    ? ['Teléfono',  data.client.phone]    : null,
-    data.client?.email    ? ['Email',     data.client.email]    : null,
-    data.client?.address  ? ['Dirección', data.client.address]  : null,
-    data.client?.website  ? ['Web',       data.client.website]  : null,
-  ].filter(Boolean).forEach(([lbl, val]) => {
-    doc.font('Helvetica').fontSize(7.5).fillColor(C.muted)
-      .text(lbl.toUpperCase(), xC, cy, { characterSpacing: 0.6 })
-    doc.font('Helvetica').fontSize(9).fillColor(C.text)
-      .text(val, xC, cy + 10, { width: colC })
-    cy += 24
+    org.cuit    ? `CUIL/CUIT: ${org.cuit}` : null,
+    org.email   ? org.email                : null,
+    org.phone   ? org.phone                : null,
+    org.address ? org.address              : null,
+    org.website ? org.website              : null,
+  ].filter(Boolean).forEach(val => {
+    doc.font('Helvetica').fontSize(7.5).fillColor(C.slate400)
+      .text(val, eX, ey, { width: 175, align: 'right' })
+    ey += 12
   })
 
-  // ── Columna DETALLES DEL DOC ──
+  // ─────────────────────────────────────────────────────────────────────────
+  // INFO SECTION — 2 columns: CLIENTE | DETALLE
+  // ─────────────────────────────────────────────────────────────────────────
+  const infoTop = headerH + 24
+  const tableW  = pageW - pad * 2
+  const colGap  = 20
+  const colL    = Math.floor(tableW * 0.50)
+  const colR    = tableW - colL - colGap
+
+  const xL = pad
+  const xR = pad + colL + colGap
+
+  // ── Cliente ──
+  doc.font('Helvetica-Bold').fontSize(7).fillColor(C.zinc400)
+    .text('CLIENTE', xL, infoTop, { characterSpacing: 1.5 })
+
+  doc.font('Helvetica-Bold').fontSize(13).fillColor(C.zinc800)
+    .text(data.client?.name || '—', xL, infoTop + 13, { width: colL })
+
+  let cy = infoTop + 32
+  ;[
+    data.client?.company  ? data.client.company               : null,
+    data.client?.cuit     ? `CUIL/CUIT: ${data.client.cuit}`  : null,
+    data.client?.email    ? data.client.email                  : null,
+    data.client?.phone    ? data.client.phone                  : null,
+    data.client?.address  ? data.client.address                : null,
+  ].filter(Boolean).forEach(val => {
+    doc.font('Helvetica').fontSize(8.5).fillColor(C.zinc500)
+      .text(val, xL, cy, { width: colL })
+    cy += 14
+  })
+
+  // ── Detalle ──
+  doc.font('Helvetica-Bold').fontSize(7).fillColor(C.zinc400)
+    .text('DETALLE', xR, infoTop, { characterSpacing: 1.5 })
+  doc.font('Helvetica-Bold').fontSize(7).fillColor(C.zinc400)
+    .text(`${docLabel.toUpperCase()} #${numStr}`, xR, infoTop + 13, { width: colR, characterSpacing: 0.8 })
+
   const infoRows = isQuote
     ? [
         ['Fecha',        fmtDate(data.createdAt)],
-        ['Estado',       STATUS_LABELS[data.status] || data.status],
         ['Moneda',       data.currency],
-        data.project    ? ['Proyecto',     data.project.title]                              : null,
-        validDays != null ? ['Válido por', `${validDays} día${validDays !== 1 ? 's' : ''}`] : null,
-        data.validUntil ? ['Válido hasta', fmtDate(data.validUntil)]                        : null,
+        ['Estado',       STATUS_LABELS[data.status] || data.status],
+        data.project     ? ['Proyecto',     data.project.title]                              : null,
+        validDays != null ? ['Válido por',  `${validDays} día${validDays !== 1 ? 's' : ''}`] : null,
+        data.validUntil  ? ['Válido hasta', fmtDate(data.validUntil)]                        : null,
       ].filter(Boolean)
     : [
         ['Fecha',        fmtDate(data.createdAt)],
-        ['Estado',       STATUS_LABELS[data.status] || data.status],
         ['Moneda',       data.currency],
+        ['Estado',       STATUS_LABELS[data.status] || data.status],
         data.project  ? ['Proyecto',    data.project.title]    : null,
         data.dueDate  ? ['Vencimiento', fmtDate(data.dueDate)] : null,
       ].filter(Boolean)
 
-  let ry = infoTop
+  let ry = infoTop + 26
   infoRows.forEach(([label, value]) => {
-    doc.font('Helvetica').fontSize(7).fillColor(C.muted)
-      .text(label.toUpperCase(), xDet, ry, { width: colD, characterSpacing: 0.6 })
-    doc.font('Helvetica-Bold').fontSize(9).fillColor(C.text)
-      .text(String(value), xDet, ry + 10, { width: colD })
-    ry += 26
+    doc.font('Helvetica').fontSize(8).fillColor(C.zinc400)
+      .text(label, xR, ry, { width: 80 })
+    doc.font('Helvetica-Bold').fontSize(8.5).fillColor(C.zinc800)
+      .text(String(value), xR + 82, ry, { width: colR - 82 })
+    ry += 14
   })
 
-  // ── Columna EMISOR ──
-  const org = data.organization || {}
-  doc.font('Helvetica-Bold').fontSize(7).fillColor(C.teal)
-    .text('EMISOR', xO, infoTop, { characterSpacing: 1.5 })
-
-  doc.font('Helvetica-Bold').fontSize(13).fillColor(C.text)
-    .text(org.name || '—', xO, infoTop + 12, { width: colO })
-
-  let oy = infoTop + 30
-  ;[
-    org.cuit    ? ['CUIT/CUIL', org.cuit]    : null,
-    org.phone   ? ['Teléfono',  org.phone]   : null,
-    org.email   ? ['Email',     org.email]   : null,
-    org.address ? ['Dirección', org.address] : null,
-    org.website ? ['Web',       org.website] : null,
-  ].filter(Boolean).forEach(([lbl, val]) => {
-    doc.font('Helvetica').fontSize(7.5).fillColor(C.muted)
-      .text(lbl.toUpperCase(), xO, oy, { characterSpacing: 0.6 })
-    doc.font('Helvetica').fontSize(9).fillColor(C.text)
-      .text(val, xO, oy + 10, { width: colO })
-    oy += 24
-  })
-
-  // Separadores verticales entre columnas
-  const sepBot = Math.max(cy, ry, oy) + 4
-  doc.rect(xDet - colGap / 2, sepTop, 0.5, sepBot - sepTop).fillColor(C.border).fill()
-  doc.rect(xO   - colGap / 2, sepTop, 0.5, sepBot - sepTop).fillColor(C.border).fill()
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // DIVIDER
-  // ─────────────────────────────────────────────────────────────────────────
-  const divY = sepBot + 16
-  doc.rect(pad, divY, pageW - pad * 2, 1).fillColor(C.border).fill()
-  // Teal accent dot on divider
-  doc.rect(pad, divY - 1, 24, 3).fillColor(C.teal).fill()
+  // Separator between info columns
+  const sepBot = Math.max(cy, ry) + 8
+  doc.rect(xR - colGap / 2, infoTop, 0.5, sepBot - infoTop).fillColor(C.zinc100).fill()
 
   // ─────────────────────────────────────────────────────────────────────────
   // ITEMS TABLE
   // ─────────────────────────────────────────────────────────────────────────
-  const tableTop = divY + 20
-  const tableW   = pageW - pad * 2
-  const cDesc    = tableW * 0.47
-  const cQty     = tableW * 0.11
-  const cUnit    = tableW * 0.21
-  const cAmt     = tableW * 0.21
+  const tableTop = sepBot + 16
+  const cDesc = tableW * 0.47
+  const cQty  = tableW * 0.11
+  const cUnit = tableW * 0.21
+  const cAmt  = tableW * 0.21
 
   const xD = pad
   const xQ = pad + cDesc
   const xU = pad + cDesc + cQty
   const xA = pad + cDesc + cQty + cUnit
 
-  // Column headers — no background, just labels with teal underline
-  doc.font('Helvetica-Bold').fontSize(7.5).fillColor(C.muted)
-  doc.text('DESCRIPCIÓN',  xD + 2, tableTop, { width: cDesc - 4, characterSpacing: 0.8 })
-  doc.text('CANT.',        xQ,     tableTop, { width: cQty,  align: 'right', characterSpacing: 0.8 })
-  doc.text('PRECIO UNIT.', xU,     tableTop, { width: cUnit, align: 'right', characterSpacing: 0.8 })
-  doc.text('TOTAL',        xA,     tableTop, { width: cAmt - 2, align: 'right', characterSpacing: 0.8 })
+  // Header row — slate-800 bg + white text
+  const thH = 28
+  doc.rect(pad, tableTop, tableW, thH).fillColor(C.slate800).fill()
+  doc.font('Helvetica-Bold').fontSize(7.5).fillColor(C.white)
+  doc.text('DESCRIPCIÓN',  xD + 6,  tableTop + 9, { width: cDesc - 10, characterSpacing: 0.6 })
+  doc.text('CANT.',        xQ,      tableTop + 9, { width: cQty,  align: 'right', characterSpacing: 0.6 })
+  doc.text('PRECIO UNIT.', xU,      tableTop + 9, { width: cUnit, align: 'right', characterSpacing: 0.6 })
+  doc.text('TOTAL',        xA,      tableTop + 9, { width: cAmt - 6, align: 'right', characterSpacing: 0.6 })
 
-  // Teal underline under headers
-  doc.rect(pad, tableTop + 14, tableW, 2).fillColor(C.teal).fill()
-
-  let y = tableTop + 22
+  let y = tableTop + thH
   const rowH = 26
 
   ;(data.items || []).forEach((item, i) => {
-    // Subtle alternating bg
     if (i % 2 !== 0) {
-      doc.rect(pad, y, tableW, rowH).fillColor(C.bg).fill()
+      doc.rect(pad, y, tableW, rowH).fillColor(C.zinc50).fill()
     }
-
-    doc.font('Helvetica').fontSize(9.5).fillColor(C.text)
-      .text(item.description, xD + 2, y + 8, { width: cDesc - 6, ellipsis: true })
-
-    doc.font('Helvetica').fontSize(9).fillColor(C.soft)
+    doc.font('Helvetica').fontSize(9.5).fillColor(C.zinc800)
+      .text(item.description, xD + 6, y + 8, { width: cDesc - 10, ellipsis: true })
+    doc.font('Helvetica').fontSize(9).fillColor(C.zinc500)
       .text(String(item.quantity), xQ, y + 8, { width: cQty, align: 'right' })
       .text(fmt(item.unitPrice),   xU, y + 8, { width: cUnit, align: 'right' })
-
-    doc.font('Helvetica-Bold').fontSize(9.5).fillColor(C.text)
-      .text(fmt(item.amount), xA, y + 8, { width: cAmt - 2, align: 'right' })
-
-    // thin bottom border per row
-    doc.rect(pad, y + rowH - 1, tableW, 0.5).fillColor(C.border).fill()
-
+    doc.font('Helvetica-Bold').fontSize(9.5).fillColor(C.zinc800)
+      .text(fmt(item.amount), xA, y + 8, { width: cAmt - 6, align: 'right' })
+    doc.rect(pad, y + rowH - 0.5, tableW, 0.5).fillColor(C.zinc100).fill()
     y += rowH
   })
 
   // ─────────────────────────────────────────────────────────────────────────
-  // NOTES
+  // TOTALS — right-aligned block, max ~220px
   // ─────────────────────────────────────────────────────────────────────────
-  y += 20
-  if (data.notes) {
-    doc.font('Helvetica-Bold').fontSize(7.5).fillColor(C.muted)
-      .text('NOTAS', pad, y, { characterSpacing: 1.5 })
-    y += 14
-    doc.font('Helvetica').fontSize(9).fillColor(C.soft)
-      .text(data.notes, pad, y, { width: tableW * 0.6, lineGap: 3 })
-    y = doc.y + 20
+  y += 16
+
+  const subtotal  = Number(data.subtotal)
+  const total     = Number(data.total)
+  const taxAmount = total - subtotal
+
+  const totBlockW = 220
+  const totX = pageW - pad - totBlockW
+
+  // Subtotal
+  doc.font('Helvetica').fontSize(9).fillColor(C.zinc500)
+    .text('Subtotal', totX, y)
+    .text(fmt(subtotal), totX, y, { width: totBlockW, align: 'right' })
+  y += 18
+
+  // IVA
+  if (data.taxRate > 0) {
+    doc.font('Helvetica').fontSize(9).fillColor(C.zinc500)
+      .text(`IVA (${data.taxRate}%)`, totX, y)
+      .text(fmt(taxAmount), totX, y, { width: totBlockW, align: 'right' })
+    y += 18
   }
+
+  y += 4
+
+  // Total band
+  const totalH = 44
+  doc.rect(totX, y, totBlockW, totalH).fillColor(C.slate800).fill()
+  doc.font('Helvetica').fontSize(7.5).fillColor(C.slate400)
+    .text(`TOTAL ${data.currency}`, totX + 12, y + 8, { width: totBlockW - 20, align: 'left', characterSpacing: 1 })
+  doc.font('Helvetica-Bold').fontSize(18).fillColor(C.white)
+    .text(fmt(total, data.currency), totX + 12, y + 20, { width: totBlockW - 20, align: 'right' })
+
+  y += totalH + 24
 
   // ─────────────────────────────────────────────────────────────────────────
   // CUOTAS
   // ─────────────────────────────────────────────────────────────────────────
   const installments = data.installments || []
   if (installments.length > 0) {
-    // Encabezado sección
-    doc.font('Helvetica-Bold').fontSize(7.5).fillColor(C.muted)
+    doc.font('Helvetica-Bold').fontSize(7.5).fillColor(C.zinc400)
       .text('PLAN DE CUOTAS', pad, y, { characterSpacing: 1.5 })
-    y += 4
-    doc.rect(pad, y + 10, tableW, 1.5).fillColor(C.teal).fill()
-    y += 16
+    y += 14
 
-    // Cabeceras de columna
     const cNum  = tableW * 0.10
     const cDue  = tableW * 0.35
     const cStat = tableW * 0.30
-    const cAmt  = tableW * 0.25
+    const cIA   = tableW * 0.25
 
     const iNum  = pad
     const iDue  = iNum + cNum
     const iStat = iDue + cDue
     const iAmt  = iStat + cStat
 
-    doc.font('Helvetica-Bold').fontSize(7).fillColor(C.muted)
-    doc.text('N°',         iNum,  y, { width: cNum,  characterSpacing: 0.6 })
-    doc.text('VENCIMIENTO',iDue,  y, { width: cDue,  characterSpacing: 0.6 })
-    doc.text('ESTADO',     iStat, y, { width: cStat, characterSpacing: 0.6 })
-    doc.text('IMPORTE',    iAmt,  y, { width: cAmt - 2, align: 'right', characterSpacing: 0.6 })
-    y += 14
+    // Cuotas header
+    const ithH = 24
+    doc.rect(pad, y, tableW, ithH).fillColor(C.slate800).fill()
+    doc.font('Helvetica-Bold').fontSize(7).fillColor(C.white)
+    doc.text('N°',          iNum,       y + 8, { width: cNum,      characterSpacing: 0.6 })
+    doc.text('VENCIMIENTO', iDue,       y + 8, { width: cDue,      characterSpacing: 0.6 })
+    doc.text('ESTADO',      iStat,      y + 8, { width: cStat,     characterSpacing: 0.6 })
+    doc.text('IMPORTE',     iAmt,       y + 8, { width: cIA - 6,   align: 'right', characterSpacing: 0.6 })
+    y += ithH
 
     const STATUS_INST = { pending: 'Pendiente', paid: 'Pagado', overdue: 'Vencido' }
-    const STATUS_COLOR_INST = { pending: C.muted, paid: C.teal, overdue: '#ef4444' }
+    const STATUS_COLOR_INST = { pending: C.zinc400, paid: '#10b981', overdue: '#ef4444' }
 
     installments.forEach((inst, i) => {
-      const rowH = 20
+      const rH = 20
       if (i % 2 !== 0) {
-        doc.rect(pad, y, tableW, rowH).fillColor(C.bg).fill()
+        doc.rect(pad, y, tableW, rH).fillColor(C.zinc50).fill()
       }
-
       const statLabel = STATUS_INST[inst.status] || inst.status
-      const statColor = STATUS_COLOR_INST[inst.status] || C.muted
+      const statColor = STATUS_COLOR_INST[inst.status] || C.zinc400
 
-      doc.font('Helvetica').fontSize(8.5).fillColor(C.soft)
+      doc.font('Helvetica').fontSize(8.5).fillColor(C.zinc500)
         .text(String(inst.number),        iNum,  y + 5, { width: cNum })
         .text(fmtDate(inst.dueDate),      iDue,  y + 5, { width: cDue })
       doc.font('Helvetica').fontSize(8.5).fillColor(statColor)
         .text(statLabel,                  iStat, y + 5, { width: cStat })
-      doc.font('Helvetica-Bold').fontSize(8.5).fillColor(C.text)
-        .text(fmt(inst.amount, data.currency), iAmt, y + 5, { width: cAmt - 2, align: 'right' })
+      doc.font('Helvetica-Bold').fontSize(8.5).fillColor(C.zinc800)
+        .text(fmt(inst.amount, data.currency), iAmt, y + 5, { width: cIA - 6, align: 'right' })
 
-      doc.rect(pad, y + rowH - 0.5, tableW, 0.5).fillColor(C.border).fill()
-      y += rowH
+      doc.rect(pad, y + rH - 0.5, tableW, 0.5).fillColor(C.zinc100).fill()
+      y += rH
     })
 
     y += 20
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // TOTALS
+  // NOTES
   // ─────────────────────────────────────────────────────────────────────────
-  const subtotal  = Number(data.subtotal)
-  const total     = Number(data.total)
-  const taxAmount = total - subtotal
-
-  const totW = tableW
-  const totX = pad
-
-  // helper: label izq + valor der, sin columnas fijas
-  function totRow(label, value, labelColor, valueColor, fontSize) {
-    doc.font('Helvetica').fontSize(fontSize).fillColor(labelColor)
-      .text(label, totX, y, { width: totW, align: 'left' })
-    doc.font('Helvetica').fontSize(fontSize).fillColor(valueColor)
-      .text(value, totX, y, { width: totW, align: 'right' })
-    y += fontSize + 10
+  if (data.notes) {
+    doc.rect(pad, y, tableW, 0.5).fillColor(C.zinc100).fill()
+    y += 16
+    doc.font('Helvetica-Bold').fontSize(7.5).fillColor(C.zinc400)
+      .text('ALCANCE / NOTAS', pad, y, { characterSpacing: 1.5 })
+    y += 14
+    doc.font('Helvetica').fontSize(9).fillColor(C.zinc600)
+      .text(data.notes, pad, y, { width: tableW * 0.65, lineGap: 4 })
+    y = doc.y + 20
   }
-
-  // Thin top line
-  doc.rect(totX, y, totW, 0.5).fillColor(C.border).fill()
-  y += 14
-
-  // Subtotal
-  totRow('Subtotal', fmt(subtotal), C.soft, C.text, 9)
-
-  // IVA
-  if (data.taxRate > 0) {
-    totRow(`IVA (${data.taxRate}%)`, fmt(taxAmount), C.soft, C.text, 9)
-  }
-
-  y += 6
-
-  // Total band — label arriba, monto abajo (evita overflow horizontal)
-  const totalH = 56
-  doc.rect(totX, y, totW, totalH).fillColor(C.dark).fill()
-  doc.rect(totX, y, 5, totalH).fillColor(C.teal).fill()
-
-  doc.font('Helvetica').fontSize(7.5).fillColor(C.teal)
-    .text(`TOTAL ${data.currency}`, totX + 14, y + 10, { width: totW - 20, align: 'right', characterSpacing: 1 })
-  doc.font('Helvetica-Bold').fontSize(20).fillColor(C.white)
-    .text(fmt(total, data.currency), totX + 14, y + 24, { width: totW - 20, align: 'right' })
 
   // ─────────────────────────────────────────────────────────────────────────
   // FOOTER
   // ─────────────────────────────────────────────────────────────────────────
-  doc.rect(0, pageH - 40, pageW, 40).fillColor(C.bg).fill()
-  doc.rect(0, pageH - 40, pageW, 1).fillColor(C.border).fill()
-  doc.rect(0, pageH - 40, 5, 40).fillColor(C.teal).fill()
+  const footerH = 48
+  doc.rect(0, pageH - footerH, pageW, footerH).fillColor(C.slate800).fill()
 
-  doc.font('Helvetica').fontSize(7.5).fillColor(C.muted)
+  // Logo centrado — logo con letras negras (contrasta con fondo blanco del footer)
+  const logoPath = existsSync(DEFAULT_LOGO_LIGHT_PATH) ? DEFAULT_LOGO_LIGHT_PATH : DEFAULT_LOGO_PATH
+  const logoH = 20
+  const logoW = 80
+  const logoX = (pageW - logoW) / 2
+  doc.image(logoPath, logoX, pageH - footerH + (footerH - logoH) / 2 - 6, { height: logoH, fit: [logoW, logoH] })
+
+  // Texto debajo del logo
+  doc.font('Helvetica').fontSize(7).fillColor(C.slate400)
     .text(
-      `${org.name || ''}  ·  ${docLabel} ${docPrefix}-${numStr}`,
-      pad, pageH - 24,
+      `${org.name || ''}  ·  ${docLabel} #${numStr}`,
+      pad, pageH - 14,
       { width: pageW - pad * 2, align: 'center' }
     )
 

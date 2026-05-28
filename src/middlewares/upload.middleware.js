@@ -9,6 +9,7 @@ const ALLOWED_MIMETYPES = [
   'image/jpeg',
   'image/png',
   'image/gif',
+  'image/webp',
   'application/pdf',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -30,7 +31,7 @@ const fileFilter = (req, file, cb) => {
   if (ALLOWED_MIMETYPES.includes(file.mimetype)) {
     cb(null, true)
   } else {
-    cb(new Error('Tipo de archivo no permitido. Permitidos: JPG, PNG, GIF, PDF, DOC, DOCX, XLS, XLSX'))
+    cb(new Error('Tipo de archivo no permitido. Permitidos: JPG, PNG, GIF, WEBP, PDF, DOC, DOCX, XLS, XLSX'))
   }
 }
 
