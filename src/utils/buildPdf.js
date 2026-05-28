@@ -58,33 +58,31 @@ export function buildPdf(type, data) {
   const org = data.organization || {}
   const numStr = String(data.number).padStart(3, '0')
 
-  // Left: org logo (si existe y es PNG/JPEG) + doc label + title
+  // Left: org logo + nombre org debajo + doc label + title
   const _rawLogoFile = data.organization?.logo || ''
   const _logoExt = _rawLogoFile.split('.').pop()?.toLowerCase()
   const _logoSupported = ['png', 'jpg', 'jpeg'].includes(_logoExt)
   const orgLogoHeaderPath = _logoSupported ? join(UPLOADS_DIR, _rawLogoFile) : null
   if (orgLogoHeaderPath && existsSync(orgLogoHeaderPath)) {
-    doc.image(orgLogoHeaderPath, pad, 18, { height: 36, fit: [150, 36] })
-    doc.font('Helvetica').fontSize(8).fillColor(C.slate400)
-      .text(docLabel.toUpperCase(), pad, 62, { characterSpacing: 1.5 })
+    doc.image(orgLogoHeaderPath, pad, 16, { height: 30, fit: [150, 30] })
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(C.white)
+      .text(org.name || '', pad, 50, { width: pageW - pad * 2 - 185 })
     if (data.title) {
-      doc.font('Helvetica-Bold').fontSize(13).fillColor(C.white)
-        .text(data.title, pad, 75, { width: pageW - pad * 2 - 185 })
+      doc.font('Helvetica-Bold').fontSize(12).fillColor(C.white)
+        .text(data.title, pad, 68, { width: pageW - pad * 2 - 185 })
     }
   } else {
-    doc.font('Helvetica').fontSize(8).fillColor(C.slate400)
-      .text(docLabel.toUpperCase(), pad, 22, { characterSpacing: 1.5 })
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(C.white)
+      .text(org.name || '', pad, 18, { width: pageW - pad * 2 - 185 })
     if (data.title) {
-      doc.font('Helvetica-Bold').fontSize(14).fillColor(C.white)
+      doc.font('Helvetica-Bold').fontSize(13).fillColor(C.white)
         .text(data.title, pad, 35, { width: pageW - pad * 2 - 185 })
     }
   }
 
-  // Right: EMISOR info (nombre grande + datos pequeños)
+  // Right: datos de contacto del emisor
   const eX = pageW - pad - 175
-  doc.font('Helvetica-Bold').fontSize(13).fillColor(C.white)
-    .text(org.name || '—', eX, 18, { width: 175, align: 'right' })
-  let ey = 36
+  let ey = 18
   ;[
     org.cuit    ? `CUIL/CUIT: ${org.cuit}` : null,
     org.email   ? org.email                : null,
@@ -96,6 +94,10 @@ export function buildPdf(type, data) {
       .text(val, eX, ey, { width: 175, align: 'right' })
     ey += 12
   })
+
+  // Número de documento debajo de los datos del emisor
+  doc.font('Helvetica-Bold').fontSize(9).fillColor(C.white)
+    .text(`${docLabel} #${numStr}`, eX, ey + 4, { width: 175, align: 'right' })
 
   // ─────────────────────────────────────────────────────────────────────────
   // INFO SECTION — 2 columns: CLIENTE | DETALLE
@@ -132,8 +134,6 @@ export function buildPdf(type, data) {
   // ── Detalle ──
   doc.font('Helvetica-Bold').fontSize(7).fillColor(C.zinc400)
     .text('DETALLE', xR, infoTop, { characterSpacing: 1.5 })
-  doc.font('Helvetica-Bold').fontSize(7).fillColor(C.zinc400)
-    .text(`${docLabel.toUpperCase()} #${numStr}`, xR, infoTop + 13, { width: colR, characterSpacing: 0.8 })
 
   const infoRows = isQuote
     ? [
@@ -152,7 +152,7 @@ export function buildPdf(type, data) {
         data.dueDate  ? ['Vencimiento', fmtDate(data.dueDate)] : null,
       ].filter(Boolean)
 
-  let ry = infoTop + 26
+  let ry = infoTop + 13
   infoRows.forEach(([label, value]) => {
     doc.font('Helvetica').fontSize(8).fillColor(C.zinc400)
       .text(label, xR, ry, { width: 80 })
@@ -181,7 +181,7 @@ export function buildPdf(type, data) {
 
   // Header row — slate-800 bg + white text
   const thH = 28
-  doc.rect(pad, tableTop, tableW, thH).fillColor(C.slate800).fill()
+  doc.roundedRect(pad, tableTop, tableW, thH, 6).fillColor(C.slate800).fill()
   doc.font('Helvetica-Bold').fontSize(7.5).fillColor(C.white)
   doc.text('DESCRIPCIÓN',  xD + 6,  tableTop + 9, { width: cDesc - 10, characterSpacing: 0.6 })
   doc.text('CANT.',        xQ,      tableTop + 9, { width: cQty,  align: 'right', characterSpacing: 0.6 })
@@ -236,7 +236,7 @@ export function buildPdf(type, data) {
 
   // Total band
   const totalH = 44
-  doc.rect(totX, y, totBlockW, totalH).fillColor(C.slate800).fill()
+  doc.roundedRect(totX, y, totBlockW, totalH, 6).fillColor(C.slate800).fill()
   doc.font('Helvetica').fontSize(7.5).fillColor(C.slate400)
     .text(`TOTAL ${data.currency}`, totX + 12, y + 8, { width: totBlockW - 20, align: 'left', characterSpacing: 1 })
   doc.font('Helvetica-Bold').fontSize(18).fillColor(C.white)
@@ -265,7 +265,7 @@ export function buildPdf(type, data) {
 
     // Cuotas header
     const ithH = 24
-    doc.rect(pad, y, tableW, ithH).fillColor(C.slate800).fill()
+    doc.roundedRect(pad, y, tableW, ithH, 6).fillColor(C.slate800).fill()
     doc.font('Helvetica-Bold').fontSize(7).fillColor(C.white)
     doc.text('N°',          iNum,       y + 8, { width: cNum,      characterSpacing: 0.6 })
     doc.text('VENCIMIENTO', iDue,       y + 8, { width: cDue,      characterSpacing: 0.6 })
