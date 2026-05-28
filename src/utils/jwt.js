@@ -13,7 +13,7 @@ export const generateTempToken = (user) => {
       type: 'temp'
     },
     JWT_SECRET,
-    { expiresIn: '48h' }
+    { expiresIn: '15m' }
   )
 }
 
