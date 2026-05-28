@@ -105,7 +105,8 @@ export const getQuotes = async (req, res) => {
         include: {
           client: { select: { id: true, name: true } },
           project: { select: { id: true, title: true } },
-          _count: { select: { invoices: true } }
+          _count: { select: { invoices: true, installments: true } },
+          installments: { where: { status: { in: ['pending', 'overdue'] } }, select: { id: true } }
         },
         orderBy: { createdAt: 'desc' },
         skip,

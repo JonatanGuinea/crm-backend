@@ -65,7 +65,17 @@ export const getProjects = async (req, res) => {
         where,
         include: {
           client: { select: { id: true, name: true, email: true } },
-          quotes: { select: { id: true, total: true } }
+          quotes: {
+            select: {
+              id: true,
+              total: true,
+              status: true,
+              installments: {
+                where: { status: { in: ['pending', 'overdue'] } },
+                select: { id: true }
+              }
+            }
+          }
         },
         orderBy: { createdAt: 'desc' },
         skip,
