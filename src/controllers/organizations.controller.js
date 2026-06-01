@@ -70,7 +70,7 @@ export const getOrganizations = async (req, res) => {
 
     const memberships = await prisma.organizationMembership.findMany({
       where: { userId, status: 'active' },
-      include: { organization: { select: { id: true, name: true, plan: true, cuit: true, email: true, website: true, phone: true, address: true, logo: true } } }
+      include: { organization: { select: { id: true, name: true, plan: true, cuit: true, email: true, website: true, phone: true, address: true, logo: true, defaultCurrency: true } } }
     })
 
     if (memberships.length === 0) {
@@ -86,8 +86,9 @@ export const getOrganizations = async (req, res) => {
       website: m.organization.website,
       phone:   m.organization.phone,
       address: m.organization.address,
-      logo:    m.organization.logo,
-      role:    m.role
+      logo:            m.organization.logo,
+      defaultCurrency: m.organization.defaultCurrency,
+      role:            m.role
     }))
 
     return success(res, 200, organizations)
@@ -116,20 +117,20 @@ export const getOrganizationBySlug = async (req, res) => {
 export const updateOrganization = async (req, res) => {
   try {
     const { id } = req.params
-    const { name, cuit, email, website } = req.body
+    const { name, cuit, email, website, phone, address, defaultCurrency } = req.body
 
     if (!name?.trim()) {
       return fail(res, 400, 'El nombre es requerido')
     }
 
-    const { phone, address } = req.body
     const updates = {
-      name:    name.trim(),
-      cuit:    cuit?.trim()    || null,
-      email:   email?.trim()   || null,
-      website: website?.trim() || null,
-      phone:   phone?.trim()   || null,
-      address: address?.trim() || null,
+      name:            name.trim(),
+      cuit:            cuit?.trim()    || null,
+      email:           email?.trim()   || null,
+      website:         website?.trim() || null,
+      phone:           phone?.trim()   || null,
+      address:         address?.trim() || null,
+      defaultCurrency: ['USD', 'ARS'].includes(defaultCurrency) ? defaultCurrency : undefined,
     }
 
     const newSlug = name
@@ -147,7 +148,7 @@ export const updateOrganization = async (req, res) => {
     const organization = await prisma.organization.update({
       where: { id },
       data: updates,
-      select: { id: true, name: true, slug: true, plan: true, cuit: true, email: true, website: true, phone: true, address: true, logo: true, updatedAt: true }
+      select: { id: true, name: true, slug: true, plan: true, cuit: true, email: true, website: true, phone: true, address: true, logo: true, defaultCurrency: true, updatedAt: true }
     })
 
     return success(res, 200, organization)

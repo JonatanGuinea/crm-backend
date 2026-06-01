@@ -41,8 +41,9 @@ model Organization {
   website   String?
   phone     String?
   address   String?
-  logo      String?
-  ownerId   String
+  logo            String?
+  defaultCurrency String  @default("USD")
+  ownerId         String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
