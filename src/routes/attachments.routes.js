@@ -8,10 +8,18 @@ import { upload } from '../middlewares/upload.middleware.js'
 import {
   uploadAttachment,
   getAttachments,
-  deleteAttachment
+  deleteAttachment,
+  serveFile
 } from '../controllers/attachments.controller.js'
 
 const router = Router()
+
+router.get(
+  '/file/:filename',
+  auth,
+  requireMembership,
+  serveFile
+)
 
 router.post(
   '/:entityType/:entityId',

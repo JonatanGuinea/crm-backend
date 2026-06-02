@@ -84,6 +84,27 @@ export const getAttachments = async (req, res) => {
   }
 }
 
+export const serveFile = async (req, res) => {
+  try {
+    const { filename } = req.params
+    const orgId = req.user.organizationId
+
+    const attachment = await prisma.attachment.findFirst({
+      where: { storedName: filename, organizationId: orgId }
+    })
+    if (!attachment) return fail(res, 404, 'Archivo no encontrado')
+
+    const filePath = path.join(UPLOADS_DIR, filename)
+    if (!fs.existsSync(filePath)) return fail(res, 404, 'Archivo no encontrado en el servidor')
+
+    res.setHeader('Content-Disposition', `inline; filename="${attachment.filename}"`)
+    res.setHeader('Content-Type', attachment.mimetype)
+    res.sendFile(filePath)
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
+
 export const deleteAttachment = async (req, res) => {
   try {
     const { id } = req.params
