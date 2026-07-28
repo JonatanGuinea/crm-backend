@@ -10,6 +10,7 @@ export const register = async (req, res) => {
     const password = req.body.password
     const organizationName = req.body.organizationName?.trim()
     const phone             = req.body.phone?.trim() || null
+    const userPhone         = req.body.userPhone?.trim() || null
     const address           = req.body.address?.trim() || null
     const organizationEmail = req.body.organizationEmail?.trim() || null
     const defaultCurrency   = ['USD', 'ARS'].includes(req.body.defaultCurrency) ? req.body.defaultCurrency : 'USD'
@@ -47,7 +48,7 @@ export const register = async (req, res) => {
     const hashedPassword = await hashPassword(password)
 
     const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword, phone }
+      data: { name, email, password: hashedPassword, phone: userPhone || phone }
     })
 
     const organization = await prisma.organization.create({

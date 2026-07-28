@@ -27,28 +27,32 @@ export const createQuote = async (req, res) => {
   try {
     const orgId = req.user.organizationId
     const userId = req.user.id
-    const { title, clientId, projectId, notes, validUntil, taxRate = 0, currency = 'USD', items } = req.body
+    const {
+      title, clientId, projectId, notes, validUntil, taxRate = 0, currency = 'USD', items,
+      potentialClientName, potentialClientEmail, potentialClientCompany, potentialProjectTitle
+    } = req.body
 
-    if (!title || !clientId) {
-      return fail(res, 400, 'El título y el cliente son requeridos')
-    }
-    if (!Array.isArray(items) || items.length === 0) {
-      return fail(res, 400, 'Debe incluir al menos un item')
-    }
+    const isPotential = !clientId && potentialClientName
 
-    const clientExists = await prisma.client.findFirst({
-      where: { id: clientId, organizationId: orgId },
-      select: { id: true }
-    })
-    if (!clientExists) return fail(res, 404, 'Cliente no encontrado en esta organización')
+    if (!title) return fail(res, 400, 'El título es requerido')
+    if (!isPotential && !clientId) return fail(res, 400, 'El cliente es requerido')
+    if (!Array.isArray(items) || items.length === 0) return fail(res, 400, 'Debe incluir al menos un item')
 
-    if (projectId) {
-      const projectExists = await prisma.project.findFirst({
-        where: { id: projectId, organizationId: orgId },
-        select: { id: true, clientId: true }
+    if (clientId) {
+      const clientExists = await prisma.client.findFirst({
+        where: { id: clientId, organizationId: orgId },
+        select: { id: true }
       })
-      if (!projectExists) return fail(res, 404, 'Proyecto no encontrado en esta organización')
-      if (projectExists.clientId !== clientId) return fail(res, 400, 'El proyecto no pertenece al cliente seleccionado')
+      if (!clientExists) return fail(res, 404, 'Cliente no encontrado en esta organización')
+
+      if (projectId) {
+        const projectExists = await prisma.project.findFirst({
+          where: { id: projectId, organizationId: orgId },
+          select: { id: true, clientId: true }
+        })
+        if (!projectExists) return fail(res, 404, 'Proyecto no encontrado en esta organización')
+        if (projectExists.clientId !== clientId) return fail(res, 400, 'El proyecto no pertenece al cliente seleccionado')
+      }
     }
 
     const last = await prisma.quote.findFirst({
@@ -70,8 +74,12 @@ export const createQuote = async (req, res) => {
         subtotal,
         total,
         currency,
-        clientId,
+        clientId: clientId || null,
         projectId: projectId || null,
+        potentialClientName: isPotential ? potentialClientName : null,
+        potentialClientEmail: isPotential ? (potentialClientEmail || null) : null,
+        potentialClientCompany: isPotential ? (potentialClientCompany || null) : null,
+        potentialProjectTitle: isPotential ? (potentialProjectTitle || null) : null,
         organizationId: orgId,
         createdById: userId,
         items: { create: computed }
@@ -173,6 +181,36 @@ export const updateQuote = async (req, res) => {
         )
       }
       updates.status = status
+
+      // Al aprobar un presupuesto de cliente potencial: crear cliente + proyecto
+      if (status === 'approved' && quote.potentialClientName && !quote.clientId) {
+        const newClient = await prisma.client.create({
+          data: {
+            name: quote.potentialClientName,
+            email: quote.potentialClientEmail || undefined,
+            company: quote.potentialClientCompany || undefined,
+            organizationId: orgId,
+            createdById: quote.createdById
+          }
+        })
+        updates.clientId = newClient.id
+        updates.potentialClientName = null
+        updates.potentialClientEmail = null
+        updates.potentialClientCompany = null
+
+        if (quote.potentialProjectTitle) {
+          const newProject = await prisma.project.create({
+            data: {
+              title: quote.potentialProjectTitle,
+              clientId: newClient.id,
+              organizationId: orgId,
+              createdById: quote.createdById
+            }
+          })
+          updates.projectId = newProject.id
+          updates.potentialProjectTitle = null
+        }
+      }
 
       if (['approved', 'rejected'].includes(status)) {
         await notify({

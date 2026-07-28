@@ -186,14 +186,20 @@ model Quote {
   total      Float
   currency   String      @default("USD")
 
-  clientId       String
-  client         Client       @relation(fields: [clientId], references: [id])
+  clientId       String?
+  client         Client?      @relation(fields: [clientId], references: [id])
   projectId      String?
   project        Project?     @relation(fields: [projectId], references: [id])
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdById    String
   createdBy      User         @relation(fields: [createdById], references: [id])
+
+  // Datos temporales de cliente potencial (se eliminan al aprobar)
+  potentialClientName    String?
+  potentialClientEmail   String?
+  potentialClientCompany String?
+  potentialProjectTitle  String?
 
   items        QuoteItem[]
   invoices     Invoice[]
