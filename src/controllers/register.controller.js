@@ -13,6 +13,7 @@ export const register = async (req, res) => {
     const userPhone         = req.body.userPhone?.trim() || null
     const address           = req.body.address?.trim() || null
     const organizationEmail = req.body.organizationEmail?.trim() || null
+    const cuit              = req.body.cuit?.trim() || null
     const defaultCurrency   = ['USD', 'ARS'].includes(req.body.defaultCurrency) ? req.body.defaultCurrency : 'USD'
 
     if (!name || !email || !password || !organizationName) {
@@ -52,7 +53,7 @@ export const register = async (req, res) => {
     })
 
     const organization = await prisma.organization.create({
-      data: { name: organizationName, ownerId: user.id, slug, phone, address, email: organizationEmail, defaultCurrency }
+      data: { name: organizationName, ownerId: user.id, slug, phone, address, email: organizationEmail, cuit, defaultCurrency }
     })
 
     const membership = await prisma.organizationMembership.create({
