@@ -4,6 +4,7 @@ import { requireMembership } from '../middlewares/requireMembership.middleware.j
 import { requireRole } from '../middlewares/RBAC.middleware.js'
 import {
   createInstallments,
+  createCustomInstallments,
   getInstallments,
   payInstallment,
   deleteInstallments
@@ -11,6 +12,7 @@ import {
 
 const router = Router()
 
+router.post('/custom', auth, requireMembership, requireRole('owner', 'admin'), createCustomInstallments)
 router.post('/', auth, requireMembership, requireRole('owner', 'admin'), createInstallments)
 router.get('/', auth, requireMembership, getInstallments)
 router.patch('/:id/pay', auth, requireMembership, requireRole('owner', 'admin'), payInstallment)

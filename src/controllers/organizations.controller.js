@@ -9,7 +9,7 @@ const uploadsDir = path.join(__dirname, '..', '..', 'uploads')
 
 export const createOrganization = async (req, res) => {
   try {
-    const { name, cuit, email, website, phone, address } = req.body
+    const { name, cuit, email, website, phone, address, defaultCurrency } = req.body
     const userId = req.user.id
 
     if (!name) {
@@ -40,11 +40,12 @@ export const createOrganization = async (req, res) => {
     const organization = await prisma.organization.create({
       data: {
         name, ownerId: userId, slug,
-        cuit:    cuit?.trim()    || null,
-        email:   email?.trim()   || null,
-        website: website?.trim() || null,
-        phone:   phone?.trim()   || null,
-        address: address?.trim() || null,
+        cuit:            cuit?.trim()    || null,
+        email:           email?.trim()   || null,
+        website:         website?.trim() || null,
+        phone:           phone?.trim()   || null,
+        address:         address?.trim() || null,
+        defaultCurrency: ['USD', 'ARS'].includes(defaultCurrency) ? defaultCurrency : 'ARS',
       }
     })
 

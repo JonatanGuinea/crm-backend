@@ -122,6 +122,54 @@ export const payInstallment = async (req, res) => {
   }
 }
 
+export const createCustomInstallments = async (req, res) => {
+  try {
+    const orgId = req.user.organizationId
+    const { invoiceId, quoteId, payments } = req.body
+
+    if (!invoiceId && !quoteId) return fail(res, 400, 'invoiceId o quoteId es requerido')
+    if (!Array.isArray(payments) || payments.length < 1) return fail(res, 400, 'Se requiere al menos un pago')
+    if (payments.some(p => !p.amount || !p.dueDate)) return fail(res, 400, 'Cada pago requiere monto y fecha')
+
+    if (invoiceId) {
+      const invoice = await prisma.invoice.findFirst({ where: { id: invoiceId, organizationId: orgId } })
+      if (!invoice) return fail(res, 404, 'Factura no encontrada')
+      await prisma.installment.deleteMany({ where: { invoiceId, organizationId: orgId } })
+    } else {
+      const quote = await prisma.quote.findFirst({ where: { id: quoteId, organizationId: orgId } })
+      if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
+      await prisma.installment.deleteMany({ where: { quoteId, organizationId: orgId } })
+    }
+
+    const installmentsData = payments.map((p, i) => {
+      const dueDate = new Date(p.dueDate)
+      dueDate.setUTCHours(0, 0, 0, 0)
+      return {
+        number: i + 1,
+        amount: parseFloat(parseFloat(p.amount).toFixed(2)),
+        dueDate,
+        ...(invoiceId ? { invoiceId } : { quoteId }),
+        organizationId: orgId
+      }
+    })
+
+    await prisma.installment.createMany({ data: installmentsData })
+
+    if (invoiceId) {
+      await prisma.invoice.update({ where: { id: invoiceId }, data: { status: 'partial' } })
+    }
+
+    const created = await prisma.installment.findMany({
+      where: invoiceId ? { invoiceId } : { quoteId },
+      orderBy: { number: 'asc' }
+    })
+
+    return success(res, 201, created)
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
+
 export const deleteInstallments = async (req, res) => {
   try {
     const orgId = req.user.organizationId

@@ -22,7 +22,7 @@ import {
 
 const router = Router()
 
-router.get('/', auth, requireMembership, getOrganizations)
+router.get('/', auth, getOrganizations)
 router.get('/:slug', auth, getOrganizationBySlug)
 
 router.post('/', auth, createOrganization)

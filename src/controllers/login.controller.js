@@ -35,13 +35,9 @@ export const login = async (req, res) => {
     }
 
     const memberships = await prisma.organizationMembership.findMany({
-      where: { userId: user.id },
+      where: { userId: user.id, status: 'active' },
       include: { organization: { select: { id: true, name: true } } }
     })
-
-    if (!memberships.length) {
-      return fail(res, 403, "El usuario no pertenece a ninguna organización")
-    }
 
     const organizations = memberships
       .filter(m => m.organization)
@@ -51,7 +47,7 @@ export const login = async (req, res) => {
         role: m.role
       }))
 
-    const membership = memberships[0]
+    const membership = memberships[0] ?? null
     const token = generateAccessToken(user, membership)
 
     return success(res, 200, {

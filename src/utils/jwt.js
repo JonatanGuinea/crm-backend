@@ -17,14 +17,12 @@ export const generateTempToken = (user) => {
   )
 }
 
-export const generateAccessToken = (user, membership) => {
-
-
+export const generateAccessToken = (user, membership = null) => {
   return jwt.sign(
     {
       uid: user.id,
-      org: membership.organizationId,
-      role: membership.role,
+      org: membership?.organizationId ?? null,
+      role: membership?.role ?? null,
       isSystemAdmin: user.isSystemAdmin || false
     },
     JWT_SECRET,
