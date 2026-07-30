@@ -21,7 +21,7 @@ export async function checkTimeAlerts(orgId) {
   const in6Days = new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000)
   const in2Days = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000)
 
-  const [adminMembers, allMembers, overdueInvoices, expiringQuotes, projects5d, projects1d] = await Promise.all([
+  const [adminMembers, allMembers, expiringQuotes, projects5d, projects1d] = await Promise.all([
     prisma.organizationMembership.findMany({
       where: { organizationId: orgId, status: 'active', role: { in: ['owner', 'admin'] } },
       select: { userId: true }
@@ -29,10 +29,6 @@ export async function checkTimeAlerts(orgId) {
     prisma.organizationMembership.findMany({
       where: { organizationId: orgId, status: 'active' },
       select: { userId: true }
-    }),
-    prisma.invoice.findMany({
-      where: { organizationId: orgId, status: 'sent', dueDate: { lt: now } },
-      select: { id: true, number: true, title: true }
     }),
     prisma.quote.findMany({
       where: {
@@ -63,21 +59,6 @@ export async function checkTimeAlerts(orgId) {
   ])
 
   const upserts = []
-
-  // Facturas vencidas: actualizar estado y notificar a owner/admin
-  for (const inv of overdueInvoices) {
-    await prisma.invoice.update({ where: { id: inv.id }, data: { status: 'overdue' } })
-    for (const m of adminMembers) {
-      upserts.push({
-        type: 'invoice_overdue',
-        title: 'Factura vencida',
-        message: `La factura #${inv.number} "${inv.title}" está vencida`,
-        userId: m.userId,
-        organizationId: orgId,
-        refId: inv.id
-      })
-    }
-  }
 
   // Presupuestos por vencer en 7 días
   for (const q of expiringQuotes) {

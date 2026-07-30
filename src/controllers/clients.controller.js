@@ -110,15 +110,15 @@ export const getTopClients = async (req, res) => {
   try {
     const orgId = req.user.organizationId
 
-    const invoicesByClient = await prisma.invoice.groupBy({
+    const quotesByClient = await prisma.quote.groupBy({
       by: ['clientId'],
-      where: { organizationId: orgId, status: 'paid' },
+      where: { organizationId: orgId, status: 'approved', clientId: { not: null } },
       _sum: { total: true },
       orderBy: { _sum: { total: 'desc' } },
       take: 5
     })
 
-    const clientIds = invoicesByClient.map(r => r.clientId)
+    const clientIds = quotesByClient.map(r => r.clientId)
     const clients = await prisma.client.findMany({
       where: { id: { in: clientIds } },
       select: { id: true, name: true, company: true }
@@ -126,7 +126,7 @@ export const getTopClients = async (req, res) => {
 
     const clientMap = Object.fromEntries(clients.map(c => [c.id, c]))
 
-    const result = invoicesByClient.map(r => ({
+    const result = quotesByClient.map(r => ({
       client: clientMap[r.clientId] ?? { id: r.clientId, name: 'Desconocido' },
       total: r._sum.total || 0
     }))

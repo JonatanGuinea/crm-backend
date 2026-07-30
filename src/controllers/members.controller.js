@@ -1,6 +1,6 @@
 
 import prisma from '../config/db.js'
-import { generateTempToken, generateAccessToken } from '../utils/jwt.js'
+import { generateTempToken, generateAccessToken, generatePreInviteToken } from '../utils/jwt.js'
 import { success, fail } from '../utils/response.js'
 import { notify } from '../services/notifications.service.js'
 
@@ -124,7 +124,13 @@ export const inviteUser = async (req, res) => {
     })
 
     if (!invitedUser) {
-      return fail(res, 404, 'No existe un usuario con ese email')
+      // El usuario no tiene cuenta: generar token de pre-registro
+      const preToken = generatePreInviteToken({ email: email.toLowerCase().trim(), orgId: organizationId, role, orgName: org.name })
+      return success(res, 200, {
+        message: `Invitación generada para ${email}`,
+        inviteToken: preToken,
+        requiresRegistration: true
+      })
     }
 
     const existing = await prisma.organizationMembership.findFirst({

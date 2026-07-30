@@ -5,16 +5,7 @@ export const getRecentActivity = async (req, res) => {
   try {
     const orgId = req.user.organizationId
 
-    const [invoices, quotes, projects] = await Promise.all([
-      prisma.invoice.findMany({
-        where: { organizationId: orgId },
-        select: {
-          id: true, number: true, title: true, status: true, total: true, createdAt: true,
-          client: { select: { id: true, name: true } }
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 10
-      }),
+    const [quotes, projects] = await Promise.all([
       prisma.quote.findMany({
         where: { organizationId: orgId },
         select: {
@@ -36,7 +27,6 @@ export const getRecentActivity = async (req, res) => {
     ])
 
     const feed = [
-      ...invoices.map(i => ({ type: 'invoice', createdAt: i.createdAt, data: i })),
       ...quotes.map(q => ({ type: 'quote', createdAt: q.createdAt, data: q })),
       ...projects.map(p => ({ type: 'project', createdAt: p.createdAt, data: p }))
     ]

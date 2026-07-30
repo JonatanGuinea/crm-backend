@@ -13,7 +13,7 @@ export const globalSearch = async (req, res) => {
     const term = q.trim()
     const contains = { contains: term, mode: 'insensitive' }
 
-    const [clients, projects, quotes, invoices] = await Promise.all([
+    const [clients, projects, quotes] = await Promise.all([
       prisma.client.findMany({
         where: {
           organizationId: orgId,
@@ -43,23 +43,12 @@ export const globalSearch = async (req, res) => {
           client: { select: { id: true, name: true } }
         },
         take: 5
-      }),
-      prisma.invoice.findMany({
-        where: {
-          organizationId: orgId,
-          OR: [{ title: contains }, { notes: contains }]
-        },
-        select: {
-          id: true, number: true, title: true, status: true, total: true,
-          client: { select: { id: true, name: true } }
-        },
-        take: 5
       })
     ])
 
-    const total = clients.length + projects.length + quotes.length + invoices.length
+    const total = clients.length + projects.length + quotes.length
 
-    return success(res, 200, { total, clients, projects, quotes, invoices })
+    return success(res, 200, { total, clients, projects, quotes })
   } catch (error) {
     return fail(res, 500, error.message)
   }

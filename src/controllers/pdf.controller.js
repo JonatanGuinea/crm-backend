@@ -30,29 +30,3 @@ export const downloadQuotePdf = async (req, res) => {
   }
 }
 
-export const downloadInvoicePdf = async (req, res) => {
-  try {
-    const orgId = req.user.organizationId
-    const { id } = req.params
-
-    const invoice = await prisma.invoice.findFirst({
-      where: { id, organizationId: orgId },
-      include: {
-        items: true,
-        client: { select: { id: true, name: true, email: true, phone: true, company: true, address: true, cuit: true, website: true } },
-        project: { select: { id: true, title: true } },
-        organization: { select: { id: true, name: true, cuit: true, email: true, website: true, phone: true, address: true, logo: true } }
-      }
-    })
-
-    if (!invoice) return fail(res, 404, 'Factura no encontrada')
-
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', `attachment; filename="factura-${invoice.number}.pdf"`)
-
-    const doc = buildPdf('invoice', invoice)
-    doc.pipe(res)
-  } catch (error) {
-    return fail(res, 500, error.message)
-  }
-}

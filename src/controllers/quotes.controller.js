@@ -113,7 +113,7 @@ export const getQuotes = async (req, res) => {
         include: {
           client: { select: { id: true, name: true } },
           project: { select: { id: true, title: true } },
-          _count: { select: { invoices: true, installments: true } },
+          _count: { select: { installments: true } },
           installments: { where: { status: { in: ['pending', 'overdue'] } }, select: { id: true } }
         },
         orderBy: { createdAt: 'desc' },
@@ -280,64 +280,6 @@ export const deleteQuote = async (req, res) => {
     await prisma.quote.delete({ where: { id } })
 
     return success(res, 200, { message: 'Presupuesto eliminado' })
-  } catch (error) {
-    return fail(res, 500, error.message)
-  }
-}
-
-export const createInvoiceFromQuote = async (req, res) => {
-  try {
-    const orgId = req.user.organizationId
-    const userId = req.user.id
-    const { id } = req.params
-    const { dueDate } = req.body
-
-    const quote = await prisma.quote.findFirst({
-      where: { id, organizationId: orgId },
-      include: { items: true }
-    })
-    if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
-    if (quote.status !== 'approved') return fail(res, 400, 'Solo se puede facturar un presupuesto aprobado')
-
-    const last = await prisma.invoice.findFirst({
-      where: { organizationId: orgId },
-      orderBy: { number: 'desc' },
-      select: { number: true }
-    })
-    const number = (last?.number ?? 0) + 1
-
-    const invoice = await prisma.invoice.create({
-      data: {
-        number,
-        title: quote.title,
-        notes: quote.notes,
-        dueDate: dueDate ? new Date(dueDate) : null,
-        subtotal: quote.subtotal,
-        taxRate: quote.taxRate,
-        total: quote.total,
-        currency: quote.currency,
-        clientId: quote.clientId,
-        projectId: quote.projectId,
-        quoteId: quote.id,
-        organizationId: orgId,
-        createdById: userId,
-        items: {
-          create: quote.items.map(i => ({
-            description: i.description,
-            quantity: i.quantity,
-            unitPrice: i.unitPrice,
-            amount: i.amount
-          }))
-        }
-      },
-      include: {
-        items: true,
-        client: { select: { id: true, name: true } },
-        project: { select: { id: true, title: true } }
-      }
-    })
-
-    return success(res, 201, invoice)
   } catch (error) {
     return fail(res, 500, error.message)
   }
