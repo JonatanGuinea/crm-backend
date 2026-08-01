@@ -2,6 +2,7 @@ import prisma from '../config/db.js'
 import { success, fail, paginated } from '../utils/response.js'
 import { parsePagination, buildPaginationMeta } from '../utils/paginate.js'
 import { notify } from '../services/notifications.service.js'
+import { sendQuoteEmail } from '../services/email.service.js'
 
 const allowedTransitions = {
   draft: ['sent', 'expired'],
@@ -293,27 +294,25 @@ export const sendQuote = async (req, res) => {
     const quote = await prisma.quote.findFirst({
       where: { id, organizationId: orgId },
       include: {
-        client: { select: { id: true, name: true, email: true } },
-        items: true
+        client:       { select: { id: true, name: true, email: true } },
+        organization: { select: { name: true, logo: true } },
       }
     })
     if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
     if (quote.status !== 'draft') return fail(res, 400, 'Solo se pueden enviar presupuestos en borrador')
     if (!quote.client?.email) return fail(res, 400, `El cliente "${quote.client?.name}" no tiene email asignado. Agregá un email desde el perfil del cliente antes de enviar.`)
 
-    // TODO: Implementar servicio de mensajería
-    // Cuando se defina el servicio (ej. Resend, SendGrid, Nodemailer), agregar aquí:
-    //
-    // await emailService.sendQuotePdf({
-    //   to: quote.client.email,
-    //   clientName: quote.client.name,
-    //   quoteId: id,
-    //   quoteNumber: quote.number,
-    //   quoteTitle: quote.title,
-    //   total: quote.total,
-    //   currency: quote.currency,
-    //   organizationId: orgId
-    // })
+    await sendQuoteEmail({
+      to:          quote.client.email,
+      clientName:  quote.client.name,
+      orgName:     quote.organization?.name || '',
+      orgLogo:     quote.organization?.logo || null,
+      quoteId:     id,
+      quoteNumber: quote.number,
+      quoteTitle:  quote.title,
+      total:       quote.total,
+      currency:    quote.currency,
+    })
 
     const updated = await prisma.quote.update({
       where: { id },
