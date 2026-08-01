@@ -106,6 +106,23 @@ export const updateClient = async (req, res) => {
   }
 }
 
+export const getClientsDashboard = async (req, res) => {
+  try {
+    const orgId = req.user.organizationId
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+
+    const [total, newThisMonth] = await Promise.all([
+      prisma.client.count({ where: { organizationId: orgId } }),
+      prisma.client.count({ where: { organizationId: orgId, createdAt: { gte: startOfMonth } } })
+    ])
+
+    return success(res, 200, { total, newThisMonth })
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
+
 export const getTopClients = async (req, res) => {
   try {
     const orgId = req.user.organizationId

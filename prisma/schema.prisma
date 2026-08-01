@@ -29,6 +29,8 @@ model User {
   notifications      Notification[]
   attachments        Attachment[]
   expenses           Expense[]
+  assignedTasks      Task[]         @relation("TaskAssignee")
+  createdTasks       Task[]         @relation("TaskCreator")
 }
 
 model Organization {
@@ -58,6 +60,7 @@ model Organization {
   installments       Installment[]
   expenseCategories  ExpenseCategory[]
   expenses           Expense[]
+  tasks              Task[]
 
   @@index([name])
 }
@@ -141,6 +144,7 @@ model Project {
   createdBy    User         @relation(fields: [createdById], references: [id])
   quotes       Quote[]
   invoices     Invoice[]
+  tasks        Task[]
 
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([organizationId, status])
@@ -329,6 +333,45 @@ model Expense {
 
   @@index([organizationId, date(sort: Desc)])
   @@index([organizationId, categoryId])
+}
+
+// ─── Tasks ────────────────────────────────────────────────────────────────────
+
+enum TaskStatus {
+  todo
+  in_progress
+  done
+}
+
+enum TaskPriority {
+  low
+  medium
+  high
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus   @default(todo)
+  priority    TaskPriority @default(medium)
+  dueDate     DateTime?
+
+  assignedToId   String?
+  assignedTo     User?        @relation("TaskAssignee", fields: [assignedToId], references: [id])
+  projectId      String?
+  project        Project?     @relation(fields: [projectId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdById    String
+  createdBy      User         @relation("TaskCreator", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, status])
+  @@index([organizationId, assignedToId])
+  @@index([organizationId, createdAt(sort: Desc)])
 }
 
 // ─── Attachments ─────────────────────────────────────────────────────────────
