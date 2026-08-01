@@ -11,9 +11,9 @@ const VALID_ENTITY_TYPES = ['client', 'project', 'quote', 'invoice']
 
 async function findEntity(entityType, entityId, orgId) {
   const queries = {
-    client: () => prisma.client.findFirst({ where: { id: entityId, organizationId: orgId }, select: { id: true } }),
+    client:  () => prisma.client.findFirst({ where: { id: entityId, organizationId: orgId }, select: { id: true } }),
     project: () => prisma.project.findFirst({ where: { id: entityId, organizationId: orgId }, select: { id: true } }),
-    quote: () => prisma.quote.findFirst({ where: { id: entityId, organizationId: orgId }, select: { id: true } }),
+    quote:   () => prisma.quote.findFirst({ where: { id: entityId, organizationId: orgId }, select: { id: true } }),
     invoice: () => prisma.invoice.findFirst({ where: { id: entityId, organizationId: orgId }, select: { id: true } })
   }
   return queries[entityType]()
@@ -72,8 +72,38 @@ export const getAttachments = async (req, res) => {
     const entity = await findEntity(entityType, entityId, orgId)
     if (!entity) return fail(res, 404, 'Entidad no encontrada en esta organización')
 
+    let where = { organizationId: orgId, entityType, entityId }
+
+    if (entityType === 'client') {
+      const projects = await prisma.project.findMany({
+        where: { clientId: entityId, organizationId: orgId },
+        select: { id: true, title: true }
+      })
+      const projectIds = projects.map(p => p.id)
+      const projectTitleMap = Object.fromEntries(projects.map(p => [p.id, p.title]))
+
+      where = {
+        organizationId: orgId,
+        OR: [
+          { entityType: 'client', entityId },
+          ...(projectIds.length > 0 ? [{ entityType: 'project', entityId: { in: projectIds } }] : [])
+        ]
+      }
+
+      const attachments = await prisma.attachment.findMany({
+        where,
+        include: { uploadedBy: { select: { id: true, name: true } } },
+        orderBy: { createdAt: 'desc' }
+      })
+
+      return success(res, 200, attachments.map(a => ({
+        ...a,
+        sourceLabel: a.entityType === 'project' ? (projectTitleMap[a.entityId] ?? 'Proyecto') : null
+      })))
+    }
+
     const attachments = await prisma.attachment.findMany({
-      where: { entityType, entityId, organizationId: orgId },
+      where,
       include: { uploadedBy: { select: { id: true, name: true } } },
       orderBy: { createdAt: 'desc' }
     })

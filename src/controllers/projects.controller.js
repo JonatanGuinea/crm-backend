@@ -84,7 +84,18 @@ export const getProjects = async (req, res) => {
       prisma.project.count({ where })
     ])
 
-    return paginated(res, projects, buildPaginationMeta(total, page, limit))
+    const projectIds = projects.map(p => p.id)
+    const attachmentCounts = projectIds.length > 0
+      ? await prisma.attachment.groupBy({
+          by: ['entityId'],
+          where: { entityType: 'project', entityId: { in: projectIds } },
+          _count: { id: true }
+        })
+      : []
+    const countMap = Object.fromEntries(attachmentCounts.map(a => [a.entityId, a._count.id]))
+    const projectsWithCounts = projects.map(p => ({ ...p, attachmentCount: countMap[p.id] ?? 0 }))
+
+    return paginated(res, projectsWithCounts, buildPaginationMeta(total, page, limit))
 
   } catch (error) {
     return fail(res, 500, error.message)
