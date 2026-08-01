@@ -44,6 +44,9 @@ model Organization {
   phone     String?
   address   String?
   logo            String?
+  city            String?
+  province        String?
+  postalCode      String?
   defaultCurrency String  @default("USD")
   ownerId         String
   createdAt DateTime @default(now())

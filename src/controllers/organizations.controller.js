@@ -9,7 +9,7 @@ const uploadsDir = path.join(__dirname, '..', '..', 'uploads')
 
 export const createOrganization = async (req, res) => {
   try {
-    const { name, cuit, email, website, phone, address, defaultCurrency } = req.body
+    const { name, cuit, email, website, phone, address, city, province, postalCode, defaultCurrency } = req.body
     const userId = req.user.id
 
     if (!name) {
@@ -43,8 +43,11 @@ export const createOrganization = async (req, res) => {
         cuit:            cuit?.trim()    || null,
         email:           email?.trim()   || null,
         website:         website?.trim() || null,
-        phone:           phone?.trim()   || null,
-        address:         address?.trim() || null,
+        phone:           phone?.trim()    || null,
+        address:         address?.trim()  || null,
+        city:            city?.trim()       || null,
+        province:        province?.trim()   || null,
+        postalCode:      postalCode?.trim() || null,
         defaultCurrency: ['USD', 'ARS'].includes(defaultCurrency) ? defaultCurrency : 'ARS',
       }
     })
@@ -71,7 +74,7 @@ export const getOrganizations = async (req, res) => {
 
     const memberships = await prisma.organizationMembership.findMany({
       where: { userId, status: 'active' },
-      include: { organization: { select: { id: true, name: true, plan: true, cuit: true, email: true, website: true, phone: true, address: true, logo: true, defaultCurrency: true } } }
+      include: { organization: { select: { id: true, name: true, plan: true, cuit: true, email: true, website: true, phone: true, address: true, city: true, province: true, postalCode: true, logo: true, defaultCurrency: true } } }
     })
 
     if (memberships.length === 0) {
@@ -86,7 +89,10 @@ export const getOrganizations = async (req, res) => {
       email:   m.organization.email,
       website: m.organization.website,
       phone:   m.organization.phone,
-      address: m.organization.address,
+      address:  m.organization.address,
+      city:       m.organization.city,
+      province:   m.organization.province,
+      postalCode: m.organization.postalCode,
       logo:            m.organization.logo,
       defaultCurrency: m.organization.defaultCurrency,
       role:            m.role
@@ -118,7 +124,7 @@ export const getOrganizationBySlug = async (req, res) => {
 export const updateOrganization = async (req, res) => {
   try {
     const { id } = req.params
-    const { name, cuit, email, website, phone, address, defaultCurrency } = req.body
+    const { name, cuit, email, website, phone, address, city, province, postalCode, defaultCurrency } = req.body
 
     if (!name?.trim()) {
       return fail(res, 400, 'El nombre es requerido')
@@ -126,11 +132,14 @@ export const updateOrganization = async (req, res) => {
 
     const updates = {
       name:            name.trim(),
-      cuit:            cuit?.trim()    || null,
-      email:           email?.trim()   || null,
-      website:         website?.trim() || null,
-      phone:           phone?.trim()   || null,
-      address:         address?.trim() || null,
+      cuit:            cuit?.trim()     || null,
+      email:           email?.trim()    || null,
+      website:         website?.trim()  || null,
+      phone:           phone?.trim()    || null,
+      address:         address?.trim()  || null,
+      city:            city?.trim()       || null,
+      province:        province?.trim()   || null,
+      postalCode:      postalCode?.trim() || null,
       defaultCurrency: ['USD', 'ARS'].includes(defaultCurrency) ? defaultCurrency : undefined,
     }
 
@@ -149,7 +158,7 @@ export const updateOrganization = async (req, res) => {
     const organization = await prisma.organization.update({
       where: { id },
       data: updates,
-      select: { id: true, name: true, slug: true, plan: true, cuit: true, email: true, website: true, phone: true, address: true, logo: true, defaultCurrency: true, updatedAt: true }
+      select: { id: true, name: true, slug: true, plan: true, cuit: true, email: true, website: true, phone: true, address: true, city: true, province: true, postalCode: true, logo: true, defaultCurrency: true, updatedAt: true }
     })
 
     return success(res, 200, organization)
