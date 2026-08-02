@@ -414,60 +414,70 @@ export function buildPdf(type, data) {
   if (hasClientSig || hasOrgSig) {
     y = sectionLabel('Firmas', y)
 
-    const sigPad  = 20
-    const sigColW = (tableW - sigPad) / 2
-    const imgH    = 56
+    const colGap  = 40
+    const sigColW = (tableW - colGap) / 2
     const sigLX   = pad
-    const sigRX   = pad + sigColW + sigPad
+    const sigRX   = pad + sigColW + colGap
+    const imgH    = 52
 
-    const imgTop  = y + 12
+    y += 16  // top padding
 
+    // ── Etiquetas de columna
+    doc.font('Helvetica').fontSize(6.5).fillColor(C.zinc400)
+    doc.text('CLIENTE', sigLX, y, { width: sigColW, align: 'center', characterSpacing: 1.2, lineBreak: false })
+    doc.text('EMPRESA', sigRX, y, { width: sigColW, align: 'center', characterSpacing: 1.2, lineBreak: false })
+    y += 10
+
+    // ── Imágenes de firma
     if (hasClientSig) {
       try {
-        const b64  = data.clientSignature.includes(',') ? data.clientSignature.split(',')[1] : data.clientSignature
-        const buf  = Buffer.from(b64, 'base64')
-        doc.image(buf, sigLX, imgTop, { fit: [sigColW, imgH], align: 'center', valign: 'bottom' })
+        const b64 = data.clientSignature.includes(',') ? data.clientSignature.split(',')[1] : data.clientSignature
+        doc.image(Buffer.from(b64, 'base64'), sigLX, y, { fit: [sigColW, imgH], align: 'center', valign: 'bottom' })
       } catch (_) {}
     }
-
     if (hasOrgSig) {
       try {
-        const b64  = org.signature.includes(',') ? org.signature.split(',')[1] : org.signature
-        const buf  = Buffer.from(b64, 'base64')
-        doc.image(buf, sigRX, imgTop, { fit: [sigColW, imgH], align: 'center', valign: 'bottom' })
+        const b64 = org.signature.includes(',') ? org.signature.split(',')[1] : org.signature
+        doc.image(Buffer.from(b64, 'base64'), sigRX, y, { fit: [sigColW, imgH], align: 'center', valign: 'bottom' })
       } catch (_) {}
     }
+    y += imgH + 8
 
-    const lineY = imgTop + imgH + 8
-    doc.rect(sigLX, lineY, sigColW, 0.5).fillColor(C.zinc300).fill()
-    doc.rect(sigRX, lineY, sigColW, 0.5).fillColor(C.zinc300).fill()
+    // ── Líneas de firma
+    doc.rect(sigLX, y, sigColW, 0.5).fillColor(C.zinc400).fill()
+    doc.rect(sigRX, y, sigColW, 0.5).fillColor(C.zinc400).fill()
 
-    let sigTextY = lineY + 6
+    // ── Separador vertical entre columnas
+    const divX = sigRX - colGap / 2
+    doc.rect(divX, y - imgH - 8, 0.5, imgH + 8).fillColor(C.zinc100).fill()
 
-    // Nombre cliente
-    const clientSigName    = data.client?.name    || data.potentialClientName    || ''
-    const clientSigCompany = data.client?.company || data.potentialClientCompany || ''
-    if (clientSigName) {
+    y += 8
+
+    // ── Nombres bajo la línea (coordenadas explícitas, sin depender del cursor)
+    const cName    = data.client?.name    || data.potentialClientName    || ''
+    const cCompany = data.client?.company || data.potentialClientCompany || ''
+    const oName    = org.signatureOwnerName || ''
+    const oOrg     = org.name || ''
+
+    if (cName) {
       doc.font('Helvetica-Bold').fontSize(8.5).fillColor(C.zinc700)
-        .text(clientSigName, sigLX, sigTextY, { width: sigColW, align: 'center' })
+        .text(cName, sigLX, y, { width: sigColW, align: 'center', lineBreak: false })
     }
-    if (clientSigCompany) {
+    if (cCompany) {
       doc.font('Helvetica').fontSize(7.5).fillColor(C.zinc500)
-        .text(clientSigCompany, sigLX, sigTextY + (clientSigName ? 12 : 0), { width: sigColW, align: 'center' })
+        .text(cCompany, sigLX, y + (cName ? 13 : 0), { width: sigColW, align: 'center', lineBreak: false })
     }
 
-    // Nombre org
-    if (org.signatureOwnerName) {
+    if (oName) {
       doc.font('Helvetica-Bold').fontSize(8.5).fillColor(C.zinc700)
-        .text(org.signatureOwnerName, sigRX, sigTextY, { width: sigColW, align: 'center' })
+        .text(oName, sigRX, y, { width: sigColW, align: 'center', lineBreak: false })
+    }
+    if (oOrg) {
       doc.font('Helvetica').fontSize(7.5).fillColor(C.zinc500)
-        .text(org.name || '', sigRX, sigTextY + 12, { width: sigColW, align: 'center' })
-    } else if (org.name) {
-      doc.font('Helvetica').fontSize(7.5).fillColor(C.zinc500)
-        .text(org.name, sigRX, sigTextY, { width: sigColW, align: 'center' })
+        .text(oOrg, sigRX, y + (oName ? 13 : 0), { width: sigColW, align: 'center', lineBreak: false })
     }
 
-    y = sigTextY + 28
+    y += 30
   }
 
   // ─────────────────────────────────────────────────────────────────────────
