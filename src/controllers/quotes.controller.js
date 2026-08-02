@@ -228,6 +228,9 @@ export const updateQuote = async (req, res) => {
     for (const key of ['title', 'notes', 'currency']) {
       if (req.body[key] !== undefined) updates[key] = req.body[key]
     }
+    for (const key of ['potentialClientName', 'potentialClientEmail', 'potentialClientCompany', 'potentialProjectTitle']) {
+      if (req.body[key] !== undefined) updates[key] = req.body[key] || null
+    }
     if (validUntil !== undefined) updates.validUntil = validUntil ? new Date(validUntil) : null
 
     if (items !== undefined) {
@@ -300,11 +303,17 @@ export const sendQuote = async (req, res) => {
     })
     if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
     if (quote.status !== 'draft') return fail(res, 400, 'Solo se pueden enviar presupuestos en borrador')
-    if (!quote.client?.email) return fail(res, 400, `El cliente "${quote.client?.name}" no tiene email asignado. Agregá un email desde el perfil del cliente antes de enviar.`)
+
+    const recipientEmail = quote.client?.email || quote.potentialClientEmail
+    const recipientName  = quote.client?.name  || quote.potentialClientName
+    if (!recipientEmail) {
+      const label = recipientName || 'El cliente'
+      return fail(res, 400, `"${label}" no tiene email asignado. Agregá un email antes de enviar.`)
+    }
 
     await sendQuoteEmail({
-      to:          quote.client.email,
-      clientName:  quote.client.name,
+      to:          recipientEmail,
+      clientName:  recipientName,
       orgName:     quote.organization?.name || '',
       orgLogo:     quote.organization?.logo || null,
       quoteId:     id,
