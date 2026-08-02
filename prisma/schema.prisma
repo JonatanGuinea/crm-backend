@@ -439,11 +439,12 @@ enum NotificationType {
 
 model Notification {
   id      String           @id @default(cuid())
-  type    NotificationType
-  title   String
-  message String
-  read    Boolean          @default(false)
-  refId   String
+  type     NotificationType
+  title    String
+  message  String
+  metadata String?
+  read     Boolean          @default(false)
+  refId    String
 
   userId         String
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)

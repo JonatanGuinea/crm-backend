@@ -2,6 +2,7 @@ import { Router } from 'express'
 import prisma from '../config/db.js'
 import { success, fail } from '../utils/response.js'
 import { buildPdf } from '../utils/buildPdf.js'
+import { notify } from '../services/notifications.service.js'
 
 const router = Router()
 
@@ -86,7 +87,12 @@ router.post('/quotes/:id/reject', async (req, res) => {
 
     const quote = await prisma.quote.findUnique({
       where: { id },
-      select: { id: true, status: true }
+      select: {
+        id: true, status: true, number: true, title: true,
+        organizationId: true, createdById: true,
+        client: { select: { name: true, phone: true, company: true } },
+        potentialClientName: true, potentialClientPhone: true, potentialClientCompany: true
+      }
     })
 
     if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
@@ -95,10 +101,43 @@ router.post('/quotes/:id/reject', async (req, res) => {
     if (quote.status === 'expired')  return fail(res, 400, 'El presupuesto ha expirado')
     if (!['draft', 'sent'].includes(quote.status)) return fail(res, 400, 'Este presupuesto no puede ser rechazado')
 
+    const trimmedReason = reason?.trim() || null
+
     await prisma.quote.update({
       where: { id },
-      data: { status: 'rejected', rejectionReason: reason?.trim() || null }
+      data: { status: 'rejected', rejectionReason: trimmedReason }
     })
+
+    // Notificar a todos los miembros activos de la organización
+    const clientName    = quote.client?.name    || quote.potentialClientName || 'Cliente'
+    const clientCompany = quote.client?.company || quote.potentialClientCompany || null
+    const clientPhone   = (quote.client?.phone  || quote.potentialClientPhone || '').replace(/\D/g, '')
+    const numStr        = String(quote.number).padStart(3, '0')
+    const displayName   = clientCompany ? `${clientCompany} (${clientName})` : clientName
+
+    const members = await prisma.organizationMembership.findMany({
+      where: { organizationId: quote.organizationId, status: 'active', role: { in: ['owner', 'admin'] } },
+      select: { userId: true }
+    })
+
+    await Promise.all(members.map(m =>
+      notify({
+        type:    'quote_rejected',
+        title:   'Presupuesto rechazado',
+        message: `${displayName} rechazó el presupuesto #${numStr} — ${quote.title}`,
+        metadata: JSON.stringify({
+          phone:       clientPhone || null,
+          clientName,
+          clientCompany,
+          quoteNumber: numStr,
+          quoteTitle:  quote.title,
+          reason:      trimmedReason
+        }),
+        userId: m.userId,
+        orgId:  quote.organizationId,
+        refId:  quote.id
+      })
+    ))
 
     return success(res, 200, { message: 'Presupuesto rechazado' })
   } catch (error) {
