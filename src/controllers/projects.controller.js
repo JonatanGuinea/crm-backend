@@ -271,3 +271,17 @@ export const deleteProject = async (req, res) => {
     return fail(res, 500, error.message)
   }
 }
+
+export const getNewProjectsCount = async (req, res) => {
+  try {
+    const orgId = req.user.organizationId
+    const { since } = req.query
+    const sinceDate = since ? new Date(since) : new Date(0)
+    const count = await prisma.project.count({
+      where: { organizationId: orgId, createdAt: { gt: sinceDate } }
+    })
+    return success(res, 200, { count })
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}

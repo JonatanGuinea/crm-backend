@@ -31,8 +31,10 @@ router.post('/quotes/:id/confirm', async (req, res) => {
     const quote = await prisma.quote.findUnique({
       where: { id },
       select: {
-        id: true, status: true, clientId: true,
+        id: true, status: true, number: true, title: true, clientId: true, projectId: true,
+        client: { select: { name: true, phone: true, company: true } },
         potentialClientName: true, potentialClientEmail: true, potentialClientPhone: true, potentialClientCompany: true,
+        potentialProjectTitle: true,
         organizationId: true, createdById: true,
       }
     })
@@ -45,8 +47,9 @@ router.post('/quotes/:id/confirm', async (req, res) => {
 
     const updateData = { status: 'signed' }
 
+    const { name, company, email, phone, website, cuit, address, province, city, postalCode, notes, signature } = req.body
+
     if (!quote.clientId && quote.potentialClientName) {
-      const { name, company, email, phone, website, cuit, address, province, city, postalCode, notes, signature } = req.body
       const newClient = await prisma.client.create({
         data: {
           name:           name    || quote.potentialClientName,
@@ -67,13 +70,60 @@ router.post('/quotes/:id/confirm', async (req, res) => {
       updateData.clientId = newClient.id
     }
 
-    const { signature } = req.body
     if (signature) {
       updateData.clientSignature = signature
       updateData.clientSignedAt  = new Date()
     }
 
+    // Crear proyecto automáticamente si no hay uno vinculado
+    if (!quote.projectId) {
+      const projectClientId = updateData.clientId || quote.clientId
+      const projectTitle    = quote.potentialProjectTitle || quote.title
+      const newProject = await prisma.project.create({
+        data: {
+          title:          projectTitle,
+          status:         'approved',
+          clientId:       projectClientId,
+          organizationId: quote.organizationId,
+          createdById:    quote.createdById,
+        }
+      })
+      updateData.projectId             = newProject.id
+      updateData.potentialProjectTitle = null
+    }
+
     await prisma.quote.update({ where: { id }, data: updateData })
+
+    // Notificar a owners y admins
+    const clientName    = quote.client?.name    || name    || quote.potentialClientName || 'Cliente'
+    const clientCompany = quote.client?.company || company || quote.potentialClientCompany || null
+    const clientPhone   = ((quote.client?.phone || phone || quote.potentialClientPhone || '')).replace(/\D/g, '')
+    const numStr        = String(quote.number).padStart(3, '0')
+    const displayName   = clientCompany ? `${clientCompany} (${clientName})` : clientName
+
+    const members = await prisma.organizationMembership.findMany({
+      where: { organizationId: quote.organizationId, status: 'active', role: { in: ['owner', 'admin'] } },
+      select: { userId: true }
+    })
+
+    await Promise.all(members.map(m =>
+      notify({
+        type:    'quote_approved',
+        title:   'Presupuesto confirmado',
+        message: `${displayName} confirmó y firmó el presupuesto #${numStr} — ${quote.title}`,
+        metadata: JSON.stringify({
+          phone:       clientPhone || null,
+          clientName,
+          clientCompany,
+          quoteNumber: numStr,
+          quoteTitle:  quote.title,
+        }),
+        userId: m.userId,
+        orgId:  quote.organizationId,
+        refId:  quote.id
+      })
+    ))
+
     return success(res, 200, { message: 'Presupuesto confirmado exitosamente' })
   } catch (error) {
     return fail(res, 500, error.message)

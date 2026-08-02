@@ -10,7 +10,8 @@ import {
   getProjectById,
   getDashboardMetrics,
   updateProject,
-  deleteProject
+  deleteProject,
+  getNewProjectsCount
 } from "../controllers/projects.controller.js";
 
 const router = Router()
@@ -35,6 +36,13 @@ router.get(
   auth,
   requireMembership,
   getDashboardMetrics
+)
+
+router.get(
+  '/new-count',
+  auth,
+  requireMembership,
+  getNewProjectsCount
 )
 
 router.get(
