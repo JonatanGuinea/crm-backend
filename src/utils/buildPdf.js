@@ -412,15 +412,31 @@ export function buildPdf(type, data) {
   const hasOrgSig    = !!org.signature
 
   if (hasClientSig || hasOrgSig) {
+    const colGap    = 40
+    const sigColW   = (tableW - colGap) / 2
+    const sigLX     = pad
+    const sigRX     = pad + sigColW + colGap
+    const imgH      = 52
+    // Altura total estimada del bloque (sectionLabel 24 + cláusula ~40 + sep 14 + labels 10 + img 52 + gap 8 + line 1 + gap 8 + text 28 + bottom 18)
+    const blockH    = 210
+
+    // Si no entra en la página actual, saltar a una nueva para evitar
+    // que doc.text() con y > pageH dispare addPage() en cada llamada
+    if (y + blockH > pageH - 42) {
+      doc.addPage()
+      y = 30
+    }
+
     y = sectionLabel('Firmas', y)
+    y += 12
 
-    const colGap  = 40
-    const sigColW = (tableW - colGap) / 2
-    const sigLX   = pad
-    const sigRX   = pad + sigColW + colGap
-    const imgH    = 52
-
-    y += 16  // top padding
+    // ── Cláusula de aceptación
+    const clauseText = 'Las partes declaran haber leído y aceptado el presente presupuesto en todas sus condiciones. La firma a continuación implica conformidad con los servicios, plazos y valores detallados en este documento.'
+    doc.font('Helvetica').fontSize(10.5).fillColor(C.zinc500)
+      .text(clauseText, pad, y, { width: tableW, align: 'justify', lineGap: 2.5 })
+    y = doc.y + 10
+    doc.rect(pad, y, tableW, 0.5).fillColor(C.zinc200).fill()
+    y += 12
 
     // ── Etiquetas de columna
     doc.font('Helvetica').fontSize(6.5).fillColor(C.zinc400)
@@ -443,17 +459,16 @@ export function buildPdf(type, data) {
     }
     y += imgH + 8
 
-    // ── Líneas de firma
-    doc.rect(sigLX, y, sigColW, 0.5).fillColor(C.zinc400).fill()
-    doc.rect(sigRX, y, sigColW, 0.5).fillColor(C.zinc400).fill()
-
     // ── Separador vertical entre columnas
     const divX = sigRX - colGap / 2
     doc.rect(divX, y - imgH - 8, 0.5, imgH + 8).fillColor(C.zinc100).fill()
 
+    // ── Líneas de firma
+    doc.rect(sigLX, y, sigColW, 0.5).fillColor(C.zinc400).fill()
+    doc.rect(sigRX, y, sigColW, 0.5).fillColor(C.zinc400).fill()
     y += 8
 
-    // ── Nombres bajo la línea (coordenadas explícitas, sin depender del cursor)
+    // ── Nombres (coordenadas Y explícitas y siempre < pageH)
     const cName    = data.client?.name    || data.potentialClientName    || ''
     const cCompany = data.client?.company || data.potentialClientCompany || ''
     const oName    = org.signatureOwnerName || ''
@@ -467,7 +482,6 @@ export function buildPdf(type, data) {
       doc.font('Helvetica').fontSize(7.5).fillColor(C.zinc500)
         .text(cCompany, sigLX, y + (cName ? 13 : 0), { width: sigColW, align: 'center', lineBreak: false })
     }
-
     if (oName) {
       doc.font('Helvetica-Bold').fontSize(8.5).fillColor(C.zinc700)
         .text(oName, sigRX, y, { width: sigColW, align: 'center', lineBreak: false })
@@ -477,7 +491,7 @@ export function buildPdf(type, data) {
         .text(oOrg, sigRX, y + (oName ? 13 : 0), { width: sigColW, align: 'center', lineBreak: false })
     }
 
-    y += 30
+    y += 28
   }
 
   // ─────────────────────────────────────────────────────────────────────────
