@@ -34,7 +34,7 @@ export const createQuote = async (req, res) => {
     const orgId = req.user.organizationId
     const userId = req.user.id
     const {
-      title, clientId, projectId, notes, validUntil, taxRate = 0, currency = 'USD', items,
+      title, clientId, projectId, notes, validUntil, deliveryDate, taxRate = 0, currency = 'USD', items,
       potentialClientName, potentialClientEmail, potentialClientCompany, potentialProjectTitle,
       discountType = null, discountValue = 0
     } = req.body
@@ -76,7 +76,8 @@ export const createQuote = async (req, res) => {
         number,
         title,
         notes,
-        validUntil: validUntil ? new Date(validUntil) : null,
+        validUntil:   validUntil   ? new Date(validUntil)   : null,
+        deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
         taxRate: parseFloat(taxRate),
         discountType: discountType || null,
         discountValue: discountType ? (parseFloat(discountValue) || 0) : null,
@@ -169,10 +170,10 @@ export const updateQuote = async (req, res) => {
     if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
 
     const updates = {}
-    const { status, title, notes, validUntil, taxRate, currency, items, discountType, discountValue } = req.body
+    const { status, title, notes, validUntil, deliveryDate, taxRate, currency, items, discountType, discountValue } = req.body
 
     if (quote.status === 'approved') {
-      const hasContentChange = [title, notes, validUntil, taxRate, currency, items, discountType, discountValue].some(v => v !== undefined)
+      const hasContentChange = [title, notes, validUntil, deliveryDate, taxRate, currency, items, discountType, discountValue].some(v => v !== undefined)
       if (hasContentChange) {
         const invoiceCount = await prisma.invoice.count({ where: { quoteId: id } })
         if (invoiceCount > 0) {
@@ -239,7 +240,8 @@ export const updateQuote = async (req, res) => {
     for (const key of ['potentialClientName', 'potentialClientEmail', 'potentialClientCompany', 'potentialProjectTitle']) {
       if (req.body[key] !== undefined) updates[key] = req.body[key] || null
     }
-    if (validUntil !== undefined) updates.validUntil = validUntil ? new Date(validUntil) : null
+    if (validUntil   !== undefined) updates.validUntil   = validUntil   ? new Date(validUntil)   : null
+    if (deliveryDate !== undefined) updates.deliveryDate = deliveryDate ? new Date(deliveryDate) : null
 
     // Persistir descuento si viene en el body
     if (discountType !== undefined) {

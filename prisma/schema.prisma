@@ -191,8 +191,9 @@ model Quote {
   number     Int
   title      String
   status     QuoteStatus @default(draft)
-  notes      String?
-  validUntil DateTime?
+  notes        String?
+  validUntil   DateTime?
+  deliveryDate DateTime?
   subtotal      Float
   discountType  String?
   discountValue Float?

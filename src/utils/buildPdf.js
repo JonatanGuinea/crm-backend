@@ -207,9 +207,10 @@ export function buildPdf(type, data) {
         ['Número',       `#${numStr}`],
         ['Fecha',        fmtDate(data.createdAt)],
         ['Moneda',       data.currency],
-        data.project      ? ['Proyecto',     data.project.title]                               : null,
-        validDays != null ? ['Válido por',   `${validDays} día${validDays !== 1 ? 's' : ''}`]  : null,
-        data.validUntil   ? ['Válido hasta', fmtDate(data.validUntil)]                         : null,
+        data.project      ? ['Proyecto',         data.project.title]                               : null,
+        validDays != null ? ['Válido por',       `${validDays} día${validDays !== 1 ? 's' : ''}`]  : null,
+        data.validUntil   ? ['Válido hasta',     fmtDate(data.validUntil)]                         : null,
+        data.deliveryDate ? ['Fecha de entrega', fmtDate(data.deliveryDate)]                       : null,
       ].filter(Boolean)
     : [
         ['Número',       `#${numStr}`],
