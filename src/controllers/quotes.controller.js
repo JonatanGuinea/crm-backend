@@ -36,7 +36,7 @@ export const createQuote = async (req, res) => {
     const userId = req.user.id
     const {
       title, clientId, projectId, notes, validUntil, deliveryDate, taxRate = 0, currency = 'USD', items,
-      potentialClientName, potentialClientEmail, potentialClientCompany, potentialProjectTitle,
+      potentialClientName, potentialClientEmail, potentialClientPhone, potentialClientCompany, potentialProjectTitle,
       discountType = null, discountValue = 0
     } = req.body
 
@@ -89,6 +89,7 @@ export const createQuote = async (req, res) => {
         projectId: projectId || null,
         potentialClientName: isPotential ? potentialClientName : null,
         potentialClientEmail: isPotential ? (potentialClientEmail || null) : null,
+        potentialClientPhone: isPotential ? (potentialClientPhone || null) : null,
         potentialClientCompany: isPotential ? (potentialClientCompany || null) : null,
         potentialProjectTitle: isPotential ? (potentialProjectTitle || null) : null,
         organizationId: orgId,
@@ -122,7 +123,7 @@ export const getQuotes = async (req, res) => {
       prisma.quote.findMany({
         where,
         include: {
-          client: { select: { id: true, name: true } },
+          client: { select: { id: true, name: true, phone: true } },
           project: { select: { id: true, title: true } },
           _count: { select: { installments: true } },
           installments: { where: { status: { in: ['pending', 'overdue'] } }, select: { id: true } }
@@ -199,6 +200,7 @@ export const updateQuote = async (req, res) => {
           data: {
             name: quote.potentialClientName,
             email: quote.potentialClientEmail || undefined,
+            phone: quote.potentialClientPhone || undefined,
             company: quote.potentialClientCompany || undefined,
             organizationId: orgId,
             createdById: quote.createdById
@@ -207,6 +209,7 @@ export const updateQuote = async (req, res) => {
         updates.clientId = newClient.id
         updates.potentialClientName = null
         updates.potentialClientEmail = null
+        updates.potentialClientPhone = null
         updates.potentialClientCompany = null
 
         if (quote.potentialProjectTitle) {
@@ -235,10 +238,15 @@ export const updateQuote = async (req, res) => {
       }
     }
 
+    if (req.body.sentByWhatsapp === true && !quote.sentByWhatsapp) {
+      updates.sentByWhatsapp = true
+      if (!['sent', 'approved', 'signed'].includes(quote.status)) updates.status = 'sent'
+    }
+
     for (const key of ['title', 'notes', 'currency']) {
       if (req.body[key] !== undefined) updates[key] = req.body[key]
     }
-    for (const key of ['potentialClientName', 'potentialClientEmail', 'potentialClientCompany', 'potentialProjectTitle']) {
+    for (const key of ['potentialClientName', 'potentialClientEmail', 'potentialClientPhone', 'potentialClientCompany', 'potentialProjectTitle']) {
       if (req.body[key] !== undefined) updates[key] = req.body[key] || null
     }
     if (validUntil   !== undefined) updates.validUntil   = validUntil   ? new Date(validUntil)   : null
@@ -321,7 +329,7 @@ export const sendQuote = async (req, res) => {
       }
     })
     if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
-    if (quote.status !== 'draft') return fail(res, 400, 'Solo se pueden enviar presupuestos en borrador')
+    if (!['draft', 'sent'].includes(quote.status)) return fail(res, 400, 'Solo se pueden enviar presupuestos en borrador o enviados')
 
     const recipientEmail = quote.client?.email || quote.potentialClientEmail
     const recipientName  = quote.client?.name  || quote.potentialClientName
@@ -344,7 +352,7 @@ export const sendQuote = async (req, res) => {
 
     const updated = await prisma.quote.update({
       where: { id },
-      data: { status: 'sent' }
+      data: { status: 'sent', sentByEmail: true }
     })
 
     return success(res, 200, updated)

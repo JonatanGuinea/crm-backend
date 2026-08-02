@@ -31,7 +31,7 @@ router.post('/quotes/:id/confirm', async (req, res) => {
       where: { id },
       select: {
         id: true, status: true, clientId: true,
-        potentialClientName: true, potentialClientEmail: true, potentialClientCompany: true,
+        potentialClientName: true, potentialClientEmail: true, potentialClientPhone: true, potentialClientCompany: true,
         organizationId: true, createdById: true,
       }
     })
@@ -50,8 +50,8 @@ router.post('/quotes/:id/confirm', async (req, res) => {
         data: {
           name:           name    || quote.potentialClientName,
           email:          email   || quote.potentialClientEmail   || null,
+          phone:          phone   || quote.potentialClientPhone   || null,
           company:        company || quote.potentialClientCompany || null,
-          phone:          phone      || null,
           website:        website    || null,
           cuit:           cuit       || null,
           address:        address    || null,
