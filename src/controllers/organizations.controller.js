@@ -74,7 +74,7 @@ export const getOrganizations = async (req, res) => {
 
     const memberships = await prisma.organizationMembership.findMany({
       where: { userId, status: 'active' },
-      include: { organization: { select: { id: true, name: true, plan: true, cuit: true, email: true, website: true, phone: true, address: true, city: true, province: true, postalCode: true, logo: true, defaultCurrency: true } } }
+      include: { organization: { select: { id: true, name: true, plan: true, cuit: true, email: true, website: true, phone: true, address: true, city: true, province: true, postalCode: true, logo: true, defaultCurrency: true, signature: true, signatureOwnerName: true } } }
     })
 
     if (memberships.length === 0) {
@@ -93,9 +93,11 @@ export const getOrganizations = async (req, res) => {
       city:       m.organization.city,
       province:   m.organization.province,
       postalCode: m.organization.postalCode,
-      logo:            m.organization.logo,
-      defaultCurrency: m.organization.defaultCurrency,
-      role:            m.role
+      logo:               m.organization.logo,
+      defaultCurrency:    m.organization.defaultCurrency,
+      signature:          m.organization.signature,
+      signatureOwnerName: m.organization.signatureOwnerName,
+      role:               m.role
     }))
 
     return success(res, 200, organizations)
@@ -124,23 +126,25 @@ export const getOrganizationBySlug = async (req, res) => {
 export const updateOrganization = async (req, res) => {
   try {
     const { id } = req.params
-    const { name, cuit, email, website, phone, address, city, province, postalCode, defaultCurrency } = req.body
+    const { name, cuit, email, website, phone, address, city, province, postalCode, defaultCurrency, signature, signatureOwnerName } = req.body
 
     if (!name?.trim()) {
       return fail(res, 400, 'El nombre es requerido')
     }
 
     const updates = {
-      name:            name.trim(),
-      cuit:            cuit?.trim()     || null,
-      email:           email?.trim()    || null,
-      website:         website?.trim()  || null,
-      phone:           phone?.trim()    || null,
-      address:         address?.trim()  || null,
-      city:            city?.trim()       || null,
-      province:        province?.trim()   || null,
-      postalCode:      postalCode?.trim() || null,
-      defaultCurrency: ['USD', 'ARS'].includes(defaultCurrency) ? defaultCurrency : undefined,
+      name:                name.trim(),
+      cuit:                cuit?.trim()               || null,
+      email:               email?.trim()              || null,
+      website:             website?.trim()            || null,
+      phone:               phone?.trim()              || null,
+      address:             address?.trim()            || null,
+      city:                city?.trim()               || null,
+      province:            province?.trim()           || null,
+      postalCode:          postalCode?.trim()         || null,
+      signatureOwnerName:  signatureOwnerName?.trim() || null,
+      defaultCurrency:     ['USD', 'ARS'].includes(defaultCurrency) ? defaultCurrency : undefined,
+      ...(signature !== undefined && { signature: signature || null }),
     }
 
     const newSlug = name

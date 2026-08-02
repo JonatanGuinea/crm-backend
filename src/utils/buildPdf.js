@@ -406,6 +406,71 @@ export function buildPdf(type, data) {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
+  // FIRMAS — dos columnas: cliente (izq) | organización (der)
+  // ─────────────────────────────────────────────────────────────────────────
+  const hasClientSig = !!data.clientSignature
+  const hasOrgSig    = !!org.signature
+
+  if (hasClientSig || hasOrgSig) {
+    y = sectionLabel('Firmas', y)
+
+    const sigPad  = 20
+    const sigColW = (tableW - sigPad) / 2
+    const imgH    = 56
+    const sigLX   = pad
+    const sigRX   = pad + sigColW + sigPad
+
+    const imgTop  = y + 12
+
+    if (hasClientSig) {
+      try {
+        const b64  = data.clientSignature.includes(',') ? data.clientSignature.split(',')[1] : data.clientSignature
+        const buf  = Buffer.from(b64, 'base64')
+        doc.image(buf, sigLX, imgTop, { fit: [sigColW, imgH], align: 'center', valign: 'bottom' })
+      } catch (_) {}
+    }
+
+    if (hasOrgSig) {
+      try {
+        const b64  = org.signature.includes(',') ? org.signature.split(',')[1] : org.signature
+        const buf  = Buffer.from(b64, 'base64')
+        doc.image(buf, sigRX, imgTop, { fit: [sigColW, imgH], align: 'center', valign: 'bottom' })
+      } catch (_) {}
+    }
+
+    const lineY = imgTop + imgH + 8
+    doc.rect(sigLX, lineY, sigColW, 0.5).fillColor(C.zinc300).fill()
+    doc.rect(sigRX, lineY, sigColW, 0.5).fillColor(C.zinc300).fill()
+
+    let sigTextY = lineY + 6
+
+    // Nombre cliente
+    const clientSigName    = data.client?.name    || data.potentialClientName    || ''
+    const clientSigCompany = data.client?.company || data.potentialClientCompany || ''
+    if (clientSigName) {
+      doc.font('Helvetica-Bold').fontSize(8.5).fillColor(C.zinc700)
+        .text(clientSigName, sigLX, sigTextY, { width: sigColW, align: 'center' })
+    }
+    if (clientSigCompany) {
+      doc.font('Helvetica').fontSize(7.5).fillColor(C.zinc500)
+        .text(clientSigCompany, sigLX, sigTextY + (clientSigName ? 12 : 0), { width: sigColW, align: 'center' })
+    }
+
+    // Nombre org
+    if (org.signatureOwnerName) {
+      doc.font('Helvetica-Bold').fontSize(8.5).fillColor(C.zinc700)
+        .text(org.signatureOwnerName, sigRX, sigTextY, { width: sigColW, align: 'center' })
+      doc.font('Helvetica').fontSize(7.5).fillColor(C.zinc500)
+        .text(org.name || '', sigRX, sigTextY + 12, { width: sigColW, align: 'center' })
+    } else if (org.name) {
+      doc.font('Helvetica').fontSize(7.5).fillColor(C.zinc500)
+        .text(org.name, sigRX, sigTextY, { width: sigColW, align: 'center' })
+    }
+
+    y = sigTextY + 28
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
   // FOOTER — igual al HTML: "Generado por [org]" (izquierda) + "Presupuesto #001" (derecha)
   // ─────────────────────────────────────────────────────────────────────────
   doc.rect(0, pageH - 40, pageW, 0.5).fillColor(C.zinc200).fill()
