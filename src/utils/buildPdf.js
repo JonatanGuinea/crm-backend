@@ -179,7 +179,7 @@ export function buildPdf(type, data) {
     data.client?.email    ? data.client.email                                                                                                         : null,
     data.client?.phone    ? data.client.phone                                                                                                         : null,
     data.client?.address  ? data.client.address                                                                                                       : null,
-    (data.client?.city || data.client?.province) ? [data.client.city, data.client.province].filter(Boolean).join(', ')                               : null,
+    (data.client?.city || data.client?.province) ? [data.client.city, data.client.province].filter(Boolean).join(', ') + (data.client.postalCode ? ` (${data.client.postalCode})` : '') : null,
   ].filter(Boolean).forEach(v => {
     doc.font('Helvetica').fontSize(8.5).fillColor(C.zinc500).text(v, xL, cy, { width: colL })
     cy += 13

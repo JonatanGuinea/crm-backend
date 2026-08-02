@@ -112,6 +112,7 @@ model Client {
   address        String?
   city           String?
   province       String?
+  postalCode     String?
   cuit           String?
   website        String?
   notes          String?
