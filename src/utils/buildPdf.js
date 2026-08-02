@@ -103,7 +103,7 @@ export function buildPdf(type, data) {
 
   if (hasLogo) {
     doc.image(orgLogoPath, pad, leftY, { height: 48, fit: [200, 48] })
-    leftY += 34
+    leftY += 58
   } else {
     // text-slate-300 font-semibold text-sm
     doc.font('Helvetica-Bold').fontSize(10).fillColor(C.slate300)
@@ -169,16 +169,20 @@ export function buildPdf(type, data) {
   doc.font('Helvetica-Bold').fontSize(7).fillColor(C.zinc400)
     .text('CLIENTE', xL, infoTop + infoPadY, { characterSpacing: 1.5 })
   // nombre: font-semibold text-zinc-800 text-base
+  const clientName    = data.client?.name    || data.potentialClientName    || '—'
+  const clientCompany = data.client?.company || data.potentialClientCompany || null
+  const clientEmail   = data.client?.email   || data.potentialClientEmail   || null
+
   doc.font('Helvetica-Bold').fontSize(13).fillColor(C.zinc800)
-    .text(data.client?.name || '—', xL, infoTop + infoPadY + 12, { width: colL })
+    .text(clientName, xL, infoTop + infoPadY + 12, { width: colL })
 
   let cy = infoTop + infoPadY + 30
   ;[
-    data.client?.company  ? data.client.company                                                                                                      : null,
-    data.client?.cuit     ? `CUIL/CUIT: ${data.client.cuit}`                                                                                         : null,
-    data.client?.email    ? data.client.email                                                                                                         : null,
-    data.client?.phone    ? data.client.phone                                                                                                         : null,
-    data.client?.address  ? data.client.address                                                                                                       : null,
+    clientCompany,
+    data.client?.cuit    ? `CUIL/CUIT: ${data.client.cuit}` : null,
+    clientEmail,
+    data.client?.phone   ? data.client.phone   : null,
+    data.client?.address ? data.client.address : null,
     (data.client?.city || data.client?.province) ? [data.client.city, data.client.province].filter(Boolean).join(', ') + (data.client.postalCode ? ` (${data.client.postalCode})` : '') : null,
   ].filter(Boolean).forEach(v => {
     doc.font('Helvetica').fontSize(8.5).fillColor(C.zinc500).text(v, xL, cy, { width: colL })
