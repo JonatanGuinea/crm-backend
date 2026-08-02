@@ -173,12 +173,21 @@ export function buildPdf(type, data) {
   const clientCompany = data.client?.company || data.potentialClientCompany || null
   const clientEmail   = data.client?.email   || data.potentialClientEmail   || null
 
-  doc.font('Helvetica-Bold').fontSize(13).fillColor(C.zinc800)
-    .text(clientName, xL, infoTop + infoPadY + 12, { width: colL })
+  let cy = infoTop + infoPadY + 12
+  if (clientCompany) {
+    doc.font('Helvetica-Bold').fontSize(13).fillColor(C.zinc800)
+      .text(clientCompany, xL, cy, { width: colL })
+    cy += 18
+    doc.font('Helvetica').fontSize(9.5).fillColor(C.zinc500)
+      .text(clientName, xL, cy, { width: colL })
+    cy += 14
+  } else {
+    doc.font('Helvetica-Bold').fontSize(13).fillColor(C.zinc800)
+      .text(clientName, xL, cy, { width: colL })
+    cy += 18
+  }
 
-  let cy = infoTop + infoPadY + 30
   ;[
-    clientCompany,
     data.client?.cuit    ? `CUIL/CUIT: ${data.client.cuit}` : null,
     clientEmail,
     data.client?.phone   ? data.client.phone   : null,
@@ -401,11 +410,11 @@ export function buildPdf(type, data) {
   // ─────────────────────────────────────────────────────────────────────────
   doc.rect(0, pageH - 40, pageW, 0.5).fillColor(C.zinc200).fill()
 
-  // Izquierda: "Generado por" + org name (zinc-400 / zinc-500)
+  // Izquierda: "Presupuesto generado por sofiapp.dev"
   doc.font('Helvetica').fontSize(7.5).fillColor(C.zinc400)
-    .text('Generado por ', pad, pageH - 24, { continued: true })
+    .text('Presupuesto generado por ', pad, pageH - 24, { continued: true })
   doc.font('Helvetica-Bold').fontSize(7.5).fillColor(C.zinc500)
-    .text(org.name || '')
+    .text('sofiapp.dev')
 
   // Derecha: docLabel + número
   doc.font('Helvetica').fontSize(7.5).fillColor(C.zinc400)
