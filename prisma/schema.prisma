@@ -173,6 +173,7 @@ enum QuoteStatus {
   draft
   sent
   approved
+  signed
   rejected
   expired
 }

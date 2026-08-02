@@ -5,9 +5,10 @@ import { notify } from '../services/notifications.service.js'
 import { sendQuoteEmail } from '../services/email.service.js'
 
 const allowedTransitions = {
-  draft: ['sent', 'expired'],
-  sent: ['approved', 'rejected', 'expired'],
+  draft:    ['sent', 'expired'],
+  sent:     ['approved', 'rejected', 'expired'],
   approved: [],
+  signed:   [],
   rejected: [],
   expired: []
 }

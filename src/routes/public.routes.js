@@ -37,11 +37,12 @@ router.post('/quotes/:id/confirm', async (req, res) => {
     })
 
     if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
+    if (quote.status === 'signed')   return fail(res, 400, 'El presupuesto ya fue firmado')
     if (quote.status === 'approved') return fail(res, 400, 'El presupuesto ya fue confirmado')
     if (quote.status === 'rejected') return fail(res, 400, 'El presupuesto fue rechazado')
     if (quote.status === 'expired')  return fail(res, 400, 'El presupuesto ha expirado')
 
-    const updateData = { status: 'approved' }
+    const updateData = { status: 'signed' }
 
     if (!quote.clientId && quote.potentialClientName) {
       const { name, company, email, phone, website, cuit, address, province, city, postalCode, notes, signature } = req.body
