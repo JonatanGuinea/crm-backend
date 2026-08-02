@@ -435,6 +435,7 @@ enum NotificationType {
   quote_rejected
   project_deadline
   member_joined
+  task_assigned
 }
 
 model Notification {

@@ -1,5 +1,6 @@
 import prisma from '../config/db.js'
 import { success, fail } from '../utils/response.js'
+import { notify } from '../services/notifications.service.js'
 
 const taskInclude = {
   assignedTo: { select: { id: true, name: true, avatar: true } },
@@ -52,6 +53,17 @@ export const createTask = async (req, res) => {
       include: taskInclude,
     })
 
+    if (assignedToId && assignedToId !== req.user.id) {
+      notify({
+        type:    'task_assigned',
+        title:   'Nueva tarea asignada',
+        message: `Te asignaron la tarea "${task.title}"`,
+        userId:  assignedToId,
+        orgId:   orgId,
+        refId:   task.id,
+      })
+    }
+
     return success(res, 201, task)
   } catch (error) {
     return fail(res, 500, error.message)
@@ -81,6 +93,21 @@ export const updateTask = async (req, res) => {
       data: updates,
       include: taskInclude,
     })
+
+    if (
+      updates.assignedToId &&
+      updates.assignedToId !== req.user.id &&
+      updates.assignedToId !== existing.assignedToId
+    ) {
+      notify({
+        type:    'task_assigned',
+        title:   'Nueva tarea asignada',
+        message: `Te asignaron la tarea "${task.title}"`,
+        userId:  updates.assignedToId,
+        orgId:   orgId,
+        refId:   `${task.id}_${updates.assignedToId}`,
+      })
+    }
 
     return success(res, 200, task)
   } catch (error) {
