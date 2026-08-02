@@ -44,7 +44,7 @@ router.post('/quotes/:id/confirm', async (req, res) => {
     const updateData = { status: 'approved' }
 
     if (!quote.clientId && quote.potentialClientName) {
-      const { name, company, email, phone, website, cuit, address, province, city, postalCode, notes } = req.body
+      const { name, company, email, phone, website, cuit, address, province, city, postalCode, notes, signature } = req.body
       const newClient = await prisma.client.create({
         data: {
           name:           name    || quote.potentialClientName,
@@ -63,6 +63,12 @@ router.post('/quotes/:id/confirm', async (req, res) => {
         }
       })
       updateData.clientId = newClient.id
+    }
+
+    const { signature } = req.body
+    if (signature) {
+      updateData.clientSignature = signature
+      updateData.clientSignedAt  = new Date()
     }
 
     await prisma.quote.update({ where: { id }, data: updateData })

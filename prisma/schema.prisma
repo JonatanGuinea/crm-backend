@@ -213,6 +213,10 @@ model Quote {
   potentialClientCompany String?
   potentialProjectTitle  String?
 
+  // Firma digital del cliente al confirmar
+  clientSignature   String?
+  clientSignedAt    DateTime?
+
   items        QuoteItem[]
   invoices     Invoice[]
   installments Installment[]
