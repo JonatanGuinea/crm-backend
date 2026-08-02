@@ -102,7 +102,7 @@ export function buildPdf(type, data) {
   let leftY = 18
 
   if (hasLogo) {
-    doc.image(orgLogoPath, pad, leftY, { height: 26, fit: [130, 26] })
+    doc.image(orgLogoPath, pad, leftY, { height: 48, fit: [200, 48] })
     leftY += 34
   } else {
     // text-slate-300 font-semibold text-sm
