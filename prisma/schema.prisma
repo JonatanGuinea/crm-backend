@@ -110,6 +110,8 @@ model Client {
   phone          String?
   company        String?
   address        String?
+  city           String?
+  province       String?
   cuit           String?
   website        String?
   notes          String?
@@ -188,10 +190,12 @@ model Quote {
   status     QuoteStatus @default(draft)
   notes      String?
   validUntil DateTime?
-  subtotal   Float
-  taxRate    Float       @default(0)
-  total      Float
-  currency   String      @default("USD")
+  subtotal      Float
+  discountType  String?
+  discountValue Float?
+  taxRate       Float    @default(0)
+  total         Float
+  currency      String   @default("USD")
 
   clientId       String?
   client         Client?      @relation(fields: [clientId], references: [id])

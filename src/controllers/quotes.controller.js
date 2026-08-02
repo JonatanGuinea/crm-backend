@@ -12,7 +12,7 @@ const allowedTransitions = {
   expired: []
 }
 
-function computeItems(items, taxRate) {
+function computeItems(items, taxRate, discountType = null, discountValue = 0) {
   const computed = items.map(item => ({
     description: item.description,
     quantity: parseFloat(item.quantity),
@@ -20,7 +20,12 @@ function computeItems(items, taxRate) {
     amount: parseFloat(item.quantity) * parseFloat(item.unitPrice)
   }))
   const subtotal = computed.reduce((acc, i) => acc + i.amount, 0)
-  const total = subtotal + subtotal * (parseFloat(taxRate) / 100)
+  const rate = parseFloat(taxRate) || 0
+  const discAmt = discountType === 'percent'
+    ? subtotal * ((parseFloat(discountValue) || 0) / 100)
+    : parseFloat(discountValue) || 0
+  const discountedSubtotal = subtotal - discAmt
+  const total = discountedSubtotal + discountedSubtotal * (rate / 100)
   return { computed, subtotal, total }
 }
 
@@ -30,7 +35,8 @@ export const createQuote = async (req, res) => {
     const userId = req.user.id
     const {
       title, clientId, projectId, notes, validUntil, taxRate = 0, currency = 'USD', items,
-      potentialClientName, potentialClientEmail, potentialClientCompany, potentialProjectTitle
+      potentialClientName, potentialClientEmail, potentialClientCompany, potentialProjectTitle,
+      discountType = null, discountValue = 0
     } = req.body
 
     const isPotential = !clientId && potentialClientName
@@ -63,7 +69,7 @@ export const createQuote = async (req, res) => {
     })
     const number = (last?.number ?? 0) + 1
 
-    const { computed, subtotal, total } = computeItems(items, taxRate)
+    const { computed, subtotal, total } = computeItems(items, taxRate, discountType, discountValue)
 
     const quote = await prisma.quote.create({
       data: {
@@ -72,6 +78,8 @@ export const createQuote = async (req, res) => {
         notes,
         validUntil: validUntil ? new Date(validUntil) : null,
         taxRate: parseFloat(taxRate),
+        discountType: discountType || null,
+        discountValue: discountType ? (parseFloat(discountValue) || 0) : null,
         subtotal,
         total,
         currency,
@@ -161,10 +169,10 @@ export const updateQuote = async (req, res) => {
     if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
 
     const updates = {}
-    const { status, title, notes, validUntil, taxRate, currency, items } = req.body
+    const { status, title, notes, validUntil, taxRate, currency, items, discountType, discountValue } = req.body
 
     if (quote.status === 'approved') {
-      const hasContentChange = [title, notes, validUntil, taxRate, currency, items].some(v => v !== undefined)
+      const hasContentChange = [title, notes, validUntil, taxRate, currency, items, discountType, discountValue].some(v => v !== undefined)
       if (hasContentChange) {
         const invoiceCount = await prisma.invoice.count({ where: { quoteId: id } })
         if (invoiceCount > 0) {
@@ -233,12 +241,21 @@ export const updateQuote = async (req, res) => {
     }
     if (validUntil !== undefined) updates.validUntil = validUntil ? new Date(validUntil) : null
 
+    // Persistir descuento si viene en el body
+    if (discountType !== undefined) {
+      updates.discountType  = discountType || null
+      updates.discountValue = discountType ? (parseFloat(discountValue) || 0) : null
+    }
+
+    const effectiveDiscountType  = discountType  !== undefined ? (discountType || null)  : quote.discountType
+    const effectiveDiscountValue = discountValue !== undefined ? (parseFloat(discountValue) || 0) : (quote.discountValue || 0)
+
     if (items !== undefined) {
       if (!Array.isArray(items) || items.length === 0) {
         return fail(res, 400, 'Debe incluir al menos un item')
       }
       const rate = taxRate !== undefined ? taxRate : quote.taxRate
-      const { computed, subtotal, total } = computeItems(items, rate)
+      const { computed, subtotal, total } = computeItems(items, rate, effectiveDiscountType, effectiveDiscountValue)
       updates.taxRate = parseFloat(rate)
       updates.subtotal = subtotal
       updates.total = total
@@ -246,14 +263,13 @@ export const updateQuote = async (req, res) => {
         deleteMany: {},
         create: computed
       }
-    } else if (taxRate !== undefined) {
-      const { subtotal: sub, total: tot } = computeItems(
-        await prisma.quoteItem.findMany({ where: { quoteId: id } }),
-        taxRate
-      )
-      updates.taxRate = parseFloat(taxRate)
+    } else if (taxRate !== undefined || discountType !== undefined || discountValue !== undefined) {
+      const existingItems = await prisma.quoteItem.findMany({ where: { quoteId: id } })
+      const rate = taxRate !== undefined ? taxRate : quote.taxRate
+      const { subtotal: sub, total: tot } = computeItems(existingItems, rate, effectiveDiscountType, effectiveDiscountValue)
+      updates.taxRate  = parseFloat(rate)
       updates.subtotal = sub
-      updates.total = tot
+      updates.total    = tot
     }
 
     const updated = await prisma.quote.update({

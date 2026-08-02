@@ -145,6 +145,7 @@ export function buildPdf(type, data) {
     org.email   ? org.email                : null,
     org.phone   ? org.phone                : null,
     org.address ? org.address              : null,
+    (org.city || org.province) ? [org.city, org.province].filter(Boolean).join(', ') + (org.postalCode ? ` (${org.postalCode})` : '') : null,
     org.website ? org.website              : null,
   ].filter(Boolean).forEach(v => {
     doc.font('Helvetica').fontSize(7.5).fillColor(C.slate400)
@@ -173,11 +174,12 @@ export function buildPdf(type, data) {
 
   let cy = infoTop + infoPadY + 30
   ;[
-    data.client?.company ? data.client.company               : null,
-    data.client?.cuit    ? `CUIL/CUIT: ${data.client.cuit}`  : null,
-    data.client?.email   ? data.client.email                  : null,
-    data.client?.phone   ? data.client.phone                  : null,
-    data.client?.address ? data.client.address                : null,
+    data.client?.company  ? data.client.company                                                                                                      : null,
+    data.client?.cuit     ? `CUIL/CUIT: ${data.client.cuit}`                                                                                         : null,
+    data.client?.email    ? data.client.email                                                                                                         : null,
+    data.client?.phone    ? data.client.phone                                                                                                         : null,
+    data.client?.address  ? data.client.address                                                                                                       : null,
+    (data.client?.city || data.client?.province) ? [data.client.city, data.client.province].filter(Boolean).join(', ')                               : null,
   ].filter(Boolean).forEach(v => {
     doc.font('Helvetica').fontSize(8.5).fillColor(C.zinc500).text(v, xL, cy, { width: colL })
     cy += 13
@@ -265,11 +267,15 @@ export function buildPdf(type, data) {
   // ─────────────────────────────────────────────────────────────────────────
   // TOTALES — border-t border-zinc-100 bg-zinc-50/50 px-7 py-5
   // ─────────────────────────────────────────────────────────────────────────
-  const subtotal  = Number(data.subtotal)
-  const total     = Number(data.total)
-  const taxAmount = total - subtotal
-  const totRows   = 1 + (data.taxRate > 0 ? 1 : 0)
-  const totSectH  = infoPadY + totRows * 18 + 4 + 46 + infoPadY
+  const subtotal    = Number(data.subtotal)
+  const total       = Number(data.total)
+  const discountAmt = data.discountType === 'percent'
+    ? subtotal * (Number(data.discountValue) / 100)
+    : Number(data.discountValue) || 0
+  const taxAmount   = (subtotal - discountAmt) * (Number(data.taxRate) / 100)
+  const hasDiscount = discountAmt > 0
+  const totRows     = 1 + (hasDiscount ? 1 : 0) + (data.taxRate > 0 ? 1 : 0)
+  const totSectH    = infoPadY + totRows * 18 + 4 + 46 + infoPadY
 
   doc.rect(0, y, pageW, totSectH).fillColor(C.zinc50).fill()
   doc.rect(0, y, pageW, 0.5).fillColor(C.zinc100).fill()   // border-t
@@ -279,11 +285,22 @@ export function buildPdf(type, data) {
   const totBlockW = 220
   const totX      = pageW - pad - totBlockW
 
-  // Subtotal: flex justify-between text-sm text-zinc-500
+  // Subtotal
   doc.font('Helvetica').fontSize(9).fillColor(C.zinc500)
     .text('Subtotal', totX, y)
     .text(fmt(subtotal), totX, y, { width: totBlockW, align: 'right' })
   y += 18
+
+  // Descuento (si aplica)
+  if (hasDiscount) {
+    const discLabel = data.discountType === 'percent'
+      ? `Descuento (${data.discountValue}%)`
+      : 'Descuento'
+    doc.font('Helvetica').fontSize(9).fillColor('#16a34a')
+      .text(discLabel, totX, y)
+      .text(`-${fmt(discountAmt)}`, totX, y, { width: totBlockW, align: 'right' })
+    y += 18
+  }
 
   // IVA (si aplica)
   if (data.taxRate > 0) {

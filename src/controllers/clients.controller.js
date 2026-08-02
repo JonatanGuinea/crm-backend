@@ -4,7 +4,7 @@ import { parsePagination, buildPaginationMeta } from '../utils/paginate.js'
 
 export const createClient = async (req, res) => {
   try {
-    const { name, email, phone, company, address, cuit, website, notes } = req.body
+    const { name, email, phone, company, address, city, province, cuit, website, notes } = req.body
 
     if (!name)
       return fail(res, 400, "El nombre es obligatorio")
@@ -19,6 +19,8 @@ export const createClient = async (req, res) => {
         phone,
         company,
         address,
+        city,
+        province,
         cuit,
         website,
         notes,
@@ -85,7 +87,7 @@ export const updateClient = async (req, res) => {
     if (!existing)
       return fail(res, 404, "Cliente no encontrado")
 
-    const allowedFields = ["name", "email", "phone", "company", "address", "cuit", "website", "notes"]
+    const allowedFields = ["name", "email", "phone", "company", "address", "city", "province", "cuit", "website", "notes"]
     const updates = {}
 
     for (const key of allowedFields) {
