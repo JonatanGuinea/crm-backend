@@ -79,6 +79,33 @@ router.post('/quotes/:id/confirm', async (req, res) => {
   }
 })
 
+router.post('/quotes/:id/reject', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { reason } = req.body
+
+    const quote = await prisma.quote.findUnique({
+      where: { id },
+      select: { id: true, status: true }
+    })
+
+    if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
+    if (quote.status === 'rejected') return fail(res, 400, 'El presupuesto ya fue rechazado')
+    if (quote.status === 'signed')   return fail(res, 400, 'El presupuesto ya fue firmado')
+    if (quote.status === 'expired')  return fail(res, 400, 'El presupuesto ha expirado')
+    if (!['draft', 'sent'].includes(quote.status)) return fail(res, 400, 'Este presupuesto no puede ser rechazado')
+
+    await prisma.quote.update({
+      where: { id },
+      data: { status: 'rejected', rejectionReason: reason?.trim() || null }
+    })
+
+    return success(res, 200, { message: 'Presupuesto rechazado' })
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+})
+
 router.get('/quotes/:id/pdf', async (req, res) => {
   try {
     const { id } = req.params

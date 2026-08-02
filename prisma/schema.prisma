@@ -211,8 +211,9 @@ model Quote {
   createdById    String
   createdBy      User         @relation(fields: [createdById], references: [id])
 
-  sentByEmail    Boolean @default(false)
-  sentByWhatsapp Boolean @default(false)
+  sentByEmail      Boolean @default(false)
+  sentByWhatsapp   Boolean @default(false)
+  rejectionReason  String?
 
   // Datos temporales de cliente potencial (se eliminan al aprobar)
   potentialClientName    String?
