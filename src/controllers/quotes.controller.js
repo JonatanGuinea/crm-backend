@@ -173,7 +173,7 @@ export const updateQuote = async (req, res) => {
     const updates = {}
     const { status, title, notes, validUntil, deliveryDate, taxRate, currency, items, discountType, discountValue } = req.body
 
-    if (quote.status === 'approved') {
+    if (quote.status === 'approved' || quote.status === 'signed') {
       const hasContentChange = [title, notes, validUntil, deliveryDate, taxRate, currency, items, discountType, discountValue].some(v => v !== undefined)
       if (hasContentChange) {
         const invoiceCount = await prisma.invoice.count({ where: { quoteId: id } })
@@ -453,7 +453,7 @@ export const getQuotesDashboard = async (req, res) => {
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       if (monthlyMap[key]) {
         monthlyMap[key].issued += Number(q.total) || 0
-        if (q.status === 'approved') monthlyMap[key].approved += Number(q.total) || 0
+        if (q.status === 'approved' || q.status === 'signed') monthlyMap[key].approved += Number(q.total) || 0
       }
     })
     monthlyExpenses.forEach(e => {
@@ -473,7 +473,7 @@ export const getQuotesDashboard = async (req, res) => {
         totalValue:   totals._sum.total  || 0,
         draft:        statusMap.draft?.total      || 0,
         sent:         statusMap.sent?.total       || 0,
-        approved:     statusMap.approved?.total   || 0,
+        approved:     (statusMap.approved?.total || 0) + (statusMap.signed?.total || 0),
         rejected:     (statusMap.rejected?.total  || 0) + (statusMap.cancelled?.total || 0),
       },
       byStatus: byStatus.map(s => ({

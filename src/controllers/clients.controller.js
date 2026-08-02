@@ -132,7 +132,7 @@ export const getTopClients = async (req, res) => {
 
     const quotesByClient = await prisma.quote.groupBy({
       by: ['clientId'],
-      where: { organizationId: orgId, status: 'approved', clientId: { not: null } },
+      where: { organizationId: orgId, status: { in: ['approved', 'signed'] }, clientId: { not: null } },
       _sum: { total: true },
       orderBy: { _sum: { total: 'desc' } },
       take: 5
