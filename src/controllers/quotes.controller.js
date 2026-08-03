@@ -103,6 +103,15 @@ export const createQuote = async (req, res) => {
       }
     })
 
+    await prisma.quoteHistory.create({
+      data: {
+        quoteId:        quote.id,
+        userId:         req.user.id,
+        action:         'created',
+        organizationId: orgId,
+      }
+    })
+
     return success(res, 201, quote)
   } catch (error) {
     return fail(res, 500, error.message)
@@ -112,12 +121,13 @@ export const createQuote = async (req, res) => {
 export const getQuotes = async (req, res) => {
   try {
     const orgId = req.user.organizationId
-    const { status, clientId } = req.query
+    const { status, clientId, projectId } = req.query
     const { page, limit, skip } = parsePagination(req.query)
 
     const where = { organizationId: orgId }
-    if (status) where.status = status
-    if (clientId) where.clientId = clientId
+    if (status)    where.status    = status
+    if (clientId)  where.clientId  = clientId
+    if (projectId) where.projectId = projectId
 
     const [quotes, total] = await Promise.all([
       prisma.quote.findMany({
@@ -212,6 +222,16 @@ export const updateQuote = async (req, res) => {
         updates.potentialClientPhone = null
         updates.potentialClientCompany = null
 
+        await prisma.clientHistory.create({
+          data: {
+            clientId:       newClient.id,
+            userId:         req.user.id,
+            action:         'created',
+            detail:         'Creado al aprobar presupuesto',
+            organizationId: orgId,
+          }
+        })
+
         if (quote.potentialProjectTitle) {
           const newProject = await prisma.project.create({
             data: {
@@ -223,6 +243,16 @@ export const updateQuote = async (req, res) => {
           })
           updates.projectId = newProject.id
           updates.potentialProjectTitle = null
+
+          await prisma.projectHistory.create({
+            data: {
+              projectId:      newProject.id,
+              userId:         req.user.id,
+              action:         'created',
+              detail:         'Creado al aprobar presupuesto',
+              organizationId: orgId,
+            }
+          })
         }
       }
 
@@ -293,6 +323,54 @@ export const updateQuote = async (req, res) => {
       }
     })
 
+    const STATUS_LABELS_ES = {
+      draft: 'Borrador', sent: 'Enviado', approved: 'Aprobado',
+      signed: 'Firmado', rejected: 'Rechazado', expired: 'Vencido'
+    }
+    const FIELD_LABELS = {
+      title: 'título', notes: 'notas', currency: 'moneda',
+      validUntil: 'validez', deliveryDate: 'entrega',
+      taxRate: 'IVA', discountType: 'descuento',
+    }
+
+    if (updates.status && updates.status !== quote.status) {
+      await prisma.quoteHistory.create({
+        data: {
+          quoteId:        id,
+          userId:         req.user.id,
+          action:         'status_changed',
+          detail:         `${STATUS_LABELS_ES[quote.status]} → ${STATUS_LABELS_ES[updates.status]}`,
+          organizationId: orgId,
+        }
+      })
+    }
+
+    if (updates.items) {
+      await prisma.quoteHistory.create({
+        data: {
+          quoteId:        id,
+          userId:         req.user.id,
+          action:         'updated',
+          detail:         'ítems y precios',
+          organizationId: orgId,
+        }
+      })
+    } else {
+      const textFields = ['title', 'notes', 'currency', 'validUntil', 'deliveryDate', 'taxRate', 'discountType']
+      const changed = textFields.filter(k => updates[k] !== undefined && String(updates[k]) !== String(quote[k]))
+      if (changed.length > 0) {
+        await prisma.quoteHistory.create({
+          data: {
+            quoteId:        id,
+            userId:         req.user.id,
+            action:         'updated',
+            detail:         changed.map(k => FIELD_LABELS[k] || k).join(', '),
+            organizationId: orgId,
+          }
+        })
+      }
+    }
+
     return success(res, 200, updated)
   } catch (error) {
     return fail(res, 500, error.message)
@@ -355,7 +433,35 @@ export const sendQuote = async (req, res) => {
       data: { status: 'sent', sentByEmail: true }
     })
 
+    await prisma.quoteHistory.create({
+      data: {
+        quoteId:        id,
+        userId:         req.user.id,
+        action:         'sent_email',
+        detail:         recipientEmail,
+        organizationId: quote.organizationId,
+      }
+    })
+
     return success(res, 200, updated)
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
+
+export const getAllQuotesHistory = async (req, res) => {
+  try {
+    const orgId = req.user.organizationId
+    const history = await prisma.quoteHistory.findMany({
+      where: { organizationId: orgId },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      include: {
+        user:  { select: { id: true, name: true } },
+        quote: { select: { id: true, number: true, title: true } },
+      }
+    })
+    return success(res, 200, history)
   } catch (error) {
     return fail(res, 500, error.message)
   }

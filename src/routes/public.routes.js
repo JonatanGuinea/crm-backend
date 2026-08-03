@@ -68,6 +68,16 @@ router.post('/quotes/:id/confirm', async (req, res) => {
         }
       })
       updateData.clientId = newClient.id
+
+      await prisma.clientHistory.create({
+        data: {
+          clientId:       newClient.id,
+          userId:         quote.createdById,
+          action:         'created',
+          detail:         'Creado desde presupuesto firmado por el cliente',
+          organizationId: quote.organizationId,
+        }
+      })
     }
 
     if (signature) {
@@ -90,9 +100,29 @@ router.post('/quotes/:id/confirm', async (req, res) => {
       })
       updateData.projectId             = newProject.id
       updateData.potentialProjectTitle = null
+
+      await prisma.projectHistory.create({
+        data: {
+          projectId:      newProject.id,
+          userId:         quote.createdById,
+          action:         'created',
+          detail:         'Creado desde presupuesto firmado por el cliente',
+          organizationId: quote.organizationId,
+        }
+      })
     }
 
     await prisma.quote.update({ where: { id }, data: updateData })
+
+    await prisma.quoteHistory.create({
+      data: {
+        quoteId:        id,
+        userId:         quote.createdById,
+        action:         'status_changed',
+        detail:         'Enviado → Firmado',
+        organizationId: quote.organizationId,
+      }
+    })
 
     // Notificar a owners y admins
     const clientName    = quote.client?.name    || name    || quote.potentialClientName || 'Cliente'

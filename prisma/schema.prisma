@@ -34,6 +34,7 @@ model User {
   taskHistory        TaskHistory[]
   clientHistory      ClientHistory[]
   projectHistory     ProjectHistory[]
+  quoteHistory       QuoteHistory[]
 }
 
 model Organization {
@@ -234,6 +235,7 @@ model Quote {
   items        QuoteItem[]
   invoices     Invoice[]
   installments Installment[]
+  history      QuoteHistory[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -419,6 +421,22 @@ model TaskHistory {
 
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([taskId])
+}
+
+// ─── Quote History ────────────────────────────────────────────────────────────
+
+model QuoteHistory {
+  id             String   @id @default(cuid())
+  quoteId        String
+  quote          Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  action         String
+  detail         String?
+  organizationId String
+  createdAt      DateTime @default(now())
+
+  @@index([quoteId, createdAt(sort: Desc)])
 }
 
 // ─── Project History ──────────────────────────────────────────────────────────

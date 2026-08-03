@@ -11,7 +11,8 @@ import {
   getQuotesDashboard,
   updateQuote,
   deleteQuote,
-  sendQuote
+  sendQuote,
+  getAllQuotesHistory,
 } from '../controllers/quotes.controller.js'
 import { downloadQuotePdf } from '../controllers/pdf.controller.js'
 
@@ -37,6 +38,13 @@ router.get(
   auth,
   requireMembership,
   getQuotesDashboard
+)
+
+router.get(
+  '/history',
+  auth,
+  requireMembership,
+  getAllQuotesHistory
 )
 
 router.get(
