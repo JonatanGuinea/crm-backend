@@ -43,6 +43,15 @@ export const createProject = async (req, res) => {
       }
     })
 
+    await prisma.projectHistory.create({
+      data: {
+        projectId:      project.id,
+        userId:         req.user.id,
+        action:         'created',
+        organizationId: orgId,
+      }
+    })
+
     return success(res, 201, project)
 
   } catch (error) {
@@ -174,6 +183,43 @@ for (const key of allowedFields) {
       data: updates
     })
 
+    const STATUS_LABELS_ES = {
+      pending: 'Pendiente', approved: 'Aprobado', in_progress: 'En curso',
+      finished: 'Finalizado', cancelled: 'Cancelado'
+    }
+    const FIELD_LABELS = {
+      title: 'título', description: 'descripción', budget: 'presupuesto',
+      startDate: 'fecha inicio', endDate: 'fecha fin'
+    }
+
+    if (updates.status) {
+      await prisma.projectHistory.create({
+        data: {
+          projectId:      id,
+          userId:         req.user.id,
+          action:         'status_changed',
+          detail:         `${STATUS_LABELS_ES[project.status]} → ${STATUS_LABELS_ES[updates.status]}`,
+          organizationId: orgId,
+        }
+      })
+    }
+
+    const changedFields = Object.keys(updates)
+      .filter(k => k !== 'status')
+      .filter(k => String(updates[k]) !== String(project[k]))
+
+    if (changedFields.length > 0) {
+      await prisma.projectHistory.create({
+        data: {
+          projectId:      id,
+          userId:         req.user.id,
+          action:         'updated',
+          detail:         changedFields.map(k => FIELD_LABELS[k] || k).join(', '),
+          organizationId: orgId,
+        }
+      })
+    }
+
     return success(res, 200, updated)
 
   } catch (error) {
@@ -267,6 +313,24 @@ export const deleteProject = async (req, res) => {
 
     return success(res, 200, { message: "Proyecto eliminado correctamente" })
 
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
+
+export const getAllProjectsHistory = async (req, res) => {
+  try {
+    const orgId = req.user.organizationId
+    const history = await prisma.projectHistory.findMany({
+      where: { organizationId: orgId },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      include: {
+        user:    { select: { id: true, name: true } },
+        project: { select: { id: true, title: true } },
+      }
+    })
+    return success(res, 200, history)
   } catch (error) {
     return fail(res, 500, error.message)
   }

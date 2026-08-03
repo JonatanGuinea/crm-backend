@@ -30,6 +30,15 @@ export const createClient = async (req, res) => {
       }
     })
 
+    await prisma.clientHistory.create({
+      data: {
+        clientId:      client.id,
+        userId:        req.user.id,
+        action:        'created',
+        organizationId: req.user.organizationId,
+      }
+    })
+
     return success(res, 201, client)
 
   } catch (error) {
@@ -97,10 +106,30 @@ export const updateClient = async (req, res) => {
       }
     }
 
+    const FIELD_LABELS = {
+      name: 'nombre', email: 'email', phone: 'teléfono', company: 'empresa',
+      address: 'dirección', city: 'ciudad', province: 'provincia',
+      postalCode: 'código postal', cuit: 'CUIT', website: 'sitio web', notes: 'notas'
+    }
+
+    const changedFields = Object.keys(updates).filter(k => updates[k] !== existing[k])
+
     const updatedClient = await prisma.client.update({
       where: { id },
       data: updates
     })
+
+    if (changedFields.length > 0) {
+      await prisma.clientHistory.create({
+        data: {
+          clientId:      id,
+          userId:        req.user.id,
+          action:        'updated',
+          detail:        changedFields.map(k => FIELD_LABELS[k] || k).join(', '),
+          organizationId: req.user.organizationId,
+        }
+      })
+    }
 
     return success(res, 200, updatedClient)
 
@@ -152,6 +181,45 @@ export const getTopClients = async (req, res) => {
     }))
 
     return success(res, 200, result)
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
+
+export const getAllClientsHistory = async (req, res) => {
+  try {
+    const orgId = req.user.organizationId
+    const history = await prisma.clientHistory.findMany({
+      where: { organizationId: orgId },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      include: {
+        user:   { select: { id: true, name: true } },
+        client: { select: { id: true, name: true } },
+      }
+    })
+    return success(res, 200, history)
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
+
+export const getClientHistory = async (req, res) => {
+  try {
+    const { id } = req.params
+    const orgId  = req.user.organizationId
+
+    const client = await prisma.client.findFirst({ where: { id, organizationId: orgId } })
+    if (!client) return fail(res, 404, 'Cliente no encontrado')
+
+    const history = await prisma.clientHistory.findMany({
+      where: { clientId: id },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      include: { user: { select: { id: true, name: true } } }
+    })
+
+    return success(res, 200, history)
   } catch (error) {
     return fail(res, 500, error.message)
   }

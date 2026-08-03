@@ -53,6 +53,16 @@ export const createTask = async (req, res) => {
       include: taskInclude,
     })
 
+    await prisma.taskHistory.create({
+      data: {
+        taskId:         task.id,
+        userId:         req.user.id,
+        fromStatus:     null,
+        toStatus:       task.status,
+        organizationId: orgId,
+      }
+    })
+
     if (assignedToId && assignedToId !== req.user.id) {
       notify({
         type:    'task_assigned',
@@ -88,11 +98,35 @@ export const updateTask = async (req, res) => {
       }
     }
 
+    if (updates.status === 'in_progress' && existing.status !== 'in_progress') {
+      updates.startedAt = new Date()
+    } else if (updates.status === 'todo') {
+      updates.startedAt = null
+    }
+
+    if (updates.status === 'done' && existing.status !== 'done') {
+      updates.completedAt = new Date()
+    } else if (updates.status && updates.status !== 'done' && existing.status === 'done') {
+      updates.completedAt = null
+    }
+
     const task = await prisma.task.update({
       where: { id },
       data: updates,
       include: taskInclude,
     })
+
+    if (updates.status && updates.status !== existing.status) {
+      await prisma.taskHistory.create({
+        data: {
+          taskId:         id,
+          userId:         req.user.id,
+          fromStatus:     existing.status,
+          toStatus:       updates.status,
+          organizationId: orgId,
+        }
+      })
+    }
 
     if (
       updates.assignedToId &&
@@ -110,6 +144,36 @@ export const updateTask = async (req, res) => {
     }
 
     return success(res, 200, task)
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
+
+export const getTaskHistory = async (req, res) => {
+  try {
+    const orgId = req.user.organizationId
+    const history = await prisma.taskHistory.findMany({
+      where: { organizationId: orgId },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      include: {
+        user: { select: { id: true, name: true, avatar: true } },
+        task: { select: { id: true, title: true } },
+      }
+    })
+    return success(res, 200, history)
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
+
+export const clearDoneTasks = async (req, res) => {
+  try {
+    const orgId = req.user.organizationId
+    const { count } = await prisma.task.deleteMany({
+      where: { organizationId: orgId, status: 'done' }
+    })
+    return success(res, 200, { count })
   } catch (error) {
     return fail(res, 500, error.message)
   }
