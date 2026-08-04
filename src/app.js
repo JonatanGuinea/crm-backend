@@ -18,6 +18,9 @@ import installmentsRoutes from './routes/installments.routes.js'
 import expensesRoutes from './routes/expenses.routes.js'
 import publicRoutes from './routes/public.routes.js'
 import tasksRoutes from './routes/tasks.routes.js'
+import categoriesRoutes from './routes/categories.routes.js'
+import productsRoutes from './routes/products.routes.js'
+import stockRoutes from './routes/stock.routes.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -42,5 +45,8 @@ app.use('/api/installments', installmentsRoutes)
 app.use('/api/expenses', expensesRoutes)
 app.use('/api/public', publicRoutes)
 app.use('/api/tasks', tasksRoutes)
+app.use('/api/categories', categoriesRoutes)
+app.use('/api/products', productsRoutes)
+app.use('/api/stock', stockRoutes)
 
 export default app

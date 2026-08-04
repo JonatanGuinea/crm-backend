@@ -29,12 +29,13 @@ model User {
   notifications      Notification[]
   attachments        Attachment[]
   expenses           Expense[]
-  assignedTasks      Task[]         @relation("TaskAssignee")
-  createdTasks       Task[]         @relation("TaskCreator")
+  assignedTasks      Task[]           @relation("TaskAssignee")
+  createdTasks       Task[]           @relation("TaskCreator")
   taskHistory        TaskHistory[]
   clientHistory      ClientHistory[]
   projectHistory     ProjectHistory[]
   quoteHistory       QuoteHistory[]
+  stockMovements     StockMovement[]
 }
 
 model Organization {
@@ -70,6 +71,9 @@ model Organization {
   expenseCategories  ExpenseCategory[]
   expenses           Expense[]
   tasks              Task[]
+  productCategories  ProductCategory[]
+  products           Product[]
+  stockMovements     StockMovement[]
 
   @@index([name])
 }
@@ -127,12 +131,13 @@ model Client {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdBy    User           @relation(fields: [createdById], references: [id])
-  projects     Project[]
-  quotes       Quote[]
-  invoices     Invoice[]
-  history      ClientHistory[]
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      User            @relation(fields: [createdById], references: [id])
+  projects       Project[]
+  quotes         Quote[]
+  invoices       Invoice[]
+  history        ClientHistory[]
+  stockMovements StockMovement[]
 
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([organizationId, name])
@@ -155,10 +160,11 @@ model Project {
   client       Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
   organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdBy    User            @relation(fields: [createdById], references: [id])
-  quotes       Quote[]
-  invoices     Invoice[]
-  tasks        Task[]
-  history      ProjectHistory[]
+  quotes         Quote[]
+  invoices       Invoice[]
+  tasks          Task[]
+  history        ProjectHistory[]
+  stockMovements StockMovement[]
 
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([organizationId, status])
@@ -232,10 +238,11 @@ model Quote {
   clientSignature   String?
   clientSignedAt    DateTime?
 
-  items        QuoteItem[]
-  invoices     Invoice[]
-  installments Installment[]
-  history      QuoteHistory[]
+  items          QuoteItem[]
+  invoices       Invoice[]
+  installments   Installment[]
+  history        QuoteHistory[]
+  stockMovements StockMovement[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -247,11 +254,13 @@ model Quote {
 }
 
 model QuoteItem {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   description String
   quantity    Float
   unitPrice   Float
   amount      Float
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
 
   quoteId String
   quote   Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
@@ -499,6 +508,125 @@ model Attachment {
 
   @@index([entityType, entityId])
   @@index([organizationId])
+}
+
+// ─── Stock ───────────────────────────────────────────────────────────────────
+
+enum ProductStatus {
+  active
+  inactive
+  discontinued
+}
+
+enum MovementType {
+  initial        // Carga inicial de stock
+  purchase       // Compra a proveedor
+  sale           // Venta a cliente
+  adjustment_in  // Ajuste positivo manual
+  adjustment_out // Ajuste negativo manual
+  return_in      // Devolución de cliente
+  return_out     // Devolución a proveedor
+  production_in  // Producto terminado / ensamblado
+  production_out // Consumo en producción
+  transfer_in    // Transferencia recibida
+  transfer_out   // Transferencia enviada
+  correction     // Corrección de error
+}
+
+enum MovementDirection {
+  IN
+  OUT
+}
+
+model ProductCategory {
+  id             String   @id @default(cuid())
+  orgId          String
+  parentId       String?
+  name           String
+  description    String?
+  color          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  parent       ProductCategory?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children     ProductCategory[] @relation("CategoryTree")
+  products     Product[]
+
+  @@unique([orgId, name])
+  @@index([orgId])
+  @@index([orgId, parentId])
+}
+
+model Product {
+  id         String        @id @default(cuid())
+  orgId      String
+  categoryId String?
+
+  sku         String
+  name        String
+  description String?
+  unit        String        @default("unidad")
+
+  stock    Decimal       @default(0) @db.Decimal(15, 4)
+  minStock Decimal       @default(0) @db.Decimal(15, 4)
+  maxStock Decimal?      @db.Decimal(15, 4)
+
+  costPrice Decimal? @db.Decimal(15, 2)
+  salePrice Decimal? @db.Decimal(15, 2)
+
+  status    ProductStatus @default(active)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  organization Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  category     ProductCategory? @relation(fields: [categoryId], references: [id])
+  movements    StockMovement[]
+  quoteItems   QuoteItem[]
+
+  @@unique([orgId, sku])
+  @@index([orgId])
+  @@index([orgId, status])
+  @@index([orgId, categoryId])
+  @@index([orgId, stock])
+}
+
+model StockMovement {
+  id        String            @id @default(cuid())
+  orgId     String
+  productId String
+
+  type      MovementType
+  direction MovementDirection
+
+  quantity      Decimal @db.Decimal(15, 4)
+  previousStock Decimal @db.Decimal(15, 4)
+  currentStock  Decimal @db.Decimal(15, 4)
+
+  unitCost  Decimal? @db.Decimal(15, 2)
+  totalCost Decimal? @db.Decimal(15, 2)
+
+  reason    String?
+  reference String?
+
+  quoteId   String?
+  projectId String?
+  clientId  String?
+
+  createdById String
+  createdAt   DateTime @default(now())
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  product      Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quote        Quote?       @relation(fields: [quoteId], references: [id])
+  project      Project?     @relation(fields: [projectId], references: [id])
+  client       Client?      @relation(fields: [clientId], references: [id])
+  createdBy    User         @relation(fields: [createdById], references: [id])
+
+  @@index([orgId, createdAt(sort: Desc)])
+  @@index([orgId, productId, createdAt(sort: Desc)])
+  @@index([orgId, type])
+  @@index([productId, createdAt(sort: Desc)])
 }
 
 // ─── Notifications ────────────────────────────────────────────────────────────
