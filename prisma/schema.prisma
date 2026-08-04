@@ -36,6 +36,7 @@ model User {
   projectHistory     ProjectHistory[]
   quoteHistory       QuoteHistory[]
   stockMovements     StockMovement[]
+  cashMovements      CashMovement[]
 }
 
 model Organization {
@@ -75,6 +76,9 @@ model Organization {
   products           Product[]
   stockMovements     StockMovement[]
   suppliers          Supplier[]
+  financialCategories FinancialCategory[]
+  cashAccounts        CashAccount[]
+  cashMovements       CashMovement[]
 
   @@index([name])
 }
@@ -139,6 +143,7 @@ model Client {
   invoices       Invoice[]
   history        ClientHistory[]
   stockMovements StockMovement[]
+  cashMovements  CashMovement[]
 
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([organizationId, name])
@@ -166,6 +171,7 @@ model Project {
   tasks          Task[]
   history        ProjectHistory[]
   stockMovements StockMovement[]
+  cashMovements  CashMovement[]
 
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([organizationId, status])
@@ -244,6 +250,7 @@ model Quote {
   installments   Installment[]
   history        QuoteHistory[]
   stockMovements StockMovement[]
+  cashMovements  CashMovement[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -667,9 +674,147 @@ model Supplier {
 
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   products     Product[]
+  cashMovements CashMovement[]
 
   @@index([orgId])
   @@index([orgId, name])
+}
+
+// ─── Finances ────────────────────────────────────────────────────────────────
+
+enum CashAccountType {
+  cash
+  bank
+  virtual
+}
+
+enum CashAccountStatus {
+  active
+  inactive
+}
+
+enum CashMovementType {
+  income
+  expense
+  transfer_out
+  transfer_in
+  adjustment
+}
+
+enum CashMovementStatus {
+  pending
+  confirmed
+  annulled
+}
+
+enum PaymentMethod {
+  cash
+  bank_transfer
+  check
+  credit_card
+  debit_card
+  mercado_pago
+  other
+}
+
+enum FinancialCategoryType {
+  income
+  expense
+}
+
+model FinancialCategory {
+  id        String               @id @default(cuid())
+  orgId     String
+  name      String
+  type      FinancialCategoryType
+  parentId  String?
+  color     String?
+  isDefault Boolean              @default(false)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  organization Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  parent       FinancialCategory?  @relation("FinCatTree", fields: [parentId], references: [id])
+  children     FinancialCategory[] @relation("FinCatTree")
+  movements    CashMovement[]
+
+  @@unique([orgId, name, type])
+  @@index([orgId, type])
+}
+
+model CashAccount {
+  id             String            @id @default(cuid())
+  orgId          String
+  name           String
+  type           CashAccountType   @default(cash)
+  currency       String            @default("ARS")
+  initialBalance Decimal           @default(0) @db.Decimal(15, 2)
+  currentBalance Decimal           @default(0) @db.Decimal(15, 2)
+  description    String?
+  status         CashAccountStatus @default(active)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  organization Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  movements    CashMovement[] @relation("AccountMovements")
+  transfersTo  CashMovement[] @relation("TransferDestination")
+
+  @@index([orgId, status])
+}
+
+model CashMovement {
+  id      String             @id @default(cuid())
+  orgId   String
+  accountId String
+
+  type      CashMovementType
+  concept   String
+  categoryId String?
+  amount    Decimal            @db.Decimal(15, 2)
+  balanceBefore Decimal        @db.Decimal(15, 2)
+  balanceAfter  Decimal        @db.Decimal(15, 2)
+
+  paymentMethod PaymentMethod  @default(cash)
+  status        CashMovementStatus @default(pending)
+
+  date        DateTime
+  description String?
+  reference   String?
+
+  clientId    String?
+  projectId   String?
+  supplierId  String?
+  quoteId     String?
+
+  transferPairId    String?
+  toAccountId       String?
+  annulledById      String?
+  annulmentReason   String?
+
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organization Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  account      CashAccount        @relation("AccountMovements", fields: [accountId], references: [id])
+  toAccount    CashAccount?       @relation("TransferDestination", fields: [toAccountId], references: [id])
+  category     FinancialCategory? @relation(fields: [categoryId], references: [id])
+  client       Client?            @relation(fields: [clientId], references: [id])
+  project      Project?           @relation(fields: [projectId], references: [id])
+  supplier     Supplier?          @relation(fields: [supplierId], references: [id])
+  quote        Quote?             @relation(fields: [quoteId], references: [id])
+  createdBy    User               @relation(fields: [createdById], references: [id])
+  annulledBy   CashMovement?      @relation("AnnulmentPair", fields: [annulledById], references: [id])
+  annuls       CashMovement[]     @relation("AnnulmentPair")
+
+  @@index([orgId, date(sort: Desc)])
+  @@index([orgId, accountId, date(sort: Desc)])
+  @@index([orgId, type, date(sort: Desc)])
+  @@index([orgId, categoryId, date(sort: Desc)])
+  @@index([orgId, status, date(sort: Desc)])
+  @@index([orgId, clientId])
+  @@index([orgId, projectId])
+  @@index([transferPairId])
 }
 
 // ─── Notifications ────────────────────────────────────────────────────────────
