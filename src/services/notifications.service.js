@@ -1,12 +1,12 @@
 import prisma from '../config/db.js'
 
-export async function notify({ type, title, message, metadata, userId, orgId, refId }) {
+export async function notify({ type, title, message, metadata, userId, orgId, refId, reactivate = false }) {
   try {
     await prisma.notification.upsert({
       where: {
         type_userId_organizationId_refId: { type, userId, organizationId: orgId, refId }
       },
-      update: {},
+      update: reactivate ? { read: false, title, message, createdAt: new Date() } : {},
       create: { type, title, message, metadata: metadata ?? null, userId, organizationId: orgId, refId }
     })
   } catch {

@@ -1,5 +1,6 @@
 import prisma from '../config/db.js'
 import { success, fail } from '../utils/response.js'
+import { notify } from '../services/notifications.service.js'
 
 // Tipos que suman stock (IN) y los que restan (OUT)
 const IN_TYPES  = ['initial', 'purchase', 'adjustment_in', 'return_in', 'production_in', 'transfer_in', 'correction']
@@ -46,7 +47,7 @@ async function createMovement(tx, { orgId, productId, type, quantity, unitCost, 
       createdById,
     },
     include: {
-      product:   { select: { id: true, sku: true, name: true, unit: true } },
+      product:   { select: { id: true, sku: true, name: true, unit: true, minStock: true } },
       createdBy: { select: { id: true, name: true } },
     },
   })
@@ -57,6 +58,38 @@ async function createMovement(tx, { orgId, productId, type, quantity, unitCost, 
   })
 
   return movement
+}
+
+// ── Notificaciones de stock bajo / sin stock ──────────────────────────────────
+async function maybeNotifyStockAlert(orgId, movement) {
+  try {
+    const stock = Number(movement.currentStock)
+    const min   = Number(movement.product.minStock)
+
+    let type, title, message
+    if (stock <= 0) {
+      type    = 'stock_out'
+      title   = 'Producto sin stock'
+      message = `"${movement.product.name}" (${movement.product.sku}) quedó sin stock`
+    } else if (min > 0 && stock <= min) {
+      type    = 'stock_low'
+      title   = 'Stock bajo'
+      message = `"${movement.product.name}" tiene stock bajo: ${stock} ${movement.product.unit} (mínimo: ${min})`
+    } else {
+      return
+    }
+
+    const admins = await prisma.organizationMembership.findMany({
+      where: { organizationId: orgId, status: 'active', role: { in: ['owner', 'admin'] } },
+      select: { userId: true },
+    })
+
+    await Promise.all(admins.map(m =>
+      notify({ type, title, message, userId: m.userId, orgId, refId: movement.productId, reactivate: true })
+    ))
+  } catch {
+    // non-critical
+  }
 }
 
 // ── POST /stock/in ────────────────────────────────────────────────────────────
@@ -76,6 +109,7 @@ export async function stockIn(req, res) {
       createdById: req.user.id,
     })
   )
+  await maybeNotifyStockAlert(orgId, movement)
   success(res, 201, movement)
 }
 
@@ -97,6 +131,7 @@ export async function stockOut(req, res) {
         createdById: req.user.id,
       })
     )
+    await maybeNotifyStockAlert(orgId, movement)
     success(res, 201, movement)
   } catch (err) {
     if (err.message.startsWith('Stock insuficiente')) return fail(res, 422, err.message)
@@ -135,6 +170,7 @@ export async function stockAdjustment(req, res) {
       createdById: req.user.id,
     })
   )
+  await maybeNotifyStockAlert(orgId, movement)
   success(res, 201, movement)
 }
 
