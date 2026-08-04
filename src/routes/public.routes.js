@@ -3,6 +3,7 @@ import prisma from '../config/db.js'
 import { success, fail } from '../utils/response.js'
 import { buildPdf } from '../utils/buildPdf.js'
 import { notify } from '../services/notifications.service.js'
+import { syncQuoteMovements } from '../services/finances.service.js'
 
 const router = Router()
 
@@ -32,6 +33,7 @@ router.post('/quotes/:id/confirm', async (req, res) => {
       where: { id },
       select: {
         id: true, status: true, number: true, title: true, clientId: true, projectId: true,
+        total: true, currency: true,
         client: { select: { name: true, phone: true, company: true } },
         potentialClientName: true, potentialClientEmail: true, potentialClientPhone: true, potentialClientCompany: true,
         potentialProjectTitle: true,
@@ -85,9 +87,9 @@ router.post('/quotes/:id/confirm', async (req, res) => {
       updateData.clientSignedAt  = new Date()
     }
 
-    // Crear proyecto automáticamente si no hay uno vinculado
-    if (!quote.projectId) {
-      const projectClientId = updateData.clientId || quote.clientId
+    // Crear proyecto automáticamente si no hay uno vinculado y hay cliente
+    const projectClientId = updateData.clientId || quote.clientId
+    if (!quote.projectId && projectClientId) {
       const projectTitle    = quote.potentialProjectTitle || quote.title
       const newProject = await prisma.project.create({
         data: {
@@ -112,7 +114,20 @@ router.post('/quotes/:id/confirm', async (req, res) => {
       })
     }
 
+    const resolvedClientId = updateData.clientId || quote.clientId || null
+
     await prisma.quote.update({ where: { id }, data: updateData })
+
+    // Sincronizar movimientos financieros respetando el plan de cuotas
+    try {
+      const installments = await prisma.installment.findMany({
+        where: { quoteId: quote.id, organizationId: quote.organizationId },
+        orderBy: { number: 'asc' },
+      })
+      await syncQuoteMovements(quote.id, quote.organizationId, installments, quote.createdById)
+    } catch (err) {
+      console.error('[finances] Error sincronizando movimientos pendientes:', err.message)
+    }
 
     await prisma.quoteHistory.create({
       data: {

@@ -59,6 +59,20 @@ export async function updateAccount(req, res) {
   success(res, 200, updated)
 }
 
+export async function setDefaultAccount(req, res) {
+  const orgId = req.user.organizationId
+  const { id } = req.params
+
+  const account = await prisma.cashAccount.findFirst({ where: { id, orgId } })
+  if (!account) return fail(res, 404, 'Cuenta no encontrada')
+
+  await prisma.organization.update({
+    where: { id: orgId },
+    data: { defaultCashAccountId: id },
+  })
+  success(res, 200, { defaultCashAccountId: id })
+}
+
 export async function deleteAccount(req, res) {
   const orgId = req.user.organizationId
   const { id } = req.params

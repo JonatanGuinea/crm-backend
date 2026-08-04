@@ -1,4 +1,5 @@
 import prisma from '../config/db.js'
+import { Prisma } from '@prisma/client'
 import { success, fail, paginated } from '../utils/response.js'
 import { parsePagination, buildPaginationMeta } from '../utils/paginate.js'
 
@@ -52,14 +53,16 @@ export const getClients = async (req, res) => {
     const { name, company } = req.query
     const { page, limit, skip } = parsePagination(req.query)
 
-    const where = { organizationId: orgId }
-    if (name) where.name = { contains: name, mode: 'insensitive' }
-    if (company) where.company = { contains: company, mode: 'insensitive' }
+    const conditions = [Prisma.sql`"organizationId" = ${orgId}`]
+    if (name)    conditions.push(Prisma.sql`name ILIKE ${'%' + name + '%'}`)
+    if (company) conditions.push(Prisma.sql`company ILIKE ${'%' + company + '%'}`)
+    const where = Prisma.join(conditions, ' AND ')
 
-    const [clients, total] = await Promise.all([
-      prisma.client.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take: limit }),
-      prisma.client.count({ where })
+    const [clients, countResult] = await Promise.all([
+      prisma.$queryRaw`SELECT * FROM "Client" WHERE ${where} ORDER BY LOWER(name) ASC LIMIT ${limit} OFFSET ${skip}`,
+      prisma.$queryRaw`SELECT COUNT(*) AS count FROM "Client" WHERE ${where}`,
     ])
+    const total = Number(countResult[0].count)
 
     return paginated(res, clients, buildPaginationMeta(total, page, limit))
 

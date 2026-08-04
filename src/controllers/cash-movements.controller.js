@@ -6,7 +6,7 @@ export async function getMovements(req, res) {
   const orgId = req.user.organizationId
   const {
     accountId, type, categoryId, status,
-    clientId, projectId,
+    clientId, projectId, reference,
     from, to,
     page = 1, limit = 30,
   } = req.query
@@ -18,6 +18,7 @@ export async function getMovements(req, res) {
   if (status)     where.status     = status
   if (clientId)   where.clientId   = clientId
   if (projectId)  where.projectId  = projectId
+  if (reference)  where.reference  = { contains: reference, mode: 'insensitive' }
   if (from || to) {
     where.date = {}
     if (from) where.date.gte = new Date(from)
@@ -30,7 +31,7 @@ export async function getMovements(req, res) {
     prisma.cashMovement.findMany({
       where,
       include: INCLUDE_MOVEMENT,
-      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+      orderBy: { createdAt: 'desc' },
       skip,
       take: Number(limit),
     }),

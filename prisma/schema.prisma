@@ -55,7 +55,8 @@ model Organization {
   postalCode          String?
   signature           String?
   signatureOwnerName  String?
-  defaultCurrency     String  @default("USD")
+  defaultCurrency      String  @default("USD")
+  defaultCashAccountId String?
   ownerId         String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

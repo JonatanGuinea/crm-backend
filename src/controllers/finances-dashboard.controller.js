@@ -2,16 +2,23 @@ import prisma from '../config/db.js'
 import { success } from '../utils/response.js'
 
 export async function getFinancesDashboard(req, res) {
-  const orgId = req.user.organizationId
+  const orgId     = req.user.organizationId
+  const accountId = req.query.accountId || null
 
   const now   = new Date()
-  const start = new Date(now.getFullYear(), now.getMonth(), 1)
-  const end   = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+  const year  = parseInt(req.query.year)  || now.getFullYear()
+  const month = parseInt(req.query.month) || (now.getMonth() + 1)
+  const start = new Date(year, month - 1, 1)
+  const end   = new Date(year, month, 0, 23, 59, 59)
 
-  const [accounts, monthMovements, recentMovements, categoryTotals] = await Promise.all([
+  const movementBase = { orgId, ...(accountId ? { accountId } : {}) }
+
+  const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { defaultCashAccountId: true } })
+
+  const [accounts, monthMovements, recentMovements, categoryTotals, pendingTotals] = await Promise.all([
     // Saldo por cuenta
     prisma.cashAccount.findMany({
-      where: { orgId, status: 'active' },
+      where: { orgId, status: 'active', ...(accountId ? { id: accountId } : {}) },
       orderBy: { name: 'asc' },
     }),
 
@@ -19,31 +26,35 @@ export async function getFinancesDashboard(req, res) {
     prisma.cashMovement.groupBy({
       by: ['type'],
       where: {
-        orgId, status: 'confirmed',
+        ...movementBase, status: 'confirmed',
         date: { gte: start, lte: end },
         type: { in: ['income', 'expense'] },
       },
       _sum: { amount: true },
     }),
 
-    // Últimos 10 movimientos
+    // Últimos movimientos del mes seleccionado (confirmados y pendientes)
     prisma.cashMovement.findMany({
-      where: { orgId, status: { not: 'annulled' } },
+      where: {
+        ...movementBase,
+        status: { not: 'annulled' },
+        date: { gte: start, lte: end },
+      },
       include: {
         account:  { select: { id: true, name: true } },
         category: { select: { id: true, name: true } },
         client:   { select: { id: true, name: true } },
         project:  { select: { id: true, title: true } },
       },
-      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
-      take: 10,
+      orderBy: { createdAt: 'desc' },
+      take: 6,
     }),
 
     // Gastos por categoría del mes
     prisma.cashMovement.groupBy({
       by: ['categoryId'],
       where: {
-        orgId, status: 'confirmed', type: 'expense',
+        ...movementBase, status: 'confirmed', type: 'expense',
         date: { gte: start, lte: end },
         categoryId: { not: null },
       },
@@ -51,14 +62,30 @@ export async function getFinancesDashboard(req, res) {
       orderBy: { _sum: { amount: 'desc' } },
       take: 8,
     }),
+
+    // Pendientes del mes seleccionado (income y expense por separado)
+    prisma.cashMovement.groupBy({
+      by: ['type'],
+      where: {
+        ...movementBase,
+        status: 'pending',
+        type: { in: ['income', 'expense'] },
+        date: { gte: start, lte: end },
+      },
+      _sum: { amount: true },
+    }),
   ])
 
-  // Saldo total
+  // Saldo total (de las cuentas filtradas)
   const totalBalance = accounts.reduce((s, a) => s + Number(a.currentBalance), 0)
 
   // Ingresos / egresos del mes
   const incomeMonth  = Number(monthMovements.find(m => m.type === 'income')?._sum?.amount  ?? 0)
   const expenseMonth = Number(monthMovements.find(m => m.type === 'expense')?._sum?.amount ?? 0)
+
+  // Pendientes
+  const pendingIncome  = Number(pendingTotals.find(m => m.type === 'income')?._sum?.amount  ?? 0)
+  const pendingExpense = Number(pendingTotals.find(m => m.type === 'expense')?._sum?.amount ?? 0)
 
   // Enriquecer categorías con nombre
   const categoryIds = categoryTotals.map(c => c.categoryId).filter(Boolean)
@@ -74,7 +101,7 @@ export async function getFinancesDashboard(req, res) {
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1)
   const monthlyRaw   = await prisma.cashMovement.findMany({
     where: {
-      orgId, status: 'confirmed',
+      ...movementBase, status: 'confirmed',
       type: { in: ['income', 'expense'] },
       date: { gte: sixMonthsAgo },
     },
@@ -90,14 +117,24 @@ export async function getFinancesDashboard(req, res) {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([month, vals]) => ({ month, ...vals }))
 
+  // Todas las cuentas activas (siempre, para el selector del frontend)
+  const allAccounts = accountId
+    ? await prisma.cashAccount.findMany({ where: { orgId, status: 'active' }, orderBy: { name: 'asc' } })
+    : accounts
+
   success(res, 200, {
     totalBalance,
     accounts,
+    allAccounts,
     incomeMonth,
     expenseMonth,
     netMonth: incomeMonth - expenseMonth,
+    pendingIncome,
+    pendingExpense,
     recentMovements,
     categoryBreakdown,
     monthlyEvolution,
+    filteredByAccount:    accountId || null,
+    defaultCashAccountId: org?.defaultCashAccountId || null,
   })
 }

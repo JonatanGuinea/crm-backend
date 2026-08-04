@@ -1,5 +1,6 @@
 import prisma from '../config/db.js'
 import { success, fail } from '../utils/response.js'
+import { syncQuoteMovements } from '../services/finances.service.js'
 
 export const createInstallments = async (req, res) => {
   try {
@@ -58,6 +59,8 @@ export const createInstallments = async (req, res) => {
       where: invoiceId ? { invoiceId } : { quoteId },
       orderBy: { number: 'asc' }
     })
+
+    if (quoteId) await syncQuoteMovements(quoteId, orgId, created, req.user.id)
 
     return success(res, 201, created)
   } catch (error) {
@@ -164,6 +167,8 @@ export const createCustomInstallments = async (req, res) => {
       orderBy: { number: 'asc' }
     })
 
+    if (quoteId) await syncQuoteMovements(quoteId, orgId, created, req.user.id)
+
     return success(res, 201, created)
   } catch (error) {
     return fail(res, 500, error.message)
@@ -187,6 +192,8 @@ export const deleteInstallments = async (req, res) => {
         await prisma.invoice.update({ where: { id: invoiceId }, data: { status: 'sent' } })
       }
     }
+
+    if (quoteId) await syncQuoteMovements(quoteId, orgId, [], req.user.id)
 
     return success(res, 200, { message: 'Plan de cuotas eliminado' })
   } catch (error) {

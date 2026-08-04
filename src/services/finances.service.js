@@ -16,15 +16,18 @@ export async function createMovement(orgId, userId, data) {
     accountId, type, concept, categoryId, amount,
     paymentMethod = 'cash', date, description, reference,
     clientId, projectId, supplierId, quoteId,
+    status: requestedStatus,
   } = data
+
+  const isPending = requestedStatus === 'pending'
 
   const account = await prisma.cashAccount.findFirst({ where: { id: accountId, orgId, status: 'active' } })
   if (!account) throw new Error('Cuenta no encontrada o inactiva')
 
-  const qty   = Number(amount)
-  const delta = (type === 'income' || type === 'adjustment') ? qty : -qty
-  const before = Number(account.currentBalance)
-  const after  = before + delta
+  const qty    = Number(amount)
+  const delta  = (type === 'income' || type === 'adjustment') ? qty : -qty
+  const before = isPending ? 0 : Number(account.currentBalance)
+  const after  = isPending ? 0 : before + delta
 
   const movement = await prisma.$transaction(async (tx) => {
     const m = await tx.cashMovement.create({
@@ -36,7 +39,7 @@ export async function createMovement(orgId, userId, data) {
         balanceBefore: before,
         balanceAfter:  after,
         paymentMethod,
-        status: 'confirmed',
+        status: isPending ? 'pending' : 'confirmed',
         date: new Date(date),
         description: description?.trim() || null,
         reference:   reference?.trim()   || null,
@@ -48,10 +51,12 @@ export async function createMovement(orgId, userId, data) {
       },
       include: INCLUDE_MOVEMENT,
     })
-    await tx.cashAccount.update({
-      where: { id: accountId },
-      data:  { currentBalance: after },
-    })
+    if (!isPending) {
+      await tx.cashAccount.update({
+        where: { id: accountId },
+        data:  { currentBalance: after },
+      })
+    }
     return m
   })
   return movement
@@ -195,6 +200,69 @@ async function annulTransfer(orgId, userId, pairId, reason) {
     await tx.cashAccount.update({ where: { id: out.accountId }, data: { currentBalance: { increment: qty } } })
     await tx.cashAccount.update({ where: { id: inn.accountId }, data: { currentBalance: { decrement: qty } } })
   })
+}
+
+// ── Sincronizar movimientos pendientes de un presupuesto ─────────────────────
+// Llama esto cada vez que cambia el estado de un presupuesto a approved/signed
+// o cuando se crea/modifica/elimina su plan de cuotas.
+export async function syncQuoteMovements(quoteId, orgId, installments, userId) {
+  const quote = await prisma.quote.findFirst({
+    where: { id: quoteId, organizationId: orgId },
+    select: { id: true, status: true, number: true, total: true, deliveryDate: true, clientId: true, projectId: true },
+  })
+  if (!['approved', 'signed'].includes(quote?.status)) return
+
+  const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { defaultCashAccountId: true } })
+  let accountId = org?.defaultCashAccountId
+
+  // Fallback: si no hay cuenta predeterminada, usar la primera activa
+  if (!accountId) {
+    const first = await prisma.cashAccount.findFirst({ where: { orgId, status: 'active' }, orderBy: { createdAt: 'asc' } })
+    accountId = first?.id
+  }
+  if (!accountId) return
+
+  await prisma.cashMovement.deleteMany({ where: { quoteId, status: 'pending' } })
+
+  if (installments.length > 0) {
+    await prisma.cashMovement.createMany({
+      data: installments.map(inst => ({
+        orgId,
+        accountId,
+        type: 'income',
+        concept: 'quote_installment',
+        amount: Number(inst.amount),
+        balanceBefore: 0,
+        balanceAfter: 0,
+        status: 'pending',
+        date: inst.dueDate,
+        description: `Cuota ${inst.number} — Presupuesto #${quote.number}`,
+        clientId: quote.clientId ?? null,
+        projectId: quote.projectId ?? null,
+        quoteId,
+        createdById: userId,
+      })),
+    })
+  } else {
+    await prisma.cashMovement.create({
+      data: {
+        orgId,
+        accountId,
+        type: 'income',
+        concept: 'quote_payment',
+        amount: Number(quote.total ?? 0),
+        balanceBefore: 0,
+        balanceAfter: 0,
+        status: 'pending',
+        date: quote.deliveryDate ?? new Date(),
+        description: `Cobro — Presupuesto #${quote.number}`,
+        clientId: quote.clientId ?? null,
+        projectId: quote.projectId ?? null,
+        quoteId,
+        createdById: userId,
+      },
+    })
+  }
 }
 
 export { INCLUDE_MOVEMENT }

@@ -3,14 +3,16 @@ import { success, fail, paginated } from '../utils/response.js'
 import { parsePagination, buildPaginationMeta } from '../utils/paginate.js'
 import { notify } from '../services/notifications.service.js'
 import { sendQuoteEmail } from '../services/email.service.js'
+import { syncQuoteMovements } from '../services/finances.service.js'
 
 const allowedTransitions = {
-  draft:    ['sent', 'expired'],
-  sent:     ['approved', 'rejected', 'expired'],
-  approved: [],
-  signed:   [],
-  rejected: [],
-  expired: []
+  draft:     ['sent', 'expired'],
+  sent:      ['approved', 'rejected', 'expired'],
+  approved:  ['cancelled'],
+  signed:    ['cancelled'],
+  rejected:  [],
+  expired:   [],
+  cancelled: [],
 }
 
 function computeItems(items, taxRate, discountType = null, discountValue = 0) {
@@ -256,6 +258,30 @@ export const updateQuote = async (req, res) => {
         }
       }
 
+      // Auto-crear proyecto para cliente existente sin proyecto vinculado
+      if (['approved', 'signed'].includes(status) && quote.clientId && !quote.projectId && !updates.projectId) {
+        const newProject = await prisma.project.create({
+          data: {
+            title:          quote.title,
+            status:         'approved',
+            clientId:       quote.clientId,
+            organizationId: orgId,
+            createdById:    req.user.id,
+          }
+        })
+        updates.projectId = newProject.id
+
+        await prisma.projectHistory.create({
+          data: {
+            projectId:      newProject.id,
+            userId:         req.user.id,
+            action:         'created',
+            detail:         'Creado al aprobar presupuesto',
+            organizationId: orgId,
+          }
+        })
+      }
+
       if (['approved', 'rejected'].includes(status)) {
         await notify({
           type: status === 'approved' ? 'quote_approved' : 'quote_rejected',
@@ -266,7 +292,16 @@ export const updateQuote = async (req, res) => {
           refId: quote.id
         })
       }
+
+      if (status === 'cancelled') {
+        await prisma.cashMovement.updateMany({
+          where: { quoteId: id, status: 'pending' },
+          data:  { status: 'annulled', annulmentReason: 'Presupuesto cancelado' },
+        })
+      }
     }
+
+    const needsMovementSync = status && ['approved', 'signed'].includes(status) && status !== quote.status
 
     if (req.body.sentByWhatsapp === true && !quote.sentByWhatsapp) {
       updates.sentByWhatsapp = true
@@ -322,6 +357,16 @@ export const updateQuote = async (req, res) => {
         project: { select: { id: true, title: true } }
       }
     })
+
+    // Sincronizar movimientos financieros DESPUÉS del update para que el servicio
+    // lea status, clientId y projectId ya persistidos (incluye clientes potenciales convertidos)
+    if (needsMovementSync) {
+      const quoteWithInstallments = await prisma.quote.findUnique({
+        where: { id },
+        include: { installments: { orderBy: { number: 'asc' } } },
+      })
+      await syncQuoteMovements(id, orgId, quoteWithInstallments.installments ?? [], req.user.id)
+    }
 
     const STATUS_LABELS_ES = {
       draft: 'Borrador', sent: 'Enviado', approved: 'Aprobado',
