@@ -21,6 +21,7 @@ import tasksRoutes from './routes/tasks.routes.js'
 import categoriesRoutes from './routes/categories.routes.js'
 import productsRoutes from './routes/products.routes.js'
 import stockRoutes from './routes/stock.routes.js'
+import suppliersRoutes from './routes/suppliers.routes.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -48,5 +49,6 @@ app.use('/api/tasks', tasksRoutes)
 app.use('/api/categories', categoriesRoutes)
 app.use('/api/products', productsRoutes)
 app.use('/api/stock', stockRoutes)
+app.use('/api/suppliers', suppliersRoutes)
 
 export default app

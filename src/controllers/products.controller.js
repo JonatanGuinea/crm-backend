@@ -29,7 +29,10 @@ export async function getProducts(req, res) {
     prisma.product.count({ where }),
     prisma.product.findMany({
       where,
-      include: { category: { select: { id: true, name: true, color: true } } },
+      include: {
+        category: { select: { id: true, name: true, color: true } },
+        supplier: { select: { id: true, name: true, phone: true } },
+      },
       orderBy: { name: 'asc' },
       skip,
       take: Number(limit),
@@ -72,6 +75,7 @@ export async function getProduct(req, res) {
     where: { id, orgId },
     include: {
       category: { select: { id: true, name: true, color: true } },
+      supplier: { select: { id: true, name: true, email: true, phone: true } },
       _count: { select: { movements: true } },
     },
   })
@@ -86,7 +90,7 @@ export async function createProduct(req, res) {
   if (!orgId) return fail(res, 403, 'Organización activa requerida')
   const {
     sku, name, description, unit = 'unidad',
-    categoryId, costPrice, salePrice,
+    categoryId, supplierId, costPrice, salePrice,
     minStock = 0, maxStock,
     initialStock = 0, initialReason,
   } = req.body
@@ -110,7 +114,7 @@ export async function createProduct(req, res) {
     const p = await tx.product.create({
       data: {
         orgId, sku: sku.trim(), name: name.trim(), description,
-        unit, categoryId: categoryId || null,
+        unit, categoryId: categoryId || null, supplierId: supplierId || null,
         costPrice: costPrice ? Number(costPrice) : null,
         salePrice: salePrice ? Number(salePrice) : null,
         minStock: Number(minStock),
@@ -143,7 +147,7 @@ export async function updateProduct(req, res) {
   const orgId = req.user.organizationId
   const { id } = req.params
   const {
-    name, description, unit, categoryId,
+    name, description, unit, categoryId, supplierId,
     costPrice, salePrice, minStock, maxStock, status,
   } = req.body
 
@@ -163,14 +167,18 @@ export async function updateProduct(req, res) {
       name:        name?.trim()              ?? product.name,
       description: description               ?? product.description,
       unit:        unit                      ?? product.unit,
-      categoryId:  categoryId !== undefined ? (categoryId || null) : product.categoryId,
+      categoryId:  categoryId !== undefined  ? (categoryId || null)  : product.categoryId,
+      supplierId:  supplierId !== undefined  ? (supplierId || null)  : product.supplierId,
       costPrice:   costPrice !== undefined  ? (costPrice ? Number(costPrice) : null) : product.costPrice,
       salePrice:   salePrice !== undefined  ? (salePrice ? Number(salePrice) : null) : product.salePrice,
       minStock:    minStock !== undefined   ? Number(minStock)  : product.minStock,
       maxStock:    maxStock !== undefined   ? (maxStock ? Number(maxStock) : null) : product.maxStock,
       status:      status                    ?? product.status,
     },
-    include: { category: { select: { id: true, name: true, color: true } } },
+    include: {
+      category: { select: { id: true, name: true, color: true } },
+      supplier: { select: { id: true, name: true, phone: true } },
+    },
   })
   success(res, 200, updated)
 }

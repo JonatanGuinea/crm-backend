@@ -74,6 +74,7 @@ model Organization {
   productCategories  ProductCategory[]
   products           Product[]
   stockMovements     StockMovement[]
+  suppliers          Supplier[]
 
   @@index([name])
 }
@@ -579,6 +580,7 @@ model Product {
   id         String        @id @default(cuid())
   orgId      String
   categoryId String?
+  supplierId String?
 
   sku         String
   name        String
@@ -598,6 +600,7 @@ model Product {
 
   organization Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
   category     ProductCategory? @relation(fields: [categoryId], references: [id])
+  supplier     Supplier?        @relation(fields: [supplierId], references: [id])
   movements      StockMovement[]
   quoteItems     QuoteItem[]
   taskStockItems TaskStockItem[]
@@ -645,6 +648,28 @@ model StockMovement {
   @@index([orgId, productId, createdAt(sort: Desc)])
   @@index([orgId, type])
   @@index([productId, createdAt(sort: Desc)])
+}
+
+// ─── Suppliers ───────────────────────────────────────────────────────────────
+
+model Supplier {
+  id             String   @id @default(cuid())
+  orgId          String
+  name           String
+  email          String?
+  phone          String?
+  address        String?
+  website        String?
+  notes          String?
+  status         String   @default("active")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  products     Product[]
+
+  @@index([orgId])
+  @@index([orgId, name])
 }
 
 // ─── Notifications ────────────────────────────────────────────────────────────
