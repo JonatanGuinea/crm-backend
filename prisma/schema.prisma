@@ -406,6 +406,7 @@ model Task {
   createdBy      User         @relation("TaskCreator", fields: [createdById], references: [id])
 
   history     TaskHistory[]
+  stockItems  TaskStockItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -430,6 +431,22 @@ model TaskHistory {
 
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([taskId])
+}
+
+// ─── Task Stock Items ─────────────────────────────────────────────────────────
+
+model TaskStockItem {
+  id             String   @id @default(cuid())
+  taskId         String
+  task           Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id])
+  quantity       Decimal  @db.Decimal(15, 4)
+  organizationId String
+  createdAt      DateTime @default(now())
+
+  @@index([taskId])
+  @@index([productId])
 }
 
 // ─── Quote History ────────────────────────────────────────────────────────────
@@ -581,8 +598,9 @@ model Product {
 
   organization Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
   category     ProductCategory? @relation(fields: [categoryId], references: [id])
-  movements    StockMovement[]
-  quoteItems   QuoteItem[]
+  movements      StockMovement[]
+  quoteItems     QuoteItem[]
+  taskStockItems TaskStockItem[]
 
   @@unique([orgId, sku])
   @@index([orgId])
@@ -640,6 +658,8 @@ enum NotificationType {
   project_deadline
   member_joined
   task_assigned
+  stock_out
+  stock_low
 }
 
 model Notification {

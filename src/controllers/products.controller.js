@@ -41,7 +41,26 @@ export async function getProducts(req, res) {
     ? items.filter(p => Number(p.stock) > 0 && Number(p.stock) <= Number(p.minStock))
     : items
 
-  success(res, 200, { items: finalItems, total, page: Number(page), limit: Number(limit) })
+  // Stock comprometido: suma de ítems en tareas no completadas
+  const productIds = finalItems.map(p => p.id)
+  const committed = await prisma.taskStockItem.groupBy({
+    by: ['productId'],
+    where: {
+      organizationId: orgId,
+      productId: { in: productIds },
+      task: { status: { not: 'done' } },
+    },
+    _sum: { quantity: true },
+  })
+  const committedMap = Object.fromEntries(
+    committed.map(c => [c.productId, Number(c._sum.quantity ?? 0)])
+  )
+  const itemsWithCommitted = finalItems.map(p => ({
+    ...p,
+    committedStock: committedMap[p.id] ?? 0,
+  }))
+
+  success(res, 200, { items: itemsWithCommitted, total, page: Number(page), limit: Number(limit) })
 }
 
 export async function getProduct(req, res) {

@@ -1,11 +1,16 @@
 import prisma from '../config/db.js'
 import { success, fail } from '../utils/response.js'
 import { notify } from '../services/notifications.service.js'
+import { createMovement, maybeNotifyStockAlert } from '../services/stock.service.js'
 
 const taskInclude = {
   assignedTo: { select: { id: true, name: true, avatar: true } },
   project:    { select: { id: true, title: true } },
   createdBy:  { select: { id: true, name: true } },
+  stockItems: {
+    include: { product: { select: { id: true, name: true, sku: true, unit: true, stock: true } } },
+    orderBy: { createdAt: 'asc' },
+  },
 }
 
 export const getTasks = async (req, res) => {
@@ -33,7 +38,7 @@ export const getTasks = async (req, res) => {
 
 export const createTask = async (req, res) => {
   try {
-    const { title, description, status, priority, dueDate, assignedToId, projectId } = req.body
+    const { title, description, status, priority, dueDate, assignedToId, projectId, stockItems } = req.body
     const orgId = req.user.organizationId
 
     if (!title) return fail(res, 400, 'El título es obligatorio')
@@ -63,6 +68,17 @@ export const createTask = async (req, res) => {
       }
     })
 
+    if (stockItems?.length > 0) {
+      await prisma.taskStockItem.createMany({
+        data: stockItems.map(item => ({
+          taskId:        task.id,
+          productId:     item.productId,
+          quantity:      Number(item.quantity),
+          organizationId: orgId,
+        }))
+      })
+    }
+
     if (assignedToId && assignedToId !== req.user.id) {
       notify({
         type:    'task_assigned',
@@ -74,7 +90,8 @@ export const createTask = async (req, res) => {
       })
     }
 
-    return success(res, 201, task)
+    const taskWithItems = await prisma.task.findUnique({ where: { id: task.id }, include: taskInclude })
+    return success(res, 201, taskWithItems)
   } catch (error) {
     return fail(res, 500, error.message)
   }
@@ -110,6 +127,21 @@ export const updateTask = async (req, res) => {
       updates.completedAt = null
     }
 
+    // Sincronizar ítems de stock si vienen en el body
+    if (req.body.stockItems !== undefined) {
+      await prisma.taskStockItem.deleteMany({ where: { taskId: id } })
+      if (req.body.stockItems.length > 0) {
+        await prisma.taskStockItem.createMany({
+          data: req.body.stockItems.map(item => ({
+            taskId:        id,
+            productId:     item.productId,
+            quantity:      Number(item.quantity),
+            organizationId: orgId,
+          }))
+        })
+      }
+    }
+
     const task = await prisma.task.update({
       where: { id },
       data: updates,
@@ -126,6 +158,31 @@ export const updateTask = async (req, res) => {
           organizationId: orgId,
         }
       })
+    }
+
+    // Descontar stock al completar la tarea
+    if (updates.status === 'done' && existing.status !== 'done') {
+      const items = await prisma.taskStockItem.findMany({
+        where: { taskId: id },
+        select: { productId: true, quantity: true },
+      })
+      for (const item of items) {
+        try {
+          const movement = await prisma.$transaction(tx =>
+            createMovement(tx, {
+              orgId,
+              productId:   item.productId,
+              type:        'production_out',
+              quantity:    Number(item.quantity),
+              reason:      `Tarea completada: "${existing.title}"`,
+              createdById: req.user.id,
+            })
+          )
+          await maybeNotifyStockAlert(orgId, movement)
+        } catch {
+          // stock insuficiente u otro error — se omite el ítem
+        }
+      }
     }
 
     if (
