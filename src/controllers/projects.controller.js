@@ -94,15 +94,41 @@ export const getProjects = async (req, res) => {
     ])
 
     const projectIds = projects.map(p => p.id)
-    const attachmentCounts = projectIds.length > 0
-      ? await prisma.attachment.groupBy({
-          by: ['entityId'],
-          where: { entityType: 'project', entityId: { in: projectIds } },
-          _count: { id: true }
-        })
-      : []
-    const countMap = Object.fromEntries(attachmentCounts.map(a => [a.entityId, a._count.id]))
-    const projectsWithCounts = projects.map(p => ({ ...p, attachmentCount: countMap[p.id] ?? 0 }))
+
+    const [attachmentCounts, taskTotals, taskDone] = await Promise.all([
+      projectIds.length > 0
+        ? prisma.attachment.groupBy({
+            by: ['entityId'],
+            where: { entityType: 'project', entityId: { in: projectIds } },
+            _count: { id: true }
+          })
+        : [],
+      projectIds.length > 0
+        ? prisma.task.groupBy({
+            by: ['projectId'],
+            where: { projectId: { in: projectIds } },
+            _count: { id: true }
+          })
+        : [],
+      projectIds.length > 0
+        ? prisma.task.groupBy({
+            by: ['projectId'],
+            where: { projectId: { in: projectIds }, status: 'done' },
+            _count: { id: true }
+          })
+        : [],
+    ])
+
+    const attachMap  = Object.fromEntries(attachmentCounts.map(a => [a.entityId,  a._count.id]))
+    const totalMap   = Object.fromEntries(taskTotals.map(t => [t.projectId, t._count.id]))
+    const doneMap    = Object.fromEntries(taskDone.map(t   => [t.projectId, t._count.id]))
+
+    const projectsWithCounts = projects.map(p => ({
+      ...p,
+      attachmentCount: attachMap[p.id] ?? 0,
+      taskCount:       totalMap[p.id]  ?? 0,
+      doneTaskCount:   doneMap[p.id]   ?? 0,
+    }))
 
     return paginated(res, projectsWithCounts, buildPaginationMeta(total, page, limit))
 
