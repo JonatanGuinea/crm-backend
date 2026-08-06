@@ -5,7 +5,7 @@ import { parsePagination, buildPaginationMeta } from '../utils/paginate.js'
 const allowedTransitions = {
   pending: ["approved", "cancelled"],
   approved: ["in_progress", "cancelled"],
-  in_progress: ["finished"],
+  in_progress: ["finished", "cancelled"],
   finished: [],
   cancelled: []
 }

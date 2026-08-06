@@ -51,7 +51,7 @@ export async function getProducts(req, res) {
     where: {
       organizationId: orgId,
       productId: { in: productIds },
-      task: { status: { not: 'done' } },
+      task: { status: { notIn: ['done', 'cancelled'] } },
     },
     _sum: { quantity: true },
   })
