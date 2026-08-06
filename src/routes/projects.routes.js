@@ -64,7 +64,6 @@ router.put(
   '/:id',
   auth,
   requireMembership,
-  requireRole('owner', 'admin'),
   updateProject
 )
 

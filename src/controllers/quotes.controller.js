@@ -448,11 +448,15 @@ export const sendQuote = async (req, res) => {
       where: { id, organizationId: orgId },
       include: {
         client:       { select: { id: true, name: true, email: true } },
-        organization: { select: { name: true, logo: true } },
+        organization: { select: { name: true, logo: true, signature: true } },
       }
     })
     if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
     if (!['draft', 'sent'].includes(quote.status)) return fail(res, 400, 'Solo se pueden enviar presupuestos en borrador o enviados')
+
+    if (!quote.organization?.signature) {
+      return fail(res, 400, 'La organización no tiene firma configurada. Configurá la firma en Ajustes antes de enviar presupuestos.')
+    }
 
     const recipientEmail = quote.client?.email || quote.potentialClientEmail
     const recipientName  = quote.client?.name  || quote.potentialClientName

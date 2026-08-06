@@ -168,7 +168,7 @@ export const updateTask = async (req, res) => {
       })
       for (const item of items) {
         try {
-          const movement = await prisma.$transaction(tx =>
+          const movement = await prisma.$transaction(async (tx) =>
             createMovement(tx, {
               orgId,
               productId:   item.productId,
@@ -179,9 +179,24 @@ export const updateTask = async (req, res) => {
             })
           )
           await maybeNotifyStockAlert(orgId, movement)
-        } catch {
-          // stock insuficiente u otro error — se omite el ítem
+        } catch (err) {
+          console.error(`[stock deduct] productId=${item.productId}`, err?.message)
         }
+      }
+    }
+
+    // Revertir stock al reabrir una tarea que estaba completada
+    const wasReopened = existing.status === 'done' && updates.status && updates.status !== 'done'
+    if (wasReopened) {
+      const items = await prisma.taskStockItem.findMany({
+        where: { taskId: id },
+        select: { productId: true, quantity: true },
+      })
+      for (const item of items) {
+        await prisma.product.update({
+          where: { id: item.productId },
+          data:  { stock: { increment: Number(item.quantity) } },
+        })
       }
     }
 
