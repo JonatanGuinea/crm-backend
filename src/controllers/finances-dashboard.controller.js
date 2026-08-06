@@ -6,10 +6,10 @@ export async function getFinancesDashboard(req, res) {
   const accountId = req.query.accountId || null
 
   const now   = new Date()
-  const year  = parseInt(req.query.year)  || now.getFullYear()
-  const month = parseInt(req.query.month) || (now.getMonth() + 1)
-  const start = new Date(year, month - 1, 1)
-  const end   = new Date(year, month, 0, 23, 59, 59)
+  const year  = parseInt(req.query.year)  || now.getUTCFullYear()
+  const month = parseInt(req.query.month) || (now.getUTCMonth() + 1)
+  const start = new Date(Date.UTC(year, month - 1, 1))
+  const end   = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999))
 
   const movementBase = { orgId, ...(accountId ? { accountId } : {}) }
 
@@ -33,12 +33,15 @@ export async function getFinancesDashboard(req, res) {
       _sum: { amount: true },
     }),
 
-    // Últimos movimientos del mes seleccionado (confirmados y pendientes)
+    // Movimientos del día actual (UTC)
     prisma.cashMovement.findMany({
       where: {
         ...movementBase,
         status: { not: 'annulled' },
-        date: { gte: start, lte: end },
+        date: {
+          gte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0)),
+          lte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999)),
+        },
       },
       include: {
         account:  { select: { id: true, name: true } },
@@ -47,7 +50,6 @@ export async function getFinancesDashboard(req, res) {
         project:  { select: { id: true, title: true } },
       },
       orderBy: { createdAt: 'desc' },
-      take: 6,
     }),
 
     // Gastos por categoría del mes

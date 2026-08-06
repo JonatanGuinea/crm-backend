@@ -94,29 +94,37 @@ export async function updateMovement(req, res) {
 }
 
 export async function confirmMovement(req, res) {
-  const orgId  = req.user.organizationId
-  const userId = req.user.id
+  const orgId = req.user.organizationId
   const { id } = req.params
 
-  const movement = await prisma.cashMovement.findFirst({ where: { id, orgId } })
-  if (!movement)                       return fail(res, 404, 'Movimiento no encontrado')
-  if (movement.status !== 'pending')   return fail(res, 409, 'Solo se pueden confirmar movimientos pendientes')
+  try {
+    const movement = await prisma.cashMovement.findFirst({ where: { id, orgId } })
+    if (!movement)                     return fail(res, 404, 'Movimiento no encontrado')
+    if (movement.status !== 'pending') return fail(res, 409, 'Solo se pueden confirmar movimientos pendientes')
 
-  const account = await prisma.cashAccount.findFirst({ where: { id: movement.accountId, orgId } })
-  const qty     = Number(movement.amount)
-  const delta   = (movement.type === 'income' || movement.type === 'adjustment') ? qty : -qty
-  const before  = Number(account.currentBalance)
-  const after   = before + delta
+    const account = await prisma.cashAccount.findFirst({ where: { id: movement.accountId, orgId } })
+    if (!account) return fail(res, 404, 'Cuenta del movimiento no encontrada')
 
-  await prisma.$transaction(async (tx) => {
-    await tx.cashMovement.update({
-      where: { id },
-      data: { status: 'confirmed', balanceBefore: before, balanceAfter: after },
+    const qty   = Number(movement.amount)
+    const delta = (movement.type === 'income' || movement.type === 'adjustment') ? qty : -qty
+    const before = Number(account.currentBalance)
+    const after  = before + delta
+
+    const today = new Date()
+    today.setUTCHours(0, 0, 0, 0)
+
+    await prisma.$transaction(async (tx) => {
+      await tx.cashMovement.update({
+        where: { id },
+        data: { status: 'confirmed', balanceBefore: before, balanceAfter: after, date: today },
+      })
+      await tx.cashAccount.update({ where: { id: movement.accountId }, data: { currentBalance: after } })
     })
-    await tx.cashAccount.update({ where: { id: movement.accountId }, data: { currentBalance: after } })
-  })
 
-  success(res, 200, { message: 'Movimiento confirmado' })
+    success(res, 200, { message: 'Movimiento confirmado' })
+  } catch (err) {
+    fail(res, 500, err.message)
+  }
 }
 
 export async function annulMovementHandler(req, res) {
