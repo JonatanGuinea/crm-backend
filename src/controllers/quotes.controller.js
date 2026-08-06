@@ -123,31 +123,31 @@ export const createQuote = async (req, res) => {
 export const getQuotes = async (req, res) => {
   try {
     const orgId = req.user.organizationId
-    const { status, clientId, projectId } = req.query
-    const { page, limit, skip } = parsePagination(req.query)
+    const { status, clientId, projectId, fromDate, toDate } = req.query
 
     const where = { organizationId: orgId }
     if (status)    where.status    = status
     if (clientId)  where.clientId  = clientId
     if (projectId) where.projectId = projectId
+    if (fromDate || toDate) {
+      where.createdAt = {}
+      if (fromDate) where.createdAt.gte = new Date(fromDate)
+      if (toDate)   where.createdAt.lte = new Date(toDate + 'T23:59:59.999Z')
+    }
 
-    const [quotes, total] = await Promise.all([
-      prisma.quote.findMany({
-        where,
-        include: {
-          client: { select: { id: true, name: true, phone: true } },
-          project: { select: { id: true, title: true } },
-          _count: { select: { installments: true } },
-          installments: { where: { status: { in: ['pending', 'overdue'] } }, select: { id: true } }
-        },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit
-      }),
-      prisma.quote.count({ where })
-    ])
+    const quotes = await prisma.quote.findMany({
+      where,
+      include: {
+        client: { select: { id: true, name: true, phone: true } },
+        project: { select: { id: true, title: true } },
+        _count: { select: { installments: true } },
+        installments: { where: { status: { in: ['pending', 'overdue'] } }, select: { id: true } }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 500
+    })
 
-    return paginated(res, quotes, buildPaginationMeta(total, page, limit))
+    return success(res, 200, quotes)
   } catch (error) {
     return fail(res, 500, error.message)
   }
