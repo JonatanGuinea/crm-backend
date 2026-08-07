@@ -74,7 +74,7 @@ export const getOrganizations = async (req, res) => {
 
     const memberships = await prisma.organizationMembership.findMany({
       where: { userId, status: 'active' },
-      include: { organization: { select: { id: true, name: true, plan: true, cuit: true, email: true, website: true, phone: true, address: true, city: true, province: true, postalCode: true, logo: true, defaultCurrency: true, signature: true, signatureOwnerName: true } } }
+      include: { organization: { select: { id: true, name: true, plan: true, cuit: true, email: true, website: true, phone: true, address: true, city: true, province: true, postalCode: true, logo: true, defaultCurrency: true, defaultCashAccountId: true, signature: true, signatureOwnerName: true } } }
     })
 
     if (memberships.length === 0) {
@@ -94,10 +94,11 @@ export const getOrganizations = async (req, res) => {
       province:   m.organization.province,
       postalCode: m.organization.postalCode,
       logo:               m.organization.logo,
-      defaultCurrency:    m.organization.defaultCurrency,
-      signature:          m.organization.signature,
-      signatureOwnerName: m.organization.signatureOwnerName,
-      role:               m.role
+      defaultCurrency:      m.organization.defaultCurrency,
+      defaultCashAccountId: m.organization.defaultCashAccountId,
+      signature:            m.organization.signature,
+      signatureOwnerName:   m.organization.signatureOwnerName,
+      role:                 m.role
     }))
 
     return success(res, 200, organizations)
