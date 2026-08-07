@@ -110,8 +110,8 @@ export async function confirmMovement(req, res) {
     const before = Number(account.currentBalance)
     const after  = before + delta
 
-    const today = new Date()
-    today.setUTCHours(0, 0, 0, 0)
+    const _n = new Date()
+    const today = new Date(_n.getFullYear(), _n.getMonth(), _n.getDate(), 0, 0, 0, 0)
 
     await prisma.$transaction(async (tx) => {
       await tx.cashMovement.update({
