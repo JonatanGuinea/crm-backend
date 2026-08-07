@@ -1,5 +1,12 @@
 import prisma from '../config/db.js'
 
+// Parsea "YYYY-MM-DD" como medianoche local (Argentina UTC-3), no UTC
+function parseLocalDate(str) {
+  if (!str) return new Date()
+  const [y, m, d] = String(str).split('-').map(Number)
+  return new Date(y, m - 1, d, 0, 0, 0, 0)
+}
+
 const INCLUDE_MOVEMENT = {
   account:   { select: { id: true, name: true, type: true, currency: true } },
   toAccount: { select: { id: true, name: true } },
@@ -40,7 +47,7 @@ export async function createMovement(orgId, userId, data) {
         balanceAfter:  after,
         paymentMethod,
         status: isPending ? 'pending' : 'confirmed',
-        date: new Date(date),
+        date: parseLocalDate(date),
         description: description?.trim() || null,
         reference:   reference?.trim()   || null,
         clientId:   clientId   || null,
@@ -77,7 +84,7 @@ export async function createTransfer(orgId, userId, data) {
 
   const qty        = Number(amount)
   const pairId     = crypto.randomUUID()
-  const dateObj    = new Date(date)
+  const dateObj    = parseLocalDate(date)
   const fromBefore = Number(from.currentBalance)
   const fromAfter  = fromBefore - qty
   const toBefore   = Number(to.currentBalance)
