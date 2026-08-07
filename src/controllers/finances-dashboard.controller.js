@@ -16,7 +16,7 @@ export async function getFinancesDashboard(req, res) {
 
   const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { defaultCashAccountId: true } })
 
-  const [accounts, monthMovements, recentMovements, categoryTotals, pendingTotals] = await Promise.all([
+  const [accounts, monthMovements, recentMovements, categoryTotals, pendingTotals, topMovementsMonth, cashFlowMovements, pendingMovements] = await Promise.all([
     // Saldo por cuenta
     prisma.cashAccount.findMany({
       where: { orgId, status: 'active', ...(accountId ? { id: accountId } : {}) },
@@ -32,6 +32,7 @@ export async function getFinancesDashboard(req, res) {
         type: { in: ['income', 'expense'] },
       },
       _sum: { amount: true },
+      _count: { type: true },
     }),
 
     // Movimientos del día actual (fecha local Argentina)
@@ -77,14 +78,68 @@ export async function getFinancesDashboard(req, res) {
       },
       _sum: { amount: true },
     }),
+
+    // Top 10 movimientos del mes por monto (para reporte PDF)
+    prisma.cashMovement.findMany({
+      where: {
+        ...movementBase,
+        status: 'confirmed',
+        type: { in: ['income', 'expense'] },
+        date: { gte: start, lte: end },
+      },
+      include: {
+        account:  { select: { id: true, name: true } },
+        category: { select: { id: true, name: true } },
+        client:   { select: { id: true, name: true } },
+      },
+      orderBy: { amount: 'desc' },
+      take: 10,
+    }),
+
+    // Flujo de caja del mes: todos los movimientos confirmados ordenados por fecha
+    prisma.cashMovement.findMany({
+      where: {
+        ...movementBase,
+        status: 'confirmed',
+        type: { in: ['income', 'expense'] },
+        date: { gte: start, lte: end },
+      },
+      include: {
+        account:  { select: { id: true, name: true } },
+        category: { select: { id: true, name: true } },
+        client:   { select: { id: true, name: true } },
+      },
+      orderBy: { date: 'asc' },
+      take: 200,
+    }),
+
+    // Movimientos pendientes del mes (cuentas por cobrar / pagar)
+    prisma.cashMovement.findMany({
+      where: {
+        ...movementBase,
+        status: 'pending',
+        type: { in: ['income', 'expense'] },
+        date: { gte: start, lte: end },
+      },
+      include: {
+        account:  { select: { id: true, name: true } },
+        category: { select: { id: true, name: true } },
+        client:   { select: { id: true, name: true } },
+      },
+      orderBy: { date: 'asc' },
+    }),
   ])
 
   // Saldo total (de las cuentas filtradas)
   const totalBalance = accounts.reduce((s, a) => s + Number(a.currentBalance), 0)
 
   // Ingresos / egresos del mes
-  const incomeMonth  = Number(monthMovements.find(m => m.type === 'income')?._sum?.amount  ?? 0)
-  const expenseMonth = Number(monthMovements.find(m => m.type === 'expense')?._sum?.amount ?? 0)
+  const incomeRaw    = monthMovements.find(m => m.type === 'income')
+  const expenseRaw   = monthMovements.find(m => m.type === 'expense')
+  const incomeMonth  = Number(incomeRaw?._sum?.amount  ?? 0)
+  const expenseMonth = Number(expenseRaw?._sum?.amount ?? 0)
+  const incomeCount  = incomeRaw?._count?.type  ?? 0
+  const expenseCount = expenseRaw?._count?.type ?? 0
 
   // Pendientes
   const pendingIncome  = Number(pendingTotals.find(m => m.type === 'income')?._sum?.amount  ?? 0)
@@ -131,12 +186,17 @@ export async function getFinancesDashboard(req, res) {
     allAccounts,
     incomeMonth,
     expenseMonth,
+    incomeCount,
+    expenseCount,
     netMonth: incomeMonth - expenseMonth,
     pendingIncome,
     pendingExpense,
     recentMovements,
     categoryBreakdown,
     monthlyEvolution,
+    topMovementsMonth,
+    cashFlowMovements,
+    pendingMovements,
     filteredByAccount:    accountId || null,
     defaultCashAccountId: org?.defaultCashAccountId || null,
   })

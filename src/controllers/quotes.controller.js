@@ -532,7 +532,7 @@ export const getQuotesDashboard = async (req, res) => {
     twelveMonthsAgo.setDate(1)
     twelveMonthsAgo.setUTCHours(0, 0, 0, 0)
 
-    const [byStatus, totals, expiringSoon, recent, installments, monthlyRaw, monthlyExpenses] = await Promise.all([
+    const [byStatus, totals, expiringSoon, recent, installments, monthlyRaw, monthlyExpenses, rejectedRaw] = await Promise.all([
       prisma.quote.groupBy({
         by: ['status'],
         where: { organizationId: orgId, ...currencyFilter },
@@ -599,7 +599,16 @@ export const getQuotesDashboard = async (req, res) => {
           date: { gte: twelveMonthsAgo }
         },
         select: { date: true, amount: true }
-      })
+      }),
+      prisma.quote.findMany({
+        where: {
+          organizationId: orgId,
+          status: 'rejected',
+          rejectionReason: { not: null },
+          ...currencyFilter,
+        },
+        select: { rejectionReason: true }
+      }),
     ])
 
     // Agrupar monthly
@@ -609,14 +618,21 @@ export const getQuotesDashboard = async (req, res) => {
       d.setMonth(d.getMonth() - i)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       const label = d.toLocaleDateString('es-AR', { month: 'short' })
-      monthlyMap[key] = { key, label, issued: 0, approved: 0, expenses: 0 }
+      monthlyMap[key] = { key, label, issued: 0, approved: 0, expenses: 0, issuedCount: 0, approvedCount: 0, rejectedCount: 0 }
     }
     monthlyRaw.forEach(q => {
       const d = new Date(q.createdAt)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       if (monthlyMap[key]) {
         monthlyMap[key].issued += Number(q.total) || 0
-        if (q.status === 'approved' || q.status === 'signed') monthlyMap[key].approved += Number(q.total) || 0
+        monthlyMap[key].issuedCount++
+        if (q.status === 'approved' || q.status === 'signed') {
+          monthlyMap[key].approved += Number(q.total) || 0
+          monthlyMap[key].approvedCount++
+        }
+        if (q.status === 'rejected' || q.status === 'expired') {
+          monthlyMap[key].rejectedCount++
+        }
       }
     })
     monthlyExpenses.forEach(e => {
@@ -630,20 +646,36 @@ export const getQuotesDashboard = async (req, res) => {
     const statusMap = {}
     byStatus.forEach(s => { statusMap[s.status] = { count: s._count.status, total: s._sum.total || 0 } })
 
+    // Agrupar causas de rechazo
+    const reasonMap = {}
+    rejectedRaw.forEach(q => {
+      const r = q.rejectionReason?.trim()
+      if (!r) return
+      reasonMap[r] = (reasonMap[r] || 0) + 1
+    })
+    const rejectionReasons = Object.entries(reasonMap)
+      .sort((a, b) => b[1] - a[1])
+      .map(([reason, count]) => ({ reason, count }))
+
     return success(res, 200, {
       summary: {
-        totalQuotes:  totals._count._all,
-        totalValue:   totals._sum.total  || 0,
-        draft:        statusMap.draft?.total      || 0,
-        sent:         statusMap.sent?.total       || 0,
-        approved:     (statusMap.approved?.total || 0) + (statusMap.signed?.total || 0),
-        rejected:     (statusMap.rejected?.total  || 0) + (statusMap.cancelled?.total || 0),
+        totalQuotes:    totals._count._all,
+        totalValue:     totals._sum.total || 0,
+        draft:          statusMap.draft?.total     || 0,
+        sent:           statusMap.sent?.total      || 0,
+        approved:       (statusMap.approved?.total || 0) + (statusMap.signed?.total    || 0),
+        rejected:       (statusMap.rejected?.total || 0) + (statusMap.cancelled?.total || 0),
+        draftCount:     statusMap.draft?.count     || 0,
+        sentCount:      statusMap.sent?.count      || 0,
+        approvedCount:  (statusMap.approved?.count || 0) + (statusMap.signed?.count   || 0),
+        rejectedCount:  (statusMap.rejected?.count || 0) + (statusMap.expired?.count  || 0),
       },
       byStatus: byStatus.map(s => ({
         status: s.status,
         count:  s._count.status,
         total:  s._sum.total || 0
       })),
+      rejectionReasons,
       expiringSoon,
       recent,
       upcomingInstallments: installments,
