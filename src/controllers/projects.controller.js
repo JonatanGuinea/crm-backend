@@ -15,7 +15,7 @@ export const createProject = async (req, res) => {
     const orgId = req.user.organizationId
     const userId = req.user.id
 
-    const { title, description, budget, startDate, endDate, client } = req.body
+    const { title, description, budget, startDate, endDate, client, memberIds } = req.body
 
     if (!title || !client) {
       return fail(res, 400, "Titulo del proyecto y cliente son requeridos")
@@ -43,16 +43,25 @@ export const createProject = async (req, res) => {
       }
     })
 
-    await prisma.projectHistory.create({
-      data: {
-        projectId:      project.id,
-        userId:         req.user.id,
-        action:         'created',
-        organizationId: orgId,
-      }
+    const ids = Array.isArray(memberIds) ? memberIds : []
+    await Promise.all([
+      prisma.projectHistory.create({
+        data: { projectId: project.id, userId: req.user.id, action: 'created', organizationId: orgId }
+      }),
+      ids.length > 0
+        ? prisma.projectMember.createMany({
+            data: ids.map(uid => ({ projectId: project.id, userId: uid, organizationId: orgId })),
+            skipDuplicates: true
+          })
+        : Promise.resolve()
+    ])
+
+    const projectWithMembers = await prisma.project.findUnique({
+      where: { id: project.id },
+      include: { members: { include: { user: { select: { id: true, name: true, avatar: true } } } } }
     })
 
-    return success(res, 201, project)
+    return success(res, 201, projectWithMembers)
 
   } catch (error) {
     return fail(res, 500, error.message)
@@ -74,6 +83,7 @@ export const getProjects = async (req, res) => {
         where,
         include: {
           client: { select: { id: true, name: true, email: true } },
+          members: { include: { user: { select: { id: true, name: true, avatar: true } } } },
           quotes: {
             select: {
               id: true,
@@ -144,7 +154,10 @@ export const getProjectById = async (req, res) => {
 
     const project = await prisma.project.findFirst({
       where: { id, organizationId: orgId },
-      include: { client: { select: { id: true, name: true, email: true } } }
+      include: {
+        client: { select: { id: true, name: true, email: true } },
+        members: { include: { user: { select: { id: true, name: true, avatar: true } } } }
+      }
     })
 
     if (!project) {
@@ -171,7 +184,7 @@ export const updateProject = async (req, res) => {
       return fail(res, 404, "Proyecto no encontrado")
     }
 
-    const { status } = req.body
+    const { status, memberIds } = req.body
     const updates = {}
 
     if (status && status !== project.status) {
@@ -207,6 +220,16 @@ export const updateProject = async (req, res) => {
       where: { id },
       data: updates
     })
+
+    if (req.user.role !== 'member' && Array.isArray(memberIds)) {
+      await prisma.projectMember.deleteMany({ where: { projectId: id } })
+      if (memberIds.length > 0) {
+        await prisma.projectMember.createMany({
+          data: memberIds.map(uid => ({ projectId: id, userId: uid, organizationId: orgId })),
+          skipDuplicates: true
+        })
+      }
+    }
 
     const STATUS_LABELS_ES = {
       pending: 'Pendiente', approved: 'Aprobado', in_progress: 'En curso',

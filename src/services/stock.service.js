@@ -77,12 +77,12 @@ export async function maybeNotifyStockAlert(orgId, movement) {
       return
     }
 
-    const admins = await prisma.organizationMembership.findMany({
-      where: { organizationId: orgId, status: 'active', role: { in: ['owner', 'admin'] } },
+    const members = await prisma.organizationMembership.findMany({
+      where: { organizationId: orgId, status: 'active' },
       select: { userId: true },
     })
 
-    await Promise.all(admins.map(m =>
+    await Promise.all(members.map(m =>
       notify({ type, title, message, userId: m.userId, orgId, refId: movement.productId, reactivate: true })
     ))
   } catch {

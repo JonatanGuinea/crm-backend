@@ -24,6 +24,7 @@ model User {
   memberships        OrganizationMembership[]
   clients            Client[]
   projects           Project[]
+  projectMembers     ProjectMember[]
   quotes             Quote[]
   invoices           Invoice[]
   notifications      Notification[]
@@ -173,10 +174,25 @@ model Project {
   history        ProjectHistory[]
   stockMovements StockMovement[]
   cashMovements  CashMovement[]
+  members        ProjectMember[]
 
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([organizationId, status])
   @@index([organizationId, clientId])
+}
+
+model ProjectMember {
+  id             String   @id @default(cuid())
+  projectId      String
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  createdAt      DateTime @default(now())
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId, organizationId])
 }
 
 enum ProjectStatus {

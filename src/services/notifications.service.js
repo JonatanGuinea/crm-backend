@@ -16,10 +16,9 @@ export async function notify({ type, title, message, metadata, userId, orgId, re
 
 export async function checkTimeAlerts(orgId) {
   const now = new Date()
-  const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+  const in2Days = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000)
   const in4Days = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000)
   const in6Days = new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000)
-  const in2Days = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000)
 
   const [adminMembers, allMembers, expiringQuotes, projects5d, projects1d] = await Promise.all([
     prisma.organizationMembership.findMany({
@@ -34,7 +33,7 @@ export async function checkTimeAlerts(orgId) {
       where: {
         organizationId: orgId,
         status: { in: ['draft', 'sent'] },
-        validUntil: { gte: now, lte: in7Days }
+        validUntil: { gte: now, lte: in2Days }
       },
       select: { id: true, number: true, title: true, validUntil: true }
     }),
@@ -60,14 +59,17 @@ export async function checkTimeAlerts(orgId) {
 
   const upserts = []
 
-  // Presupuestos por vencer en 7 días
+  // Presupuestos que vencen hoy o mañana
   for (const q of expiringQuotes) {
     const daysLeft = Math.max(0, Math.ceil((new Date(q.validUntil) - now) / (1000 * 60 * 60 * 24)))
+    const msg = daysLeft <= 0
+      ? `El presupuesto #${q.number} "${q.title}" vence hoy`
+      : `El presupuesto #${q.number} "${q.title}" vence mañana`
     for (const m of adminMembers) {
       upserts.push({
         type: 'quote_expiring',
-        title: 'Presupuesto por vencer',
-        message: `El presupuesto #${q.number} "${q.title}" vence en ${daysLeft} día(s)`,
+        title: '⚠️ Presupuesto vence pronto',
+        message: msg,
         userId: m.userId,
         organizationId: orgId,
         refId: q.id
