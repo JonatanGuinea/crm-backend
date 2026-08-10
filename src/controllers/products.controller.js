@@ -1,5 +1,6 @@
 import prisma from '../config/db.js'
 import { success, fail } from '../utils/response.js'
+import { INVENTORY_TYPES } from '../services/stock.service.js'
 
 const VALID_UNITS    = ['unidad', 'kg', 'g', 'litro', 'ml', 'm', 'cm', 'm²', 'm³', 'caja', 'par', 'rollo', 'bolsa']
 const VALID_STATUSES = ['active', 'inactive', 'discontinued']
@@ -8,15 +9,16 @@ export async function getProducts(req, res) {
   const orgId = req.user.organizationId
   if (!orgId) return fail(res, 403, 'Organización activa requerida')
   const {
-    search, status, categoryId,
+    search, status, categoryId, inventoryType,
     lowStock, outOfStock,
     page = 1, limit = 50,
   } = req.query
 
   const where = { orgId }
-  if (status)     where.status = status
-  if (categoryId) where.categoryId = categoryId
-  if (search)     where.OR = [
+  if (status)        where.status        = status
+  if (categoryId)    where.categoryId    = categoryId
+  if (inventoryType) where.inventoryType = inventoryType
+  if (search)        where.OR = [
     { name: { contains: search, mode: 'insensitive' } },
     { sku:  { contains: search, mode: 'insensitive' } },
     { description: { contains: search, mode: 'insensitive' } },
@@ -93,11 +95,13 @@ export async function createProduct(req, res) {
     categoryId, supplierId, costPrice, salePrice,
     minStock = 0, maxStock,
     initialStock = 0, initialReason,
+    inventoryType = 'sale',
   } = req.body
 
   if (!sku?.trim())  return fail(res, 400, 'El SKU es requerido')
   if (!name?.trim()) return fail(res, 400, 'El nombre es requerido')
   if (!VALID_UNITS.includes(unit)) return fail(res, 400, `Unidad inválida. Opciones: ${VALID_UNITS.join(', ')}`)
+  if (!INVENTORY_TYPES.includes(inventoryType)) return fail(res, 400, `Tipo de inventario inválido. Opciones: ${INVENTORY_TYPES.join(', ')}`)
   if (Number(initialStock) < 0) return fail(res, 400, 'El stock inicial no puede ser negativo')
 
   const exists = await prisma.product.findUnique({ where: { orgId_sku: { orgId, sku: sku.trim() } } })
@@ -120,6 +124,7 @@ export async function createProduct(req, res) {
         minStock: Number(minStock),
         maxStock: maxStock ? Number(maxStock) : null,
         stock: qty,
+        inventoryType,
       },
     })
 
@@ -148,7 +153,7 @@ export async function updateProduct(req, res) {
   const { id } = req.params
   const {
     name, description, unit, categoryId, supplierId,
-    costPrice, salePrice, minStock, maxStock, status,
+    costPrice, salePrice, minStock, maxStock, status, inventoryType,
   } = req.body
 
   const product = await prisma.product.findFirst({ where: { id, orgId } })
@@ -156,6 +161,7 @@ export async function updateProduct(req, res) {
 
   if (unit && !VALID_UNITS.includes(unit)) return fail(res, 400, `Unidad inválida. Opciones: ${VALID_UNITS.join(', ')}`)
   if (status && !VALID_STATUSES.includes(status)) return fail(res, 400, 'Estado inválido')
+  if (inventoryType && !INVENTORY_TYPES.includes(inventoryType)) return fail(res, 400, `Tipo de inventario inválido. Opciones: ${INVENTORY_TYPES.join(', ')}`)
   if (categoryId) {
     const cat = await prisma.productCategory.findFirst({ where: { id: categoryId, orgId } })
     if (!cat) return fail(res, 404, 'Categoría no encontrada')
@@ -164,16 +170,17 @@ export async function updateProduct(req, res) {
   const updated = await prisma.product.update({
     where: { id },
     data: {
-      name:        name?.trim()              ?? product.name,
-      description: description               ?? product.description,
-      unit:        unit                      ?? product.unit,
-      categoryId:  categoryId !== undefined  ? (categoryId || null)  : product.categoryId,
-      supplierId:  supplierId !== undefined  ? (supplierId || null)  : product.supplierId,
-      costPrice:   costPrice !== undefined  ? (costPrice ? Number(costPrice) : null) : product.costPrice,
-      salePrice:   salePrice !== undefined  ? (salePrice ? Number(salePrice) : null) : product.salePrice,
-      minStock:    minStock !== undefined   ? Number(minStock)  : product.minStock,
-      maxStock:    maxStock !== undefined   ? (maxStock ? Number(maxStock) : null) : product.maxStock,
-      status:      status                    ?? product.status,
+      name:          name?.trim()               ?? product.name,
+      description:   description                ?? product.description,
+      unit:          unit                       ?? product.unit,
+      categoryId:    categoryId !== undefined   ? (categoryId || null)  : product.categoryId,
+      supplierId:    supplierId !== undefined   ? (supplierId || null)  : product.supplierId,
+      costPrice:     costPrice !== undefined    ? (costPrice ? Number(costPrice) : null) : product.costPrice,
+      salePrice:     salePrice !== undefined    ? (salePrice ? Number(salePrice) : null) : product.salePrice,
+      minStock:      minStock !== undefined     ? Number(minStock)  : product.minStock,
+      maxStock:      maxStock !== undefined     ? (maxStock ? Number(maxStock) : null) : product.maxStock,
+      status:        status                     ?? product.status,
+      inventoryType: inventoryType              ?? product.inventoryType,
     },
     include: {
       category: { select: { id: true, name: true, color: true } },

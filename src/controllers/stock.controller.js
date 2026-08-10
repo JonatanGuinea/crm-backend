@@ -87,12 +87,13 @@ export async function stockAdjustment(req, res) {
 // ── GET /stock/movements ──────────────────────────────────────────────────────
 export async function getMovements(req, res) {
   const orgId = req.user.organizationId
-  const { productId, type, direction, from, to, page = 1, limit = 25 } = req.query
+  const { productId, type, direction, inventoryType, from, to, page = 1, limit = 25 } = req.query
 
   const where = { orgId }
-  if (productId) where.productId = productId
-  if (type)      where.type      = type
-  if (direction) where.direction = direction
+  if (productId)     where.productId = productId
+  if (type)          where.type      = type
+  if (direction)     where.direction = direction
+  if (inventoryType) where.product   = { inventoryType }
   if (from || to) {
     where.createdAt = {}
     if (from) where.createdAt.gte = new Date(from)
@@ -131,9 +132,10 @@ export async function getStockDashboard(req, res) {
     outOfStockProducts,
     discontinuedProducts,
     recentMovements,
-    inventoryValue,
+    inventoryValueRaw,
     movementsByType,
     topProducts,
+    countByType,
   ] = await Promise.all([
     prisma.product.count({ where: { orgId } }),
 
@@ -148,17 +150,17 @@ export async function getStockDashboard(req, res) {
     prisma.stockMovement.findMany({
       where: { orgId },
       include: {
-        product:   { select: { id: true, sku: true, name: true, unit: true } },
+        product:   { select: { id: true, sku: true, name: true, unit: true, inventoryType: true } },
         createdBy: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: 10,
     }),
 
-    // Valor total del inventario: SUM(stock * costPrice) para activos con costo definido
+    // Valor del inventario por producto (para desglose por tipo)
     prisma.product.findMany({
       where: { orgId, status: { not: 'discontinued' }, costPrice: { not: null } },
-      select: { stock: true, costPrice: true },
+      select: { stock: true, costPrice: true, inventoryType: true },
     }),
 
     // Conteo de movimientos por tipo (últimos 30 días)
@@ -176,6 +178,13 @@ export async function getStockDashboard(req, res) {
       orderBy: { _count: { id: 'desc' } },
       take: 5,
     }),
+
+    // Conteo de productos activos por tipo de inventario
+    prisma.product.groupBy({
+      by: ['inventoryType'],
+      where: { orgId, status: 'active' },
+      _count: { id: true },
+    }),
   ])
 
   // Calcular stock bajo en JS (requiere comparar dos campos)
@@ -185,16 +194,25 @@ export async function getStockDashboard(req, res) {
   })
   const lowStock = allActive.filter(p => Number(p.stock) > 0 && Number(p.stock) <= Number(p.minStock)).length
 
-  // Valor total del inventario
-  const totalInventoryValue = inventoryValue.reduce((acc, p) => {
-    return acc + Number(p.stock) * Number(p.costPrice)
-  }, 0)
+  // Valor total y desglose por tipo de inventario
+  const valueByType = { sale: 0, internal: 0, raw_material: 0 }
+  for (const p of inventoryValueRaw) {
+    const v = Number(p.stock) * Number(p.costPrice)
+    valueByType[p.inventoryType] = (valueByType[p.inventoryType] ?? 0) + v
+  }
+  const totalInventoryValue = Object.values(valueByType).reduce((a, b) => a + b, 0)
+
+  // Count por tipo
+  const productsByType = { sale: 0, internal: 0, raw_material: 0 }
+  for (const row of countByType) {
+    productsByType[row.inventoryType] = row._count.id
+  }
 
   // Mapear top productos con nombre
   const topProductIds = topProducts.map(t => t.productId)
   const topProductDetails = await prisma.product.findMany({
     where: { id: { in: topProductIds } },
-    select: { id: true, sku: true, name: true, stock: true, unit: true },
+    select: { id: true, sku: true, name: true, stock: true, unit: true, inventoryType: true },
   })
   const topProductsWithCount = topProducts.map(t => ({
     ...topProductDetails.find(p => p.id === t.productId),
@@ -208,6 +226,12 @@ export async function getStockDashboard(req, res) {
     lowStock,
     discontinued: discontinuedProducts,
     totalInventoryValue: Math.round(totalInventoryValue * 100) / 100,
+    valueByType: {
+      sale:         Math.round(valueByType.sale * 100) / 100,
+      internal:     Math.round(valueByType.internal * 100) / 100,
+      raw_material: Math.round(valueByType.raw_material * 100) / 100,
+    },
+    productsByType,
     recentMovements,
     movementsByType: Object.fromEntries(movementsByType.map(m => [m.type, m._count.id])),
     topProducts: topProductsWithCount,

@@ -2,7 +2,9 @@ import prisma from '../config/db.js'
 import { notify } from './notifications.service.js'
 
 export const IN_TYPES  = ['initial', 'purchase', 'adjustment_in', 'return_in', 'production_in', 'transfer_in', 'correction']
-export const OUT_TYPES = ['sale', 'adjustment_out', 'return_out', 'production_out', 'transfer_out']
+export const OUT_TYPES = ['sale', 'adjustment_out', 'return_out', 'production_out', 'transfer_out', 'internal_consumption']
+
+export const INVENTORY_TYPES = ['sale', 'internal', 'raw_material']
 
 export function directionFor(type) {
   if (IN_TYPES.includes(type))  return 'IN'

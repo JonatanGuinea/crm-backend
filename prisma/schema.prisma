@@ -545,19 +545,26 @@ enum ProductStatus {
   discontinued
 }
 
+enum InventoryType {
+  sale         // Producto para venta a clientes
+  internal     // Insumo / material de uso interno
+  raw_material // Materia prima
+}
+
 enum MovementType {
-  initial        // Carga inicial de stock
-  purchase       // Compra a proveedor
-  sale           // Venta a cliente
-  adjustment_in  // Ajuste positivo manual
-  adjustment_out // Ajuste negativo manual
-  return_in      // Devolución de cliente
-  return_out     // Devolución a proveedor
-  production_in  // Producto terminado / ensamblado
-  production_out // Consumo en producción
-  transfer_in    // Transferencia recibida
-  transfer_out   // Transferencia enviada
-  correction     // Corrección de error
+  initial               // Carga inicial de stock
+  purchase              // Compra a proveedor
+  sale                  // Venta a cliente
+  adjustment_in         // Ajuste positivo manual
+  adjustment_out        // Ajuste negativo manual
+  return_in             // Devolución de cliente
+  return_out            // Devolución a proveedor
+  production_in         // Producto terminado / ensamblado
+  production_out        // Consumo en producción
+  transfer_in           // Transferencia recibida
+  transfer_out          // Transferencia enviada
+  correction            // Corrección de error
+  internal_consumption  // Consumo interno (insumos / materias primas)
 }
 
 enum MovementDirection {
@@ -600,10 +607,11 @@ model Product {
   minStock Decimal       @default(0) @db.Decimal(15, 4)
   maxStock Decimal?      @db.Decimal(15, 4)
 
-  costPrice Decimal? @db.Decimal(15, 2)
-  salePrice Decimal? @db.Decimal(15, 2)
+  costPrice     Decimal? @db.Decimal(15, 2)
+  salePrice     Decimal? @db.Decimal(15, 2)
 
-  status    ProductStatus @default(active)
+  inventoryType InventoryType @default(sale)
+  status        ProductStatus @default(active)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
@@ -617,6 +625,7 @@ model Product {
   @@unique([orgId, sku])
   @@index([orgId])
   @@index([orgId, status])
+  @@index([orgId, inventoryType])
   @@index([orgId, categoryId])
   @@index([orgId, stock])
 }
