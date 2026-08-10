@@ -2,6 +2,107 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173'
 const BACKEND_URL  = process.env.BACKEND_URL  || `http://localhost:${process.env.PORT || 8000}`
 
 /**
+ * Envía el informe mensual como PDF adjunto al owner de la organización.
+ *
+ * Para activar: configurar el mismo proveedor que sendQuoteEmail.
+ *
+ * Resend:
+ *   await resend.emails.send({ from: process.env.EMAIL_FROM, to, subject, html,
+ *     attachments: [{ filename, content: pdfBuffer.toString('base64') }] })
+ *
+ * Nodemailer:
+ *   await transporter.sendMail({ from, to, subject, html,
+ *     attachments: [{ filename, content: pdfBuffer }] })
+ */
+export async function sendMonthlyReportEmail({ to, ownerName, orgName, year, month, pdfBuffer }) {
+  const monthStr = new Date(year, month - 1, 1)
+    .toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+  const monthId  = `${year}-${String(month).padStart(2, '0')}`
+  const filename = `informe-${orgName.toLowerCase().replace(/\s+/g, '-')}-${monthId}.pdf`
+  const subject  = `Informe mensual ${monthStr} — ${orgName}`
+  const html     = buildReportEmailHtml({ ownerName, orgName, monthStr, filename })
+
+  // ── Resend ────────────────────────────────────────────────────────────────
+  // import { Resend } from 'resend'
+  // const resend = new Resend(process.env.RESEND_API_KEY)
+  // await resend.emails.send({
+  //   from: process.env.EMAIL_FROM, to, subject, html,
+  //   attachments: [{ filename, content: pdfBuffer.toString('base64') }]
+  // })
+
+  // ── Nodemailer / SMTP ─────────────────────────────────────────────────────
+  // import nodemailer from 'nodemailer'
+  // const transporter = nodemailer.createTransport({
+  //   host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT) || 587,
+  //   auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+  // })
+  // await transporter.sendMail({ from: process.env.EMAIL_FROM, to, subject, html,
+  //   attachments: [{ filename, content: pdfBuffer }] })
+
+  console.log(`[email] Informe mensual → ${to} | ${subject} | PDF: ${pdfBuffer.length} bytes`)
+}
+
+function buildReportEmailHtml({ ownerName, orgName, monthStr, filename }) {
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Informe mensual ${monthStr}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:560px;border-radius:12px;overflow:hidden;border:1px solid #e4e4e7;background:#ffffff;">
+
+          <tr>
+            <td style="background-color:#4f46e5;padding:28px 36px;">
+              <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">Informe Mensual</h1>
+              <p style="margin:6px 0 0;color:#c7d2fe;font-size:13px;">${orgName} · ${monthStr.charAt(0).toUpperCase() + monthStr.slice(1)}</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:32px 36px;">
+              <p style="margin:0 0 12px;color:#27272a;font-size:15px;">
+                Hola, <strong>${ownerName}</strong>
+              </p>
+              <p style="margin:0 0 20px;color:#71717a;font-size:14px;line-height:1.6;">
+                Adjunto encontrás el informe mensual de <strong style="color:#27272a;">${orgName}</strong> correspondiente a <strong style="color:#27272a;">${monthStr}</strong>.
+              </p>
+              <p style="margin:0 0 20px;color:#71717a;font-size:14px;line-height:1.6;">
+                El reporte incluye:
+              </p>
+              <ul style="margin:0 0 24px;padding-left:20px;color:#71717a;font-size:14px;line-height:1.8;">
+                <li>Resumen financiero del mes</li>
+                <li>Estado de presupuestos</li>
+                <li>Situación de proyectos</li>
+                <li>Inventario y alertas de stock</li>
+              </ul>
+              <p style="margin:0;color:#a1a1aa;font-size:12px;">
+                Archivo: <strong>${filename}</strong>
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="border-top:1px solid #f4f4f5;padding:18px 36px;text-align:center;">
+              <p style="margin:0;color:#a1a1aa;font-size:11px;">
+                Generado automáticamente por <strong>SOFIAPP CRM</strong>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+}
+
+/**
  * Envía el presupuesto al cliente como email con link a la página pública HTML.
  *
  * Para activar: descomentar el bloque del proveedor elegido y configurar
