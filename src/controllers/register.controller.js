@@ -1,16 +1,17 @@
+import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
 import prisma from '../config/db.js'
 import { hashPassword } from '../utils/passwordHash.js'
-import { generateAccessToken } from '../utils/jwt.js'
 import { success, fail } from '../utils/response.js'
 import { notify } from '../services/notifications.service.js'
+import { sendVerificationEmail } from '../services/email.service.js'
 
 export const register = async (req, res) => {
   try {
-    const name       = req.body.name?.trim()
-    const email      = req.body.email?.trim().toLowerCase()
-    const password   = req.body.password
-    const phone      = req.body.userPhone?.trim() || null
+    const name        = req.body.name?.trim()
+    const email       = req.body.email?.trim().toLowerCase()
+    const password    = req.body.password
+    const phone       = req.body.userPhone?.trim() || null
     const inviteToken = req.body.inviteToken || null
 
     if (!name || !email || !password || !phone) {
@@ -22,19 +23,19 @@ export const register = async (req, res) => {
       return fail(res, 400, 'El usuario ya existe')
     }
 
-    const hashedPassword = await hashPassword(password)
+    const hashedPassword     = await hashPassword(password)
+    const emailVerifyToken   = crypto.randomBytes(32).toString('hex')
 
     const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword, phone }
+      data: { name, email, password: hashedPassword, phone, emailVerifyToken }
     })
 
     // Si viene con token de invitación, unir a la org directamente
-    let membership = null
     if (inviteToken) {
       try {
         const payload = jwt.verify(inviteToken, process.env.JWT_SECRET)
         if (payload.type === 'pre-invite' && payload.email === email) {
-          membership = await prisma.organizationMembership.create({
+          const membership = await prisma.organizationMembership.create({
             data: {
               userId: user.id,
               organizationId: payload.orgId,
@@ -62,17 +63,14 @@ export const register = async (req, res) => {
       }
     }
 
-    const token = generateAccessToken(user, membership)
+    try {
+      await sendVerificationEmail({ to: email, name, token: emailVerifyToken })
+    } catch (emailErr) {
+      await prisma.user.delete({ where: { id: user.id } })
+      return fail(res, 500, 'No se pudo enviar el email de verificación. Intentá de nuevo.')
+    }
 
-    return success(res, 201, {
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        isSystemAdmin: user.isSystemAdmin
-      },
-      token
-    })
+    return success(res, 201, { message: 'Cuenta creada. Revisá tu email para activarla.' })
 
   } catch (error) {
     return fail(res, 500, error.message)

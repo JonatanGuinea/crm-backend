@@ -16,9 +16,11 @@ model User {
   password      String
   avatar        String?
   phone         String?
-  isSystemAdmin Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  isSystemAdmin      Boolean  @default(false)
+  emailVerified      Boolean  @default(false)
+  emailVerifyToken   String?  @unique
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   ownedOrganizations Organization[]
   memberships        OrganizationMembership[]

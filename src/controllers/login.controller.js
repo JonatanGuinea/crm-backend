@@ -20,7 +20,8 @@ export const login = async (req, res) => {
         name: true,
         email: true,
         password: true,
-        isSystemAdmin: true
+        isSystemAdmin: true,
+        emailVerified: true,
       }
     })
 
@@ -32,6 +33,10 @@ export const login = async (req, res) => {
 
     if (!isMatch) {
       return fail(res, 401, "Credenciales inválidas")
+    }
+
+    if (!user.emailVerified) {
+      return fail(res, 403, "Debés confirmar tu email antes de ingresar. Revisá tu casilla.")
     }
 
     const memberships = await prisma.organizationMembership.findMany({

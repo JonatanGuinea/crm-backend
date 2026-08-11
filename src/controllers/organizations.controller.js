@@ -182,27 +182,41 @@ export const deleteOrganization = async (req, res) => {
 
     if (!req.user.isSystemAdmin) {
       const membership = await prisma.organizationMembership.findFirst({
-        where: {
-          userId: req.user.id,
-          organizationId: id,
-          status: 'active',
-          role: 'owner'
-        }
+        where: { userId: req.user.id, organizationId: id, status: 'active', role: 'owner' }
       })
-
-      if (!membership) {
-        return fail(res, 403, 'Solo el dueño puede eliminar la organización')
-      }
+      if (!membership) return fail(res, 403, 'Solo el dueño puede eliminar la organización')
     }
 
+    const org = await prisma.organization.findUnique({ where: { id } })
+    if (!org) return fail(res, 404, 'Organización no encontrada')
+
+    // Cascade manual en orden de dependencias
+    await prisma.$executeRawUnsafe(`DELETE FROM "CashMovement"         WHERE "orgId" = $1`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "CashAccount"          WHERE "orgId" = $1`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "FinancialCategory"    WHERE "orgId" = $1`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "Notification"         WHERE "organizationId" = $1`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "StockMovement"        WHERE "orgId" = $1`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "Product"              WHERE "orgId" = $1`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "ProductCategory"      WHERE "orgId" = $1`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "Supplier"             WHERE "orgId" = $1`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "Expense"              WHERE "organizationId" = $1`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "TaskHistory"          WHERE "orgId" = $1`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "Task"                 WHERE "orgId" = $1`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "ProjectHistory"       WHERE "orgId" = $1`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "ProjectMember"        WHERE "orgId" = $1`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "QuoteHistory"         WHERE "orgId" = $1`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "QuoteItem"            WHERE "quoteId" IN (SELECT id FROM "Quote" WHERE "orgId" = $1)`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "Installment"          WHERE "quoteId" IN (SELECT id FROM "Quote" WHERE "orgId" = $1)`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "Quote"                WHERE "orgId" = $1`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "Project"              WHERE "orgId" = $1`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "ClientHistory"        WHERE "orgId" = $1`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "Client"               WHERE "orgId" = $1`, id)
+    await prisma.$executeRawUnsafe(`DELETE FROM "OrganizationMembership" WHERE "organizationId" = $1`, id)
     await prisma.organization.delete({ where: { id } })
 
     return success(res, 200, { message: 'Organización eliminada correctamente' })
 
   } catch (error) {
-    if (error.code === 'P2025') {
-      return fail(res, 404, 'Organización no encontrada')
-    }
     return fail(res, 500, error.message)
   }
 }

@@ -1,19 +1,165 @@
+import nodemailer from 'nodemailer'
+
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173'
 const BACKEND_URL  = process.env.BACKEND_URL  || `http://localhost:${process.env.PORT || 8000}`
 
-/**
- * Envía el informe mensual como PDF adjunto al owner de la organización.
- *
- * Para activar: configurar el mismo proveedor que sendQuoteEmail.
- *
- * Resend:
- *   await resend.emails.send({ from: process.env.EMAIL_FROM, to, subject, html,
- *     attachments: [{ filename, content: pdfBuffer.toString('base64') }] })
- *
- * Nodemailer:
- *   await transporter.sendMail({ from, to, subject, html,
- *     attachments: [{ filename, content: pdfBuffer }] })
- */
+export async function sendVerificationEmail({ to, name, token }) {
+  const verifyUrl = `${FRONTEND_URL}/verify-email?token=${token}`
+  const subject   = 'Confirmá tu cuenta en SOFIAPP CRM'
+  const html      = buildVerificationEmailHtml({ name, verifyUrl })
+
+  await createTransporter().sendMail({
+    from: process.env.EMAIL_FROM,
+    to,
+    subject,
+    html,
+  })
+
+  console.log(`[email] Verificación → ${to} | ${verifyUrl}`)
+}
+
+function buildVerificationEmailHtml({ name, verifyUrl }) {
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Confirmá tu cuenta — SOFIAPP CRM</title>
+</head>
+<body style="margin:0;padding:0;background-color:#eef9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef9f9;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:560px;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,178,169,0.10);background:#ffffff;">
+
+          <!-- Barra de acento teal superior -->
+          <tr>
+            <td style="background:linear-gradient(90deg,#009990,#00B2A9,#33C4BE);height:4px;font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+
+          <!-- Header oscuro -->
+          <tr>
+            <td style="background-color:#080e1a;padding:24px 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <span style="color:#00B2A9;font-size:16px;font-weight:700;letter-spacing:-0.3px;">SOFIAPP CRM</span>
+                  </td>
+                  <td style="vertical-align:middle;text-align:right;">
+                    <span style="display:inline-block;background-color:rgba(0,178,169,0.15);color:#33C4BE;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;border-radius:20px;border:1px solid rgba(0,178,169,0.3);">
+                      Verificación
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Banner teal con ícono -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#00B2A9,#009990);padding:32px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align:middle;padding-right:20px;">
+                    <p style="margin:0 0 4px;color:rgba(255,255,255,0.65);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Nuevo acceso</p>
+                    <h1 style="margin:0 0 6px;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.5px;">Confirmá tu cuenta</h1>
+                    <p style="margin:0;color:rgba(255,255,255,0.80);font-size:14px;">Estás a un paso de empezar</p>
+                  </td>
+                  <td style="vertical-align:middle;text-align:right;width:64px;">
+                    <div style="width:56px;height:56px;background:rgba(255,255,255,0.15);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;">
+                      <img src="https://cdn-icons-png.flaticon.com/512/9195/9195785.png" width="30" height="30" alt="" style="display:block;opacity:0.9;" />
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Cuerpo -->
+          <tr>
+            <td style="padding:32px 32px 8px;">
+              <p style="margin:0 0 16px;color:#18181b;font-size:15px;font-weight:600;">
+                Hola, ${name} 👋
+              </p>
+              <p style="margin:0 0 14px;color:#52525b;font-size:14px;line-height:1.65;">
+                Gracias por registrarte en <strong style="color:#18181b;">SOFIAPP CRM</strong>. Para activar tu cuenta y comenzar a usarla, confirmá tu dirección de email haciendo clic en el botón de abajo.
+              </p>
+              <p style="margin:0 0 28px;color:#52525b;font-size:14px;line-height:1.65;">
+                Este enlace es válido por <strong style="color:#18181b;">24 horas</strong>.
+              </p>
+            </td>
+          </tr>
+
+          <!-- CTA -->
+          <tr>
+            <td style="padding:0 32px 24px;">
+              <table cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <a href="${verifyUrl}"
+                       style="display:inline-block;background-color:#00B2A9;color:#ffffff;text-decoration:none;padding:14px 40px;border-radius:10px;font-size:14px;font-weight:700;letter-spacing:0.3px;">
+                      Confirmar email
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Link plano -->
+          <tr>
+            <td style="padding:0 32px 32px;">
+              <p style="margin:0 0 6px;color:#a1a1aa;font-size:11px;text-align:center;">
+                O copiá este enlace en tu navegador:
+              </p>
+              <p style="margin:0;color:#a1a1aa;font-size:11px;text-align:center;word-break:break-all;">
+                <a href="${verifyUrl}" style="color:#00B2A9;text-decoration:none;">${verifyUrl}</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Separador -->
+          <tr>
+            <td style="padding:0 32px;">
+              <div style="height:1px;background-color:#f4f4f5;"></div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:18px 32px;text-align:center;">
+              <p style="margin:0 0 4px;color:#a1a1aa;font-size:11px;">
+                Si no creaste esta cuenta, ignorá este email.
+              </p>
+              <p style="margin:0;color:#a1a1aa;font-size:11px;">
+                Enviado por <a href="https://sofiapp.dev" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">SOFIAPP CRM</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`
+}
+
+function createTransporter() {
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT) || 465,
+    secure: true,
+    authMethod: 'PLAIN',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  })
+}
+
 export async function sendMonthlyReportEmail({ to, ownerName, orgName, year, month, pdfBuffer }) {
   const monthStr = new Date(year, month - 1, 1)
     .toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
@@ -22,22 +168,13 @@ export async function sendMonthlyReportEmail({ to, ownerName, orgName, year, mon
   const subject  = `Informe mensual ${monthStr} — ${orgName}`
   const html     = buildReportEmailHtml({ ownerName, orgName, monthStr, filename })
 
-  // ── Resend ────────────────────────────────────────────────────────────────
-  // import { Resend } from 'resend'
-  // const resend = new Resend(process.env.RESEND_API_KEY)
-  // await resend.emails.send({
-  //   from: process.env.EMAIL_FROM, to, subject, html,
-  //   attachments: [{ filename, content: pdfBuffer.toString('base64') }]
-  // })
-
-  // ── Nodemailer / SMTP ─────────────────────────────────────────────────────
-  // import nodemailer from 'nodemailer'
-  // const transporter = nodemailer.createTransport({
-  //   host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT) || 587,
-  //   auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  // })
-  // await transporter.sendMail({ from: process.env.EMAIL_FROM, to, subject, html,
-  //   attachments: [{ filename, content: pdfBuffer }] })
+  await createTransporter().sendMail({
+    from: process.env.EMAIL_FROM,
+    to,
+    subject,
+    html,
+    attachments: [{ filename, content: pdfBuffer }],
+  })
 
   console.log(`[email] Informe mensual → ${to} | ${subject} | PDF: ${pdfBuffer.length} bytes`)
 }
@@ -102,10 +239,6 @@ function buildReportEmailHtml({ ownerName, orgName, monthStr, filename }) {
 </html>`
 }
 
-/**
- * Envía un recordatorio al cliente si no respondió el presupuesto en 2 días.
- * Usa la misma configuración de proveedor que sendQuoteEmail.
- */
 export async function sendQuoteReminderEmail({ to, clientName, orgName, orgLogo, quoteId, quoteNumber, quoteTitle, total, currency }) {
   const publicUrl  = `${FRONTEND_URL}/p/presupuesto/${quoteId}`
   const orgLogoUrl = orgLogo ? `${BACKEND_URL}/uploads/${orgLogo}` : null
@@ -116,18 +249,12 @@ export async function sendQuoteReminderEmail({ to, clientName, orgName, orgLogo,
   const subject = `Recordatorio: Presupuesto #${num} pendiente de respuesta`
   const html    = buildReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, totalFmt, publicUrl })
 
-  // ── Resend ────────────────────────────────────────────────────────────────
-  // import { Resend } from 'resend'
-  // const resend = new Resend(process.env.RESEND_API_KEY)
-  // await resend.emails.send({ from: process.env.EMAIL_FROM, to, subject, html })
-
-  // ── Nodemailer / SMTP ─────────────────────────────────────────────────────
-  // import nodemailer from 'nodemailer'
-  // const transporter = nodemailer.createTransport({
-  //   host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT) || 587,
-  //   auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  // })
-  // await transporter.sendMail({ from: process.env.EMAIL_FROM, to, subject, html })
+  await createTransporter().sendMail({
+    from: process.env.EMAIL_FROM,
+    to,
+    subject,
+    html,
+  })
 
   console.log(`[email] Recordatorio → ${to} | Presupuesto #${num} | ${publicUrl}`)
 }
@@ -151,21 +278,17 @@ function buildReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTit
       <td align="center">
         <table width="100%" style="max-width:560px;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,178,169,0.10);background:#ffffff;">
 
-          <!-- Barra de acento teal superior -->
           <tr>
             <td style="background:linear-gradient(90deg,#009990,#00B2A9,#33C4BE);height:4px;font-size:0;line-height:0;">&nbsp;</td>
           </tr>
 
-          <!-- Header oscuro -->
           <tr>
             <td style="background-color:#080e1a;padding:24px 32px;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <!-- Logo / nombre org -->
                   <td style="vertical-align:middle;">
                     ${logoBlock}
                   </td>
-                  <!-- Badge RECORDATORIO -->
                   <td style="vertical-align:middle;text-align:right;">
                     <span style="display:inline-block;background-color:rgba(0,178,169,0.15);color:#33C4BE;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;border-radius:20px;border:1px solid rgba(0,178,169,0.3);">
                       Recordatorio
@@ -176,7 +299,6 @@ function buildReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTit
             </td>
           </tr>
 
-          <!-- Tarjeta del presupuesto (fondo teal) -->
           <tr>
             <td style="background:linear-gradient(135deg,#00B2A9,#009990);padding:28px 32px;">
               <p style="margin:0 0 4px;color:rgba(255,255,255,0.65);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Presupuesto</p>
@@ -193,7 +315,6 @@ function buildReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTit
             </td>
           </tr>
 
-          <!-- Cuerpo del mensaje -->
           <tr>
             <td style="padding:32px 32px 8px;">
               <p style="margin:0 0 16px;color:#18181b;font-size:15px;font-weight:600;">
@@ -208,7 +329,6 @@ function buildReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTit
             </td>
           </tr>
 
-          <!-- CTA -->
           <tr>
             <td style="padding:0 32px 28px;">
               <table cellpadding="0" cellspacing="0" width="100%">
@@ -224,7 +344,6 @@ function buildReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTit
             </td>
           </tr>
 
-          <!-- Link plano -->
           <tr>
             <td style="padding:0 32px 32px;">
               <p style="margin:0;color:#a1a1aa;font-size:11px;text-align:center;word-break:break-all;">
@@ -233,14 +352,12 @@ function buildReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTit
             </td>
           </tr>
 
-          <!-- Separador -->
           <tr>
             <td style="padding:0 32px;">
               <div style="height:1px;background-color:#f4f4f5;"></div>
             </td>
           </tr>
 
-          <!-- Footer -->
           <tr>
             <td style="padding:18px 32px;text-align:center;">
               <p style="margin:0;color:#a1a1aa;font-size:11px;">
@@ -259,12 +376,6 @@ function buildReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTit
 </html>`
 }
 
-/**
- * Envía el presupuesto al cliente como email con link a la página pública HTML.
- *
- * Para activar: descomentar el bloque del proveedor elegido y configurar
- * las variables de entorno correspondientes en .env
- */
 export async function sendQuoteEmail({ to, clientName, orgName, orgLogo, quoteId, quoteNumber, quoteTitle, total, currency }) {
   const publicUrl   = `${FRONTEND_URL}/p/presupuesto/${quoteId}`
   const orgLogoUrl  = orgLogo ? `${BACKEND_URL}/uploads/${orgLogo}` : null
@@ -275,28 +386,14 @@ export async function sendQuoteEmail({ to, clientName, orgName, orgLogo, quoteId
   const subject = `Presupuesto #${num} — ${quoteTitle}`
   const html    = buildEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, totalFmt, publicUrl })
 
-  // ── Resend ────────────────────────────────────────────────────────────────
-  // npm install resend
-  // .env: RESEND_API_KEY=re_xxx   EMAIL_FROM=Empresa <noreply@tudominio.com>
-  //
-  // import { Resend } from 'resend'
-  // const resend = new Resend(process.env.RESEND_API_KEY)
-  // await resend.emails.send({ from: process.env.EMAIL_FROM, to, subject, html })
+  await createTransporter().sendMail({
+    from: process.env.EMAIL_FROM,
+    to,
+    subject,
+    html,
+  })
 
-  // ── Nodemailer / SMTP ─────────────────────────────────────────────────────
-  // npm install nodemailer
-  // .env: SMTP_HOST  SMTP_PORT  SMTP_USER  SMTP_PASS  EMAIL_FROM
-  //
-  // import nodemailer from 'nodemailer'
-  // const transporter = nodemailer.createTransport({
-  //   host: process.env.SMTP_HOST,
-  //   port: Number(process.env.SMTP_PORT) || 587,
-  //   auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  // })
-  // await transporter.sendMail({ from: process.env.EMAIL_FROM, to, subject, html })
-
-  // Sin proveedor configurado: solo log
-  console.log(`[email] Para enviar → ${to} | Presupuesto #${num} | ${publicUrl}`)
+  console.log(`[email] Presupuesto → ${to} | #${num} | ${publicUrl}`)
 }
 
 function buildEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, totalFmt, publicUrl }) {
@@ -318,16 +415,13 @@ function buildEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, tota
       <td align="center">
         <table width="100%" style="max-width:560px;border-radius:12px;overflow:hidden;border:1px solid #e4e4e7;background:#ffffff;">
 
-          <!-- Header: izquierda = info del doc | derecha = logo/nombre org -->
           <tr>
             <td style="background-color:#1e293b;padding:28px 36px;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <!-- Izquierda: logo o nombre de la empresa -->
                   <td style="vertical-align:middle;width:140px;padding-right:20px;">
                     ${logoCell}
                   </td>
-                  <!-- Derecha: datos del presupuesto -->
                   <td style="vertical-align:middle;text-align:right;">
                     <p style="margin:0 0 4px;color:#94a3b8;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Presupuesto</p>
                     <h1 style="margin:0 0 4px;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.5px;">#${num}</h1>
@@ -338,7 +432,6 @@ function buildEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, tota
             </td>
           </tr>
 
-          <!-- Body -->
           <tr>
             <td style="padding:32px 36px;">
               <p style="margin:0 0 12px;color:#27272a;font-size:15px;">
@@ -351,7 +444,6 @@ function buildEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, tota
                 Total: <strong style="color:#27272a;font-size:15px;">${totalFmt}</strong>
               </p>
 
-              <!-- CTA -->
               <table cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                   <td align="center" style="padding-bottom:24px;">
@@ -369,7 +461,6 @@ function buildEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, tota
             </td>
           </tr>
 
-          <!-- Footer -->
           <tr>
             <td style="border-top:1px solid #f4f4f5;padding:18px 36px;text-align:center;">
               <p style="margin:0;color:#a1a1aa;font-size:11px;">
