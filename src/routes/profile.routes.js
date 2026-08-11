@@ -4,7 +4,7 @@ import path from 'path'
 import { randomUUID } from 'crypto'
 import { fileURLToPath } from 'url'
 import { auth } from '../middlewares/auth.middleware.js'
-import { getProfile, updateProfile, changePassword, uploadAvatar } from '../controllers/profile.controller.js'
+import { getProfile, updateProfile, requestPasswordChange, confirmPasswordChange, uploadAvatar } from '../controllers/profile.controller.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -29,7 +29,8 @@ const router = Router()
 
 router.get('/', auth, getProfile)
 router.put('/', auth, updateProfile)
-router.put('/password', auth, changePassword)
+router.put('/password', auth, requestPasswordChange)
+router.post('/password/confirm', confirmPasswordChange)
 router.post('/avatar', auth, avatarUpload.single('avatar'), uploadAvatar)
 
 export default router

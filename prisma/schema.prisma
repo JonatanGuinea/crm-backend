@@ -19,6 +19,8 @@ model User {
   isSystemAdmin      Boolean  @default(false)
   emailVerified      Boolean  @default(false)
   emailVerifyToken   String?  @unique
+  passwordChangeToken String? @unique
+  passwordChangeHash  String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 

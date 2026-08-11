@@ -3,6 +3,129 @@ import nodemailer from 'nodemailer'
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173'
 const BACKEND_URL  = process.env.BACKEND_URL  || `http://localhost:${process.env.PORT || 8000}`
 
+export async function sendPasswordChangeEmail({ to, name, token }) {
+  const confirmUrl = `${FRONTEND_URL}/confirm-password-change?token=${token}`
+  const subject    = 'Confirmá el cambio de contraseña — SOFIAPP CRM'
+  const html       = buildPasswordChangeEmailHtml({ name, confirmUrl })
+
+  await createTransporter().sendMail({
+    from: process.env.EMAIL_FROM,
+    to,
+    subject,
+    html,
+  })
+
+  console.log(`[email] Cambio de contraseña → ${to} | ${confirmUrl}`)
+}
+
+function buildPasswordChangeEmailHtml({ name, confirmUrl }) {
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Confirmá el cambio de contraseña</title>
+</head>
+<body style="margin:0;padding:0;background-color:#eef9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef9f9;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:560px;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,178,169,0.10);background:#ffffff;">
+
+          <tr>
+            <td style="background:linear-gradient(90deg,#009990,#00B2A9,#33C4BE);height:4px;font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+
+          <tr>
+            <td style="background-color:#080e1a;padding:24px 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <span style="color:#00B2A9;font-size:16px;font-weight:700;letter-spacing:-0.3px;">SOFIAPP CRM</span>
+                  </td>
+                  <td style="vertical-align:middle;text-align:right;">
+                    <span style="display:inline-block;background-color:rgba(0,178,169,0.15);color:#33C4BE;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;border-radius:20px;border:1px solid rgba(0,178,169,0.3);">
+                      Seguridad
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background:linear-gradient(135deg,#00B2A9,#009990);padding:28px 32px;">
+              <p style="margin:0 0 4px;color:rgba(255,255,255,0.65);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Solicitud de cambio</p>
+              <h1 style="margin:0 0 6px;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">Cambio de contraseña</h1>
+              <p style="margin:0;color:rgba(255,255,255,0.80);font-size:14px;">Confirmá para aplicar el cambio</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:32px 32px 8px;">
+              <p style="margin:0 0 16px;color:#18181b;font-size:15px;font-weight:600;">
+                Hola, ${name} 👋
+              </p>
+              <p style="margin:0 0 14px;color:#52525b;font-size:14px;line-height:1.65;">
+                Recibimos una solicitud para cambiar la contraseña de tu cuenta en <strong style="color:#18181b;">SOFIAPP CRM</strong>.
+              </p>
+              <p style="margin:0 0 28px;color:#52525b;font-size:14px;line-height:1.65;">
+                Hacé clic en el botón para confirmar el cambio. Si no fuiste vos, ignorá este email — tu contraseña actual seguirá siendo la misma.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px 24px;">
+              <table cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <a href="${confirmUrl}"
+                       style="display:inline-block;background-color:#00B2A9;color:#ffffff;text-decoration:none;padding:14px 40px;border-radius:10px;font-size:14px;font-weight:700;letter-spacing:0.3px;">
+                      Confirmar cambio de contraseña
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px 32px;">
+              <p style="margin:0 0 6px;color:#a1a1aa;font-size:11px;text-align:center;">
+                O copiá este enlace en tu navegador:
+              </p>
+              <p style="margin:0;color:#a1a1aa;font-size:11px;text-align:center;word-break:break-all;">
+                <a href="${confirmUrl}" style="color:#00B2A9;text-decoration:none;">${confirmUrl}</a>
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px;">
+              <div style="height:1px;background-color:#f4f4f5;"></div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:18px 32px;text-align:center;">
+              <p style="margin:0 0 4px;color:#a1a1aa;font-size:11px;">
+                Este enlace expira en 30 minutos. Si no solicitaste este cambio, ignorá este email.
+              </p>
+              <p style="margin:0;color:#a1a1aa;font-size:11px;">
+                Enviado por <a href="https://sofiapp.dev" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">SOFIAPP CRM</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+}
+
 export async function sendVerificationEmail({ to, name, token }) {
   const verifyUrl = `${FRONTEND_URL}/verify-email?token=${token}`
   const subject   = 'Confirmá tu cuenta en SOFIAPP CRM'
