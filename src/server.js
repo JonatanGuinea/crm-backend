@@ -5,7 +5,7 @@ import prisma from './config/db.js'
 import { checkTimeAlerts } from './services/notifications.service.js'
 import { getMonthlyReportData } from './services/report.service.js'
 import { buildMonthlyReportPdf } from './utils/buildReportPdf.js'
-import { sendMonthlyReportEmail } from './services/email.service.js'
+import { sendMonthlyReportEmail, sendQuoteReminderEmail } from './services/email.service.js'
 
 dotenv.config({ override: true })
 
@@ -63,14 +63,66 @@ async function runMonthlyReports() {
   }
 }
 
+async function runQuoteReminders() {
+  try {
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+
+    const quotes = await prisma.quote.findMany({
+      where: {
+        status:          'sent',
+        sentByEmail:     true,
+        reminderSentAt:  null,
+        sentAt:          { lte: twoDaysAgo },
+        validUntil:      { gte: new Date() },
+      },
+      select: {
+        id: true, number: true, title: true, total: true, currency: true,
+        potentialClientEmail: true, potentialClientName: true,
+        client: { select: { email: true, name: true } },
+        organization: { select: { name: true, logo: true } },
+      }
+    })
+
+    for (const q of quotes) {
+      const to   = q.client?.email || q.potentialClientEmail
+      const name = q.client?.name  || q.potentialClientName || 'Cliente'
+      if (!to) continue
+
+      try {
+        await sendQuoteReminderEmail({
+          to, clientName: name,
+          orgName:    q.organization.name,
+          orgLogo:    q.organization.logo,
+          quoteId:    q.id,
+          quoteNumber: q.number,
+          quoteTitle:  q.title,
+          total:       q.total,
+          currency:    q.currency,
+        })
+        await prisma.quote.update({
+          where: { id: q.id },
+          data:  { reminderSentAt: new Date() },
+        })
+        console.log(`[cron] Recordatorio enviado → ${to} (presupuesto #${q.number})`)
+      } catch (err) {
+        console.error(`[cron] Error recordatorio presupuesto ${q.id}:`, err.message)
+      }
+    }
+  } catch (err) {
+    console.error('[cron] Error en recordatorios de presupuestos:', err.message)
+  }
+}
+
 prisma.$connect()
   .then(() => {
     console.log('PostgreSQL conectado')
     app.listen(PORT, () => {
       console.log(`Servidor corriendo en puerto ${PORT}`)
       runTimeAlerts()
-      setInterval(runTimeAlerts,     6 * 60 * 60 * 1000) // cada 6 horas
+      runQuoteReminders()
+      setInterval(runTimeAlerts,     6  * 60 * 60 * 1000) // cada 6 horas
       setInterval(runMonthlyReports,      60 * 60 * 1000) // cada hora
+      setInterval(runQuoteReminders, 12  * 60 * 60 * 1000) // cada 12 horas
     })
   })
   .catch((error) => {

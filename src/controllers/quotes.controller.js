@@ -479,7 +479,7 @@ export const sendQuote = async (req, res) => {
 
     const updated = await prisma.quote.update({
       where: { id },
-      data: { status: 'sent', sentByEmail: true }
+      data: { status: 'sent', sentByEmail: true, sentAt: new Date() }
     })
 
     await prisma.quoteHistory.create({
