@@ -20,7 +20,7 @@ export async function checkTimeAlerts(orgId) {
   const in4Days = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000)
   const in6Days = new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000)
 
-  const [adminMembers, allMembers, expiringQuotes, projects5d, projects1d] = await Promise.all([
+  const [adminMembers, allMembers, draftExpiringQuotes, sentExpiringQuotes, projects5d, projects1d] = await Promise.all([
     prisma.organizationMembership.findMany({
       where: { organizationId: orgId, status: 'active', role: { in: ['owner', 'admin'] } },
       select: { userId: true }
@@ -29,10 +29,20 @@ export async function checkTimeAlerts(orgId) {
       where: { organizationId: orgId, status: 'active' },
       select: { userId: true }
     }),
+    // Borradores por vencer: alerta genérica
     prisma.quote.findMany({
       where: {
         organizationId: orgId,
-        status: { in: ['draft', 'sent'] },
+        status: 'draft',
+        validUntil: { gte: now, lte: in2Days }
+      },
+      select: { id: true, number: true, title: true, validUntil: true }
+    }),
+    // Enviados sin respuesta por vencer: alerta al equipo
+    prisma.quote.findMany({
+      where: {
+        organizationId: orgId,
+        status: 'sent',
         validUntil: { gte: now, lte: in2Days }
       },
       select: { id: true, number: true, title: true, validUntil: true }
@@ -59,8 +69,8 @@ export async function checkTimeAlerts(orgId) {
 
   const upserts = []
 
-  // Presupuestos que vencen hoy o mañana
-  for (const q of expiringQuotes) {
+  // Borradores que vencen hoy o mañana
+  for (const q of draftExpiringQuotes) {
     const daysLeft = Math.max(0, Math.ceil((new Date(q.validUntil) - now) / (1000 * 60 * 60 * 24)))
     const msg = daysLeft <= 0
       ? `El presupuesto #${q.number} "${q.title}" vence hoy`
@@ -69,6 +79,23 @@ export async function checkTimeAlerts(orgId) {
       upserts.push({
         type: 'quote_expiring',
         title: '⚠️ Presupuesto vence pronto',
+        message: msg,
+        userId: m.userId,
+        organizationId: orgId,
+        refId: q.id
+      })
+    }
+  }
+
+  // Enviados sin respuesta que vencen hoy o mañana — alerta al equipo completo
+  for (const q of sentExpiringQuotes) {
+    const daysLeft = Math.max(0, Math.ceil((new Date(q.validUntil) - now) / (1000 * 60 * 60 * 24)))
+    const when = daysLeft <= 0 ? 'hoy' : 'mañana'
+    const msg = `El cliente no respondió el presupuesto #${q.number} "${q.title}" y vence ${when}`
+    for (const m of allMembers) {
+      upserts.push({
+        type: 'quote_expiring',
+        title: '⚠️ Presupuesto sin respuesta por vencer',
         message: msg,
         userId: m.userId,
         organizationId: orgId,
@@ -121,7 +148,8 @@ export async function checkTimeAlerts(orgId) {
             refId: n.refId
           }
         },
-        update: {},
+        // Siempre actualiza título y mensaje para reflejar el estado actual del presupuesto
+        update: { title: n.title, message: n.message, read: false },
         create: n
       })
     ))
