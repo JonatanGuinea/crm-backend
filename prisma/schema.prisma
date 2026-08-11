@@ -21,6 +21,8 @@ model User {
   emailVerifyToken   String?  @unique
   passwordChangeToken String? @unique
   passwordChangeHash  String?
+  passwordResetToken  String? @unique
+  passwordResetExpiry DateTime?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 

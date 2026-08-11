@@ -3,9 +3,129 @@ import nodemailer from 'nodemailer'
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173'
 const BACKEND_URL  = process.env.BACKEND_URL  || `http://localhost:${process.env.PORT || 8000}`
 
+export async function sendPasswordResetEmail({ to, name, token }) {
+  const resetUrl = `${FRONTEND_URL}/reset-password?token=${token}`
+  const subject  = 'Restablecer contraseña — DANTEUP CRM'
+  const html     = buildPasswordResetEmailHtml({ name, resetUrl })
+
+  await createTransporter().sendMail({
+    from: process.env.EMAIL_FROM,
+    to,
+    subject,
+    html,
+  })
+
+  console.log(`[email] Reset de contraseña → ${to} | ${resetUrl}`)
+}
+
+function buildPasswordResetEmailHtml({ name, resetUrl }) {
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Restablecer contraseña</title>
+</head>
+<body style="margin:0;padding:0;background-color:#eef9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef9f9;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:560px;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,178,169,0.10);background:#ffffff;">
+
+          <tr>
+            <td style="background:linear-gradient(90deg,#009990,#00B2A9,#33C4BE);height:4px;font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+
+          <tr>
+            <td style="background-color:#080e1a;padding:24px 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <span style="color:#00B2A9;font-size:16px;font-weight:700;letter-spacing:-0.3px;">DANTEUP CRM</span>
+                  </td>
+                  <td style="vertical-align:middle;text-align:right;">
+                    <span style="display:inline-block;background-color:rgba(0,178,169,0.15);color:#33C4BE;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;border-radius:20px;border:1px solid rgba(0,178,169,0.3);">
+                      Recuperar acceso
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background:linear-gradient(135deg,#00B2A9,#009990);padding:28px 32px;">
+              <p style="margin:0 0 4px;color:rgba(255,255,255,0.65);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Solicitud recibida</p>
+              <h1 style="margin:0 0 6px;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">Restablecer contraseña</h1>
+              <p style="margin:0;color:rgba(255,255,255,0.80);font-size:14px;">Usá el botón para crear una nueva contraseña</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:32px 32px 8px;">
+              <p style="margin:0 0 16px;color:#18181b;font-size:15px;font-weight:600;">
+                Hola, ${name} 👋
+              </p>
+              <p style="margin:0 0 14px;color:#52525b;font-size:14px;line-height:1.65;">
+                Recibimos una solicitud para restablecer la contraseña de tu cuenta en <strong style="color:#18181b;">DANTEUP CRM</strong>.
+              </p>
+              <p style="margin:0 0 28px;color:#52525b;font-size:14px;line-height:1.65;">
+                Si no fuiste vos, podés ignorar este email — tu contraseña actual no cambiará. El enlace expira en <strong style="color:#18181b;">30 minutos</strong>.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px 24px;">
+              <table cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <a href="${resetUrl}"
+                       style="display:inline-block;background-color:#00B2A9;color:#ffffff;text-decoration:none;padding:14px 40px;border-radius:10px;font-size:14px;font-weight:700;letter-spacing:0.3px;">
+                      Crear nueva contraseña
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px 32px;">
+              <p style="margin:0 0 6px;color:#a1a1aa;font-size:11px;text-align:center;">
+                O copiá este enlace en tu navegador:
+              </p>
+              <p style="margin:0;color:#a1a1aa;font-size:11px;text-align:center;word-break:break-all;">
+                <a href="${resetUrl}" style="color:#00B2A9;text-decoration:none;">${resetUrl}</a>
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px;">
+              <div style="height:1px;background-color:#f4f4f5;"></div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:18px 32px;text-align:center;">
+              <p style="margin:0;color:#a1a1aa;font-size:11px;">
+                Enviado por <a href="https://sofiapp.dev" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+}
+
 export async function sendPasswordChangeEmail({ to, name, token }) {
   const confirmUrl = `${FRONTEND_URL}/confirm-password-change?token=${token}`
-  const subject    = 'Confirmá el cambio de contraseña — SOFIAPP CRM'
+  const subject    = 'Confirmá el cambio de contraseña — DANTEUP CRM'
   const html       = buildPasswordChangeEmailHtml({ name, confirmUrl })
 
   await createTransporter().sendMail({
@@ -41,7 +161,7 @@ function buildPasswordChangeEmailHtml({ name, confirmUrl }) {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="vertical-align:middle;">
-                    <span style="color:#00B2A9;font-size:16px;font-weight:700;letter-spacing:-0.3px;">SOFIAPP CRM</span>
+                    <span style="color:#00B2A9;font-size:16px;font-weight:700;letter-spacing:-0.3px;">DANTEUP CRM</span>
                   </td>
                   <td style="vertical-align:middle;text-align:right;">
                     <span style="display:inline-block;background-color:rgba(0,178,169,0.15);color:#33C4BE;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;border-radius:20px;border:1px solid rgba(0,178,169,0.3);">
@@ -67,7 +187,7 @@ function buildPasswordChangeEmailHtml({ name, confirmUrl }) {
                 Hola, ${name} 👋
               </p>
               <p style="margin:0 0 14px;color:#52525b;font-size:14px;line-height:1.65;">
-                Recibimos una solicitud para cambiar la contraseña de tu cuenta en <strong style="color:#18181b;">SOFIAPP CRM</strong>.
+                Recibimos una solicitud para cambiar la contraseña de tu cuenta en <strong style="color:#18181b;">DANTEUP CRM</strong>.
               </p>
               <p style="margin:0 0 28px;color:#52525b;font-size:14px;line-height:1.65;">
                 Hacé clic en el botón para confirmar el cambio. Si no fuiste vos, ignorá este email — tu contraseña actual seguirá siendo la misma.
@@ -113,7 +233,7 @@ function buildPasswordChangeEmailHtml({ name, confirmUrl }) {
                 Este enlace expira en 30 minutos. Si no solicitaste este cambio, ignorá este email.
               </p>
               <p style="margin:0;color:#a1a1aa;font-size:11px;">
-                Enviado por <a href="https://sofiapp.dev" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">SOFIAPP CRM</a>
+                Enviado por <a href="https://sofiapp.dev" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
               </p>
             </td>
           </tr>
@@ -128,7 +248,7 @@ function buildPasswordChangeEmailHtml({ name, confirmUrl }) {
 
 export async function sendVerificationEmail({ to, name, token }) {
   const verifyUrl = `${FRONTEND_URL}/verify-email?token=${token}`
-  const subject   = 'Confirmá tu cuenta en SOFIAPP CRM'
+  const subject   = 'Confirmá tu cuenta en DANTEUP CRM'
   const html      = buildVerificationEmailHtml({ name, verifyUrl })
 
   await createTransporter().sendMail({
@@ -147,7 +267,7 @@ function buildVerificationEmailHtml({ name, verifyUrl }) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Confirmá tu cuenta — SOFIAPP CRM</title>
+  <title>Confirmá tu cuenta — DANTEUP CRM</title>
 </head>
 <body style="margin:0;padding:0;background-color:#eef9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 
@@ -167,7 +287,7 @@ function buildVerificationEmailHtml({ name, verifyUrl }) {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="vertical-align:middle;">
-                    <span style="color:#00B2A9;font-size:16px;font-weight:700;letter-spacing:-0.3px;">SOFIAPP CRM</span>
+                    <span style="color:#00B2A9;font-size:16px;font-weight:700;letter-spacing:-0.3px;">DANTEUP CRM</span>
                   </td>
                   <td style="vertical-align:middle;text-align:right;">
                     <span style="display:inline-block;background-color:rgba(0,178,169,0.15);color:#33C4BE;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;border-radius:20px;border:1px solid rgba(0,178,169,0.3);">
@@ -206,7 +326,7 @@ function buildVerificationEmailHtml({ name, verifyUrl }) {
                 Hola, ${name} 👋
               </p>
               <p style="margin:0 0 14px;color:#52525b;font-size:14px;line-height:1.65;">
-                Gracias por registrarte en <strong style="color:#18181b;">SOFIAPP CRM</strong>. Para activar tu cuenta y comenzar a usarla, confirmá tu dirección de email haciendo clic en el botón de abajo.
+                Gracias por registrarte en <strong style="color:#18181b;">DANTEUP CRM</strong>. Para activar tu cuenta y comenzar a usarla, confirmá tu dirección de email haciendo clic en el botón de abajo.
               </p>
               <p style="margin:0 0 28px;color:#52525b;font-size:14px;line-height:1.65;">
                 Este enlace es válido por <strong style="color:#18181b;">24 horas</strong>.
@@ -256,7 +376,7 @@ function buildVerificationEmailHtml({ name, verifyUrl }) {
                 Si no creaste esta cuenta, ignorá este email.
               </p>
               <p style="margin:0;color:#a1a1aa;font-size:11px;">
-                Enviado por <a href="https://sofiapp.dev" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">SOFIAPP CRM</a>
+                Enviado por <a href="https://sofiapp.dev" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
               </p>
             </td>
           </tr>
@@ -292,7 +412,7 @@ export async function sendMonthlyReportEmail({ to, ownerName, orgName, year, mon
   const html     = buildReportEmailHtml({ ownerName, orgName, monthStr, filename })
 
   await createTransporter().sendMail({
-    from: process.env.EMAIL_FROM,
+    from: `${orgName} - Informe mensual <${process.env.SMTP_USER}>`,
     to,
     subject,
     html,
@@ -349,7 +469,7 @@ function buildReportEmailHtml({ ownerName, orgName, monthStr, filename }) {
           <tr>
             <td style="border-top:1px solid #f4f4f5;padding:18px 36px;text-align:center;">
               <p style="margin:0;color:#a1a1aa;font-size:11px;">
-                Generado automáticamente por <strong>SOFIAPP CRM</strong>
+                Generado automáticamente por <strong>DANTEUP CRM</strong>
               </p>
             </td>
           </tr>
@@ -369,11 +489,11 @@ export async function sendQuoteReminderEmail({ to, clientName, orgName, orgLogo,
   const sym        = currency === 'USD' ? 'US$' : '$'
   const totalFmt   = `${sym}${Number(total).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-  const subject = `Recordatorio: Presupuesto #${num} pendiente de respuesta`
+  const subject = `Recordatorio · Presupuesto #${num} — ${orgName}`
   const html    = buildReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, totalFmt, publicUrl })
 
   await createTransporter().sendMail({
-    from: process.env.EMAIL_FROM,
+    from: `${orgName} - Recordatorio <${process.env.SMTP_USER}>`,
     to,
     subject,
     html,
@@ -485,7 +605,7 @@ function buildReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTit
             <td style="padding:18px 32px;text-align:center;">
               <p style="margin:0;color:#a1a1aa;font-size:11px;">
                 Enviado por
-                <a href="https://sofiapp.dev" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">SOFIAPP CRM</a>
+                <a href="https://sofiapp.dev" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
               </p>
             </td>
           </tr>
@@ -506,11 +626,11 @@ export async function sendQuoteEmail({ to, clientName, orgName, orgLogo, quoteId
   const sym         = currency === 'USD' ? 'US$' : '$'
   const totalFmt    = `${sym}${Number(total).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-  const subject = `Presupuesto #${num} — ${quoteTitle}`
+  const subject = `Presupuesto #${num} — ${orgName}`
   const html    = buildEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, totalFmt, publicUrl })
 
   await createTransporter().sendMail({
-    from: process.env.EMAIL_FROM,
+    from: `${orgName} - Presupuesto <${process.env.SMTP_USER}>`,
     to,
     subject,
     html,
