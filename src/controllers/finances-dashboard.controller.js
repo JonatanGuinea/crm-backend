@@ -67,14 +67,14 @@ export async function getFinancesDashboard(req, res) {
       take: 8,
     }),
 
-    // Pendientes del mes seleccionado (income y expense por separado)
+    // Totales pendientes hasta fin del mes actual
     prisma.cashMovement.groupBy({
       by: ['type'],
       where: {
         ...movementBase,
         status: 'pending',
         type: { in: ['income', 'expense'] },
-        date: { gte: start, lte: end },
+        date: { lte: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999) },
       },
       _sum: { amount: true },
     }),
@@ -113,13 +113,13 @@ export async function getFinancesDashboard(req, res) {
       take: 200,
     }),
 
-    // Movimientos pendientes del mes (cuentas por cobrar / pagar)
+    // Movimientos pendientes hasta fin del mes actual (pasados + este mes, no futuros)
     prisma.cashMovement.findMany({
       where: {
         ...movementBase,
         status: 'pending',
         type: { in: ['income', 'expense'] },
-        date: { gte: start, lte: end },
+        date: { lte: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999) },
       },
       include: {
         account:  { select: { id: true, name: true } },
