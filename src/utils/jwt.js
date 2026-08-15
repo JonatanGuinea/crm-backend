@@ -25,6 +25,18 @@ export const generateTempToken = (user) => {
   )
 }
 
+export const generateInviteToken = (user) => {
+  return jwt.sign(
+    {
+      uid: user.id,
+      membershipId: user.membershipId || null,
+      type: 'temp'
+    },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  )
+}
+
 export const generateAccessToken = (user, membership = null) => {
   return jwt.sign(
     {

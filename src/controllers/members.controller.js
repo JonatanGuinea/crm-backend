@@ -1,8 +1,9 @@
 
 import prisma from '../config/db.js'
-import { generateTempToken, generateAccessToken, generatePreInviteToken } from '../utils/jwt.js'
+import { generateTempToken, generateAccessToken, generatePreInviteToken, generateInviteToken } from '../utils/jwt.js'
 import { success, fail } from '../utils/response.js'
 import { notify } from '../services/notifications.service.js'
+import { sendInvitationEmail } from '../services/email.service.js'
 
 export const getPendingInvitations = async (req, res) => {
   try {
@@ -123,14 +124,20 @@ export const inviteUser = async (req, res) => {
       select: { id: true, name: true, email: true }
     })
 
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173'
+
     if (!invitedUser) {
-      // El usuario no tiene cuenta: generar token de pre-registro
-      const preToken = generatePreInviteToken({ email: email.toLowerCase().trim(), orgId: organizationId, role, orgName: org.name })
-      return success(res, 200, {
-        message: `Invitación generada para ${email}`,
-        inviteToken: preToken,
-        requiresRegistration: true
-      })
+      // Usuario sin cuenta: pre-invite token con 7 días
+      const preToken  = generatePreInviteToken({ email: email.toLowerCase().trim(), orgId: organizationId, role, orgName: org.name })
+      const inviteLink = `${FRONTEND_URL}/accept-invite?token=${preToken}`
+
+      try {
+        await sendInvitationEmail({ to: email, inviteeName: null, orgName: org.name, role, inviteLink, isNewUser: true })
+      } catch (emailErr) {
+        console.error('[inviteUser] Error enviando email:', emailErr.message)
+      }
+
+      return success(res, 200, { message: `Invitación enviada a ${email}` })
     }
 
     const existing = await prisma.organizationMembership.findFirst({
@@ -155,14 +162,16 @@ export const inviteUser = async (req, res) => {
       }
     })
 
-    const inviteToken = generateTempToken({ ...invitedUser, membershipId: membership.id })
+    const inviteToken = generateInviteToken({ ...invitedUser, membershipId: membership.id })
+    const inviteLink  = `${FRONTEND_URL}/accept-invite?token=${inviteToken}`
 
-    return success(res, 201, {
-      message: `Invitación enviada a ${invitedUser.email}`,
-      invitedUser: { id: invitedUser.id, name: invitedUser.name, email: invitedUser.email },
-      role,
-      inviteToken
-    })
+    try {
+      await sendInvitationEmail({ to: invitedUser.email, inviteeName: invitedUser.name, orgName: org.name, role, inviteLink, isNewUser: false })
+    } catch (emailErr) {
+      console.error('[inviteUser] Error enviando email:', emailErr.message)
+    }
+
+    return success(res, 201, { message: `Invitación enviada a ${invitedUser.email}` })
 
   } catch (error) {
     return fail(res, 500, error.message)

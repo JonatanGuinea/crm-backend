@@ -403,6 +403,132 @@ function createTransporter() {
   })
 }
 
+export async function sendInvitationEmail({ to, inviteeName, orgName, role, inviteLink, isNewUser }) {
+  const subject = `Te invitaron a unirse a ${orgName}`
+  const html    = buildInvitationEmailHtml({ inviteeName, orgName, role, inviteLink, isNewUser })
+
+  await createTransporter().sendMail({
+    from: process.env.EMAIL_FROM,
+    to,
+    subject,
+    html,
+  })
+
+  console.log(`[email] Invitación → ${to} | ${orgName} | ${role} | ${inviteLink}`)
+}
+
+function buildInvitationEmailHtml({ inviteeName, orgName, role, inviteLink, isNewUser }) {
+  const roleLabel = role === 'admin' ? 'Administrador' : 'Miembro'
+  const greeting  = inviteeName ? `Hola, ${inviteeName} 👋` : '¡Hola! 👋'
+  const ctaText   = isNewUser ? 'Crear cuenta y unirse' : 'Aceptar invitación'
+  const subtitle  = isNewUser
+    ? 'Creá tu cuenta para comenzar'
+    : 'Hacé clic para unirte al equipo'
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Invitación a ${orgName}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#eef9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef9f9;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:560px;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,178,169,0.10);background:#ffffff;">
+
+          <tr>
+            <td style="background:linear-gradient(90deg,#009990,#00B2A9,#33C4BE);height:4px;font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+
+          <tr>
+            <td style="background-color:#080e1a;padding:24px 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <span style="color:#00B2A9;font-size:16px;font-weight:700;letter-spacing:-0.3px;">DANTEUP CRM</span>
+                  </td>
+                  <td style="vertical-align:middle;text-align:right;">
+                    <span style="display:inline-block;background-color:rgba(0,178,169,0.15);color:#33C4BE;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;border-radius:20px;border:1px solid rgba(0,178,169,0.3);">
+                      Invitación
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background:linear-gradient(135deg,#00B2A9,#009990);padding:28px 32px;">
+              <p style="margin:0 0 4px;color:rgba(255,255,255,0.65);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Nueva invitación</p>
+              <h1 style="margin:0 0 6px;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">${orgName}</h1>
+              <p style="margin:0;color:rgba(255,255,255,0.80);font-size:14px;">${subtitle}</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:32px 32px 8px;">
+              <p style="margin:0 0 16px;color:#18181b;font-size:15px;font-weight:600;">
+                ${greeting}
+              </p>
+              <p style="margin:0 0 14px;color:#52525b;font-size:14px;line-height:1.65;">
+                Te invitaron a unirte a <strong style="color:#18181b;">${orgName}</strong> en DANTEUP CRM con el rol de <strong style="color:#18181b;">${roleLabel}</strong>.
+              </p>
+              <p style="margin:0 0 28px;color:#52525b;font-size:14px;line-height:1.65;">
+                Este enlace es válido por <strong style="color:#18181b;">7 días</strong>. Si no esperabas esta invitación, podés ignorar este email.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px 24px;">
+              <table cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <a href="${inviteLink}"
+                       style="display:inline-block;background-color:#00B2A9;color:#ffffff;text-decoration:none;padding:14px 40px;border-radius:10px;font-size:14px;font-weight:700;letter-spacing:0.3px;">
+                      ${ctaText}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px 32px;">
+              <p style="margin:0 0 6px;color:#a1a1aa;font-size:11px;text-align:center;">
+                O copiá este enlace en tu navegador:
+              </p>
+              <p style="margin:0;color:#a1a1aa;font-size:11px;text-align:center;word-break:break-all;">
+                <a href="${inviteLink}" style="color:#00B2A9;text-decoration:none;">${inviteLink}</a>
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px;">
+              <div style="height:1px;background-color:#f4f4f5;"></div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:18px 32px;text-align:center;">
+              <p style="margin:0;color:#a1a1aa;font-size:11px;">
+                Enviado por <a href="https://sofiapp.dev" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+}
+
 export async function sendMonthlyReportEmail({ to, ownerName, orgName, year, month, pdfBuffer }) {
   const monthStr = new Date(year, month - 1, 1)
     .toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
