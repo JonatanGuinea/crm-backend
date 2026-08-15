@@ -61,7 +61,21 @@ export const createOrganization = async (req, res) => {
       }
     })
 
-    return success(res, 201, organization)
+    const cashAccount = await prisma.cashAccount.create({
+      data: {
+        orgId: organization.id,
+        name: 'Caja principal',
+        type: 'cash',
+        currency: organization.defaultCurrency,
+      }
+    })
+
+    const updatedOrg = await prisma.organization.update({
+      where: { id: organization.id },
+      data: { defaultCashAccountId: cashAccount.id }
+    })
+
+    return success(res, 201, updatedOrg)
 
   } catch (error) {
     return fail(res, 500, error.message)
