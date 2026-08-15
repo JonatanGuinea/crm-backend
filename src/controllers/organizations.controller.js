@@ -1,5 +1,6 @@
 import prisma from '../config/db.js'
 import { success, fail } from '../utils/response.js'
+import { seedDefaultCategories } from './financial-categories.controller.js'
 import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
@@ -74,6 +75,8 @@ export const createOrganization = async (req, res) => {
       where: { id: organization.id },
       data: { defaultCashAccountId: cashAccount.id }
     })
+
+    await seedDefaultCategories(organization.id)
 
     return success(res, 201, updatedOrg)
 
