@@ -148,8 +148,8 @@ export async function checkTimeAlerts(orgId) {
             refId: n.refId
           }
         },
-        // Siempre actualiza título y mensaje para reflejar el estado actual del presupuesto
-        update: { title: n.title, message: n.message, read: false },
+        // Actualiza título y mensaje sin resetear el estado de lectura
+        update: { title: n.title, message: n.message },
         create: n
       })
     ))
