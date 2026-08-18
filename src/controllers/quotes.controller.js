@@ -37,7 +37,7 @@ export const createQuote = async (req, res) => {
     const orgId = req.user.organizationId
     const userId = req.user.id
     const {
-      title, clientId, projectId, notes, validUntil, deliveryDate, taxRate = 0, currency = 'USD', items,
+      title, clientId, projectId, notes, validUntil, deliveryDate, paymentDueDate, taxRate = 0, currency = 'USD', items,
       potentialClientName, potentialClientEmail, potentialClientPhone, potentialClientCompany, potentialProjectTitle,
       discountType = null, discountValue = 0
     } = req.body
@@ -79,8 +79,9 @@ export const createQuote = async (req, res) => {
         number,
         title,
         notes,
-        validUntil:   validUntil   ? new Date(validUntil)   : null,
-        deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
+        validUntil:      validUntil      ? new Date(validUntil)      : null,
+        deliveryDate:    deliveryDate    ? new Date(deliveryDate)    : null,
+        paymentDueDate:  paymentDueDate  ? new Date(paymentDueDate)  : null,
         taxRate: parseFloat(taxRate),
         discountType: discountType || null,
         discountValue: discountType ? (parseFloat(discountValue) || 0) : null,
@@ -184,7 +185,7 @@ export const updateQuote = async (req, res) => {
     if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
 
     const updates = {}
-    const { status, title, notes, validUntil, deliveryDate, taxRate, currency, items, discountType, discountValue } = req.body
+    const { status, title, notes, validUntil, deliveryDate, paymentDueDate, taxRate, currency, items, discountType, discountValue } = req.body
 
     if (quote.status === 'approved' || quote.status === 'signed') {
       const hasContentChange = [title, notes, validUntil, deliveryDate, taxRate, currency, items, discountType, discountValue].some(v => v !== undefined)
@@ -314,8 +315,9 @@ export const updateQuote = async (req, res) => {
     for (const key of ['potentialClientName', 'potentialClientEmail', 'potentialClientPhone', 'potentialClientCompany', 'potentialProjectTitle']) {
       if (req.body[key] !== undefined) updates[key] = req.body[key] || null
     }
-    if (validUntil   !== undefined) updates.validUntil   = validUntil   ? new Date(validUntil)   : null
-    if (deliveryDate !== undefined) updates.deliveryDate = deliveryDate ? new Date(deliveryDate) : null
+    if (validUntil     !== undefined) updates.validUntil     = validUntil     ? new Date(validUntil)     : null
+    if (deliveryDate   !== undefined) updates.deliveryDate   = deliveryDate   ? new Date(deliveryDate)   : null
+    if (paymentDueDate !== undefined) updates.paymentDueDate = paymentDueDate ? new Date(paymentDueDate) : null
 
     // Persistir descuento si viene en el body
     if (discountType !== undefined) {
@@ -374,7 +376,7 @@ export const updateQuote = async (req, res) => {
     }
     const FIELD_LABELS = {
       title: 'título', notes: 'notas', currency: 'moneda',
-      validUntil: 'validez', deliveryDate: 'entrega',
+      validUntil: 'validez', deliveryDate: 'entrega', paymentDueDate: 'fecha de pago',
       taxRate: 'IVA', discountType: 'descuento',
     }
 
@@ -401,7 +403,7 @@ export const updateQuote = async (req, res) => {
         }
       })
     } else {
-      const textFields = ['title', 'notes', 'currency', 'validUntil', 'deliveryDate', 'taxRate', 'discountType']
+      const textFields = ['title', 'notes', 'currency', 'validUntil', 'deliveryDate', 'paymentDueDate', 'taxRate', 'discountType']
       const changed = textFields.filter(k => updates[k] !== undefined && String(updates[k]) !== String(quote[k]))
       if (changed.length > 0) {
         await prisma.quoteHistory.create({

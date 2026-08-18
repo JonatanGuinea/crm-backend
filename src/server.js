@@ -120,6 +120,51 @@ async function runPaymentReminders() {
     const todayEnd = new Date()
     todayEnd.setUTCHours(23, 59, 59, 999)
 
+    // Presupuestos sin cuotas con paymentDueDate hoy
+    const singlePaymentQuotes = await prisma.quote.findMany({
+      where: {
+        status:           { in: ['signed', 'approved'] },
+        paymentDueDate:   { gte: todayStart, lte: todayEnd },
+        paymentReminderSentAt: null,
+        installments:     { none: {} },
+      },
+      select: {
+        id: true, number: true, title: true, total: true, currency: true,
+        potentialClientEmail: true, potentialClientName: true,
+        client: { select: { email: true, name: true } },
+        organization: { select: { name: true, logo: true } },
+      }
+    })
+
+    for (const q of singlePaymentQuotes) {
+      const to   = q.client?.email || q.potentialClientEmail
+      const name = q.client?.name  || q.potentialClientName || 'Cliente'
+      if (!to) continue
+
+      try {
+        await sendPaymentReminderEmail({
+          to, clientName: name,
+          orgName:           q.organization.name,
+          orgLogo:           q.organization.logo,
+          quoteId:           q.id,
+          quoteNumber:       q.number,
+          quoteTitle:        q.title,
+          installmentNumber: 1,
+          installmentTotal:  1,
+          amount:            q.total,
+          currency:          q.currency,
+        })
+        await prisma.quote.update({
+          where: { id: q.id },
+          data:  { paymentReminderSentAt: new Date() },
+        })
+        console.log(`[cron] Recordatorio de pago único → ${to} | Presupuesto #${q.number}`)
+      } catch (err) {
+        console.error(`[cron] Error recordatorio pago único ${q.id}:`, err.message)
+      }
+    }
+
+    // Presupuestos con cuotas
     const installments = await prisma.installment.findMany({
       where: {
         status:         'pending',
