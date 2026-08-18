@@ -352,8 +352,9 @@ model Installment {
   number    Int
   amount    Float
   dueDate   DateTime
-  status    String   @default("pending")
-  paidAt    DateTime?
+  status          String    @default("pending")
+  paidAt          DateTime?
+  reminderSentAt  DateTime?
 
   invoiceId      String?
   invoice        Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)

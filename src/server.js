@@ -5,7 +5,7 @@ import prisma from './config/db.js'
 import { checkTimeAlerts } from './services/notifications.service.js'
 import { getMonthlyReportData } from './services/report.service.js'
 import { buildMonthlyReportPdf } from './utils/buildReportPdf.js'
-import { sendMonthlyReportEmail, sendQuoteReminderEmail } from './services/email.service.js'
+import { sendMonthlyReportEmail, sendQuoteReminderEmail, sendPaymentReminderEmail } from './services/email.service.js'
 
 dotenv.config({ override: true })
 
@@ -113,6 +113,69 @@ async function runQuoteReminders() {
   }
 }
 
+async function runPaymentReminders() {
+  try {
+    const todayStart = new Date()
+    todayStart.setUTCHours(0, 0, 0, 0)
+    const todayEnd = new Date()
+    todayEnd.setUTCHours(23, 59, 59, 999)
+
+    const installments = await prisma.installment.findMany({
+      where: {
+        status:         'pending',
+        reminderSentAt: null,
+        dueDate:        { gte: todayStart, lte: todayEnd },
+        quoteId:        { not: null },
+        quote: {
+          status: { in: ['signed', 'approved'] },
+        },
+      },
+      include: {
+        quote: {
+          select: {
+            id: true, number: true, title: true, currency: true,
+            potentialClientEmail: true, potentialClientName: true,
+            client: { select: { email: true, name: true } },
+            organization: { select: { name: true, logo: true } },
+            installments: { select: { id: true } },
+          }
+        }
+      }
+    })
+
+    for (const inst of installments) {
+      const q    = inst.quote
+      const to   = q.client?.email || q.potentialClientEmail
+      const name = q.client?.name  || q.potentialClientName || 'Cliente'
+      if (!to) continue
+
+      try {
+        await sendPaymentReminderEmail({
+          to, clientName: name,
+          orgName:            q.organization.name,
+          orgLogo:            q.organization.logo,
+          quoteId:            q.id,
+          quoteNumber:        q.number,
+          quoteTitle:         q.title,
+          installmentNumber:  inst.number,
+          installmentTotal:   q.installments.length,
+          amount:             inst.amount,
+          currency:           q.currency,
+        })
+        await prisma.installment.update({
+          where: { id: inst.id },
+          data:  { reminderSentAt: new Date() },
+        })
+        console.log(`[cron] Recordatorio de pago → ${to} | Cuota ${inst.number} | Presupuesto #${q.number}`)
+      } catch (err) {
+        console.error(`[cron] Error recordatorio pago cuota ${inst.id}:`, err.message)
+      }
+    }
+  } catch (err) {
+    console.error('[cron] Error en recordatorios de pago:', err.message)
+  }
+}
+
 prisma.$connect()
   .then(() => {
     console.log('PostgreSQL conectado')
@@ -120,9 +183,11 @@ prisma.$connect()
       console.log(`Servidor corriendo en puerto ${PORT}`)
       runTimeAlerts()
       runQuoteReminders()
-      setInterval(runTimeAlerts,     6  * 60 * 60 * 1000) // cada 6 horas
-      setInterval(runMonthlyReports,      60 * 60 * 1000) // cada hora
-      setInterval(runQuoteReminders, 12  * 60 * 60 * 1000) // cada 12 horas
+      runPaymentReminders()
+      setInterval(runTimeAlerts,      6  * 60 * 60 * 1000) // cada 6 horas
+      setInterval(runMonthlyReports,       60 * 60 * 1000) // cada hora
+      setInterval(runQuoteReminders,  12  * 60 * 60 * 1000) // cada 12 horas
+      setInterval(runPaymentReminders,     60 * 60 * 1000) // cada hora
     })
   })
   .catch((error) => {
