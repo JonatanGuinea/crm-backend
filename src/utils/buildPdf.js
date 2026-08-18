@@ -500,11 +500,11 @@ export function buildPdf(type, data) {
   // ─────────────────────────────────────────────────────────────────────────
   doc.rect(0, pageH - 40, pageW, 0.5).fillColor(C.zinc200).fill()
 
-  // Izquierda: "Presupuesto generado por sofiapp.dev"
+  // Izquierda: "Presupuesto generado por danteup.com"
   doc.font('Helvetica').fontSize(7.5).fillColor(C.zinc400)
     .text('Presupuesto generado por ', pad, pageH - 24, { continued: true })
   doc.font('Helvetica-Bold').fontSize(7.5).fillColor(C.zinc500)
-    .text('sofiapp.dev')
+    .text('danteup.com')
 
   // Derecha: docLabel + número
   doc.font('Helvetica').fontSize(7.5).fillColor(C.zinc400)

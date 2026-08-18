@@ -110,7 +110,7 @@ function buildPasswordResetEmailHtml({ name, resetUrl }) {
           <tr>
             <td style="padding:18px 32px;text-align:center;">
               <p style="margin:0;color:#a1a1aa;font-size:11px;">
-                Enviado por <a href="https://sofiapp.dev" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
+                Enviado por <a href="https://danteup.com" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
               </p>
             </td>
           </tr>
@@ -233,7 +233,7 @@ function buildPasswordChangeEmailHtml({ name, confirmUrl }) {
                 Este enlace expira en 30 minutos. Si no solicitaste este cambio, ignorá este email.
               </p>
               <p style="margin:0;color:#a1a1aa;font-size:11px;">
-                Enviado por <a href="https://sofiapp.dev" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
+                Enviado por <a href="https://danteup.com" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
               </p>
             </td>
           </tr>
@@ -376,7 +376,7 @@ function buildVerificationEmailHtml({ name, verifyUrl }) {
                 Si no creaste esta cuenta, ignorá este email.
               </p>
               <p style="margin:0;color:#a1a1aa;font-size:11px;">
-                Enviado por <a href="https://sofiapp.dev" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
+                Enviado por <a href="https://danteup.com" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
               </p>
             </td>
           </tr>
@@ -516,7 +516,7 @@ function buildInvitationEmailHtml({ inviteeName, orgName, role, inviteLink, isNe
           <tr>
             <td style="padding:18px 32px;text-align:center;">
               <p style="margin:0;color:#a1a1aa;font-size:11px;">
-                Enviado por <a href="https://sofiapp.dev" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
+                Enviado por <a href="https://danteup.com" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
               </p>
             </td>
           </tr>
@@ -731,7 +731,7 @@ function buildReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTit
             <td style="padding:18px 32px;text-align:center;">
               <p style="margin:0;color:#a1a1aa;font-size:11px;">
                 Enviado por
-                <a href="https://sofiapp.dev" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
+                <a href="https://danteup.com" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
               </p>
             </td>
           </tr>
@@ -878,7 +878,7 @@ function buildPaymentReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, q
           <tr>
             <td style="padding:18px 32px;text-align:center;">
               <p style="margin:0;color:#a1a1aa;font-size:11px;">
-                Enviado por <a href="https://sofiapp.dev" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
+                Enviado por <a href="https://danteup.com" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
               </p>
             </td>
           </tr>
@@ -979,7 +979,7 @@ function buildEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, tota
           <tr>
             <td style="border-top:1px solid #f4f4f5;padding:18px 36px;text-align:center;">
               <p style="margin:0;color:#a1a1aa;font-size:11px;">
-                Generado por <a href="https://sofiapp.dev" target="_blank" style="color:#71717a;font-weight:600;text-decoration:none;">sofiapp.dev</a>
+                Generado por <a href="https://danteup.com" target="_blank" style="color:#71717a;font-weight:600;text-decoration:none;">danteup.com</a>
               </p>
             </td>
           </tr>
