@@ -139,27 +139,9 @@ export async function annulMovement(orgId, userId, movementId, reason) {
 
   const account = await prisma.cashAccount.findFirst({ where: { id: movement.accountId, orgId } })
   const delta   = (movement.type === 'income' || movement.type === 'adjustment') ? -Number(movement.amount) : Number(movement.amount)
-  const before  = Number(account.currentBalance)
-  const after   = before + delta
+  const after   = Number(account.currentBalance) + delta
 
   await prisma.$transaction(async (tx) => {
-    // Movimiento inverso
-    await tx.cashMovement.create({
-      data: {
-        orgId, accountId: movement.accountId,
-        type:     movement.type === 'income' ? 'expense' : 'income',
-        concept:  movement.concept,
-        categoryId: movement.categoryId,
-        amount:   Number(movement.amount),
-        balanceBefore: before, balanceAfter: after,
-        paymentMethod: movement.paymentMethod,
-        status: 'confirmed',
-        date:   new Date(),
-        description: `Anulación: ${movement.description || movement.concept}`,
-        annulledById: movement.id,
-        createdById: userId,
-      },
-    })
     await tx.cashMovement.update({ where: { id: movementId }, data: { status: 'annulled', annulmentReason: reason || null } })
     await tx.cashAccount.update({ where: { id: movement.accountId }, data: { currentBalance: after } })
   })
@@ -171,38 +153,9 @@ async function annulTransfer(orgId, userId, pairId, reason) {
   const inn = pair.find(m => m.type === 'transfer_in')
   if (!out || !inn) throw new Error('Par de transferencia incompleto')
 
-  const [accFrom, accTo] = await Promise.all([
-    prisma.cashAccount.findFirst({ where: { id: out.accountId } }),
-    prisma.cashAccount.findFirst({ where: { id: inn.accountId } }),
-  ])
-  const qty       = Number(out.amount)
-  const newPairId = crypto.randomUUID()
+  const qty = Number(out.amount)
 
   await prisma.$transaction(async (tx) => {
-    await tx.cashMovement.create({
-      data: {
-        orgId, accountId: out.accountId, type: 'transfer_in',
-        concept: 'transfer', amount: qty,
-        balanceBefore: Number(accFrom.currentBalance),
-        balanceAfter:  Number(accFrom.currentBalance) + qty,
-        transferPairId: newPairId, paymentMethod: 'bank_transfer',
-        status: 'confirmed', date: new Date(),
-        description: `Anulación transferencia`,
-        annulledById: out.id, createdById: userId,
-      },
-    })
-    await tx.cashMovement.create({
-      data: {
-        orgId, accountId: inn.accountId, type: 'transfer_out',
-        concept: 'transfer', amount: qty,
-        balanceBefore: Number(accTo.currentBalance),
-        balanceAfter:  Number(accTo.currentBalance) - qty,
-        transferPairId: newPairId, paymentMethod: 'bank_transfer',
-        status: 'confirmed', date: new Date(),
-        description: `Anulación transferencia`,
-        annulledById: inn.id, createdById: userId,
-      },
-    })
     await tx.cashMovement.updateMany({ where: { transferPairId: pairId }, data: { status: 'annulled', annulmentReason: reason || null } })
     await tx.cashAccount.update({ where: { id: out.accountId }, data: { currentBalance: { increment: qty } } })
     await tx.cashAccount.update({ where: { id: inn.accountId }, data: { currentBalance: { decrement: qty } } })
