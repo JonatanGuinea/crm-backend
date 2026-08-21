@@ -134,7 +134,7 @@ export async function annulMovement(orgId, userId, movementId, reason) {
 
   // Si es parte de una transferencia, anular el par
   if (movement.transferPairId) {
-    return annulTransfer(orgId, userId, movement.transferPairId, reason)
+    return annulTransfer(orgId, movement.transferPairId, reason)
   }
 
   const account = await prisma.cashAccount.findFirst({ where: { id: movement.accountId, orgId } })
@@ -147,7 +147,7 @@ export async function annulMovement(orgId, userId, movementId, reason) {
   })
 }
 
-async function annulTransfer(orgId, userId, pairId, reason) {
+async function annulTransfer(orgId, pairId, reason) {
   const pair = await prisma.cashMovement.findMany({ where: { transferPairId: pairId, orgId } })
   const out = pair.find(m => m.type === 'transfer_out')
   const inn = pair.find(m => m.type === 'transfer_in')

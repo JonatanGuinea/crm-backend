@@ -7,12 +7,14 @@ import {
   stockOut,
   stockAdjustment,
   getMovements,
+  getStockHistory,
   getStockDashboard,
 } from '../controllers/stock.controller.js'
 
 const router = Router()
 
 router.get('/dashboard',   auth, requireMembership, getStockDashboard)
+router.get('/history',     auth, requireMembership, getStockHistory)
 router.get('/movements',   auth, requireMembership, getMovements)
 router.post('/in',         auth, requireMembership, stockIn)
 router.post('/out',        auth, requireMembership, stockOut)

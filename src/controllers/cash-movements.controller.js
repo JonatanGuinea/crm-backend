@@ -140,6 +140,17 @@ export async function annulMovementHandler(req, res) {
   }
 }
 
+export async function getMovementsHistory(req, res) {
+  const orgId = req.user.organizationId
+  const history = await prisma.cashMovement.findMany({
+    where: { orgId },
+    include: INCLUDE_MOVEMENT,
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+  })
+  success(res, 200, history)
+}
+
 export async function deleteMovement(req, res) {
   const orgId = req.user.organizationId
   const { id } = req.params

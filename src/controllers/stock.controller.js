@@ -121,6 +121,23 @@ export async function getMovements(req, res) {
   success(res, 200, { movements, total, page: Number(page), limit: Number(limit) })
 }
 
+// ── GET /stock/history ────────────────────────────────────────────────────────
+export async function getStockHistory(req, res) {
+  const orgId = req.user.organizationId
+  const history = await prisma.stockMovement.findMany({
+    where: { orgId },
+    include: {
+      product:   { select: { id: true, name: true, sku: true, unit: true } },
+      createdBy: { select: { id: true, name: true } },
+      client:    { select: { id: true, name: true } },
+      project:   { select: { id: true, title: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+  })
+  success(res, 200, history)
+}
+
 // ── GET /stock/dashboard ──────────────────────────────────────────────────────
 export async function getStockDashboard(req, res) {
   const orgId = req.user.organizationId
