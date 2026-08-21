@@ -39,7 +39,7 @@ export async function getFinancesDashboard(req, res) {
     prisma.cashMovement.findMany({
       where: {
         ...movementBase,
-        status: { not: 'annulled' },
+        status: 'confirmed',
         date: {
           gte: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0),
           lte: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999),
