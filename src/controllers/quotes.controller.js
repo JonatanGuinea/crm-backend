@@ -37,6 +37,7 @@ export const createQuote = async (req, res) => {
     const orgId = req.user.organizationId
     const userId = req.user.id
     const {
+      number: customNumber,
       title, clientId, projectId, notes, validUntil, deliveryDate, paymentDueDate, taxRate = 0, currency = 'USD', items,
       potentialClientName, potentialClientEmail, potentialClientPhone, potentialClientCompany, potentialProjectTitle,
       discountType = null, discountValue = 0
@@ -65,12 +66,21 @@ export const createQuote = async (req, res) => {
       }
     }
 
-    const last = await prisma.quote.findFirst({
-      where: { organizationId: orgId },
-      orderBy: { number: 'desc' },
-      select: { number: true }
-    })
-    const number = (last?.number ?? 0) + 1
+    let number
+    if (customNumber !== undefined) {
+      const parsed = parseInt(customNumber)
+      if (!Number.isInteger(parsed) || parsed < 1) return fail(res, 400, 'El número de presupuesto debe ser un entero positivo')
+      const existing = await prisma.quote.findFirst({ where: { organizationId: orgId, number: parsed }, select: { id: true } })
+      if (existing) return fail(res, 409, `Ya existe un presupuesto con el número ${parsed}`)
+      number = parsed
+    } else {
+      const last = await prisma.quote.findFirst({
+        where: { organizationId: orgId },
+        orderBy: { number: 'desc' },
+        select: { number: true }
+      })
+      number = (last?.number ?? 0) + 1
+    }
 
     const { computed, subtotal, total } = computeItems(items, taxRate, discountType, discountValue)
 
@@ -116,6 +126,20 @@ export const createQuote = async (req, res) => {
     })
 
     return success(res, 201, quote)
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
+
+export const getNextQuoteNumber = async (req, res) => {
+  try {
+    const orgId = req.user.organizationId
+    const last = await prisma.quote.findFirst({
+      where: { organizationId: orgId },
+      orderBy: { number: 'desc' },
+      select: { number: true }
+    })
+    return success(res, 200, { nextNumber: (last?.number ?? 0) + 1 })
   } catch (error) {
     return fail(res, 500, error.message)
   }
@@ -185,7 +209,15 @@ export const updateQuote = async (req, res) => {
     if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
 
     const updates = {}
-    const { status, title, notes, validUntil, deliveryDate, paymentDueDate, taxRate, currency, items, discountType, discountValue } = req.body
+    const { number: customNumber, status, title, notes, validUntil, deliveryDate, paymentDueDate, taxRate, currency, items, discountType, discountValue } = req.body
+
+    if (customNumber !== undefined) {
+      const parsed = parseInt(customNumber)
+      if (!Number.isInteger(parsed) || parsed < 1) return fail(res, 400, 'El número de presupuesto debe ser un entero positivo')
+      const existing = await prisma.quote.findFirst({ where: { organizationId: orgId, number: parsed, NOT: { id } }, select: { id: true } })
+      if (existing) return fail(res, 409, `Ya existe un presupuesto con el número ${parsed}`)
+      updates.number = parsed
+    }
 
     if (quote.status === 'approved' || quote.status === 'signed') {
       const hasContentChange = [title, notes, validUntil, deliveryDate, taxRate, currency, items, discountType, discountValue].some(v => v !== undefined)

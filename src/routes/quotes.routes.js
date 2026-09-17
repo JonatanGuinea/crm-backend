@@ -9,6 +9,7 @@ import {
   getQuotes,
   getQuoteById,
   getQuotesDashboard,
+  getNextQuoteNumber,
   updateQuote,
   deleteQuote,
   sendQuote,
@@ -18,10 +19,11 @@ import { downloadQuotePdf } from '../controllers/pdf.controller.js'
 
 const router = Router()
 
-router.post(   '/',          auth, requireMembership, requireRole('owner', 'admin'), createQuote)
-router.get(    '/',          auth, requireMembership, requireRole('owner', 'admin'), getQuotes)
-router.get(    '/dashboard', auth, requireMembership, requireRole('owner', 'admin'), getQuotesDashboard)
-router.get(    '/history',   auth, requireMembership, requireRole('owner', 'admin'), getAllQuotesHistory)
+router.post(   '/',             auth, requireMembership, requireRole('owner', 'admin'), createQuote)
+router.get(    '/',             auth, requireMembership, requireRole('owner', 'admin'), getQuotes)
+router.get(    '/dashboard',    auth, requireMembership, requireRole('owner', 'admin'), getQuotesDashboard)
+router.get(    '/history',      auth, requireMembership, requireRole('owner', 'admin'), getAllQuotesHistory)
+router.get(    '/next-number',  auth, requireMembership, requireRole('owner', 'admin'), getNextQuoteNumber)
 router.get(    '/:id',       auth, requireMembership, requireRole('owner', 'admin'), getQuoteById)
 router.put(    '/:id',       auth, requireMembership, requireRole('owner', 'admin'), updateQuote)
 router.delete( '/:id',       auth, requireMembership, requireRole('owner'),          deleteQuote)
