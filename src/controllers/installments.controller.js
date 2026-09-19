@@ -112,6 +112,35 @@ export const payInstallment = async (req, res) => {
       }
     }
 
+    if (installment.quoteId) {
+      const movement = await prisma.cashMovement.findFirst({
+        where: {
+          quoteId: installment.quoteId,
+          concept: 'quote_installment',
+          status: 'pending',
+          description: { contains: `Cuota ${installment.number} —` },
+        },
+      })
+      if (movement) {
+        const account = await prisma.cashAccount.findFirst({ where: { id: movement.accountId, orgId } })
+        if (account) {
+          const qty = Number(movement.amount)
+          const before = Number(account.currentBalance)
+          const after = before + qty
+          await prisma.$transaction(async (tx) => {
+            await tx.cashMovement.update({
+              where: { id: movement.id },
+              data: { status: 'confirmed', balanceBefore: before, balanceAfter: after, date: new Date() },
+            })
+            await tx.cashAccount.update({
+              where: { id: account.id },
+              data: { currentBalance: after },
+            })
+          })
+        }
+      }
+    }
+
     const updated = await prisma.installment.findMany({
       where: installment.invoiceId
         ? { invoiceId: installment.invoiceId }
