@@ -5,12 +5,17 @@ export async function getFinancesDashboard(req, res) {
   const orgId     = req.user.organizationId
   const accountId = req.query.accountId || null
 
-  const now   = new Date()
-  // Usar fecha local (Argentina UTC-3), no UTC
-  const year  = parseInt(req.query.year)  || now.getFullYear()
-  const month = parseInt(req.query.month) || (now.getMonth() + 1)
-  const start = new Date(year, month - 1, 1, 0, 0, 0, 0)
-  const end   = new Date(year, month, 0, 23, 59, 59, 999)
+  const now = new Date()
+  // Fecha y hora actuales en Argentina (UTC-3, sin DST)
+  const nowArg    = new Date(now.getTime() - 3 * 60 * 60 * 1000)
+  const year  = parseInt(req.query.year)  || nowArg.getUTCFullYear()
+  const month = parseInt(req.query.month) || (nowArg.getUTCMonth() + 1)
+  const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0))
+  const end   = new Date(Date.UTC(year, month,     0, 23, 59, 59, 999))
+  // Rango del día de hoy en Argentina → comparado contra dates almacenadas en UTC midnight
+  const todayStart    = new Date(Date.UTC(nowArg.getUTCFullYear(), nowArg.getUTCMonth(), nowArg.getUTCDate(),  0,  0,  0,   0))
+  const todayEnd      = new Date(Date.UTC(nowArg.getUTCFullYear(), nowArg.getUTCMonth(), nowArg.getUTCDate(), 23, 59, 59, 999))
+  const endOfMonthArg = new Date(Date.UTC(nowArg.getUTCFullYear(), nowArg.getUTCMonth() + 1, 0, 23, 59, 59, 999))
 
   const movementBase = { orgId, ...(accountId ? { accountId } : {}) }
 
@@ -40,10 +45,7 @@ export async function getFinancesDashboard(req, res) {
       where: {
         ...movementBase,
         status: 'confirmed',
-        date: {
-          gte: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0),
-          lte: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999),
-        },
+        date: { gte: todayStart, lte: todayEnd },
       },
       include: {
         account:  { select: { id: true, name: true } },
@@ -74,7 +76,7 @@ export async function getFinancesDashboard(req, res) {
         ...movementBase,
         status: 'pending',
         type: { in: ['income', 'expense'] },
-        date: { lte: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999) },
+        date: { lte: endOfMonthArg },
       },
       _sum: { amount: true },
     }),
@@ -119,7 +121,7 @@ export async function getFinancesDashboard(req, res) {
         ...movementBase,
         status: 'pending',
         type: { in: ['income', 'expense'] },
-        date: { lte: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999) },
+        date: { lte: endOfMonthArg },
       },
       include: {
         account:  { select: { id: true, name: true } },
