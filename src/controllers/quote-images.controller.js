@@ -61,16 +61,26 @@ export const updateQuoteImage = async (req, res) => {
     const image = await prisma.quoteImage.findFirst({
       where: { id: imageId, organizationId: orgId }
     })
-    if (!image) return fail(res, 404, 'Imagen no encontrada')
+    if (!image) {
+      if (req.file) try { fs.unlinkSync(path.join(UPLOADS_DIR, req.file.filename)) } catch {}
+      return fail(res, 404, 'Imagen no encontrada')
+    }
 
     const { title, description } = req.body
     const updates = {}
     if (title       !== undefined) updates.title       = title?.trim()       || null
     if (description !== undefined) updates.description = description?.trim() || null
 
+    if (req.file) {
+      try { fs.unlinkSync(path.join(UPLOADS_DIR, image.storedName)) } catch {}
+      updates.storedName = req.file.filename
+      updates.url        = `/uploads/${req.file.filename}`
+    }
+
     const updated = await prisma.quoteImage.update({ where: { id: imageId }, data: updates })
     return success(res, 200, updated)
   } catch (error) {
+    if (req.file) try { fs.unlinkSync(path.join(UPLOADS_DIR, req.file.filename)) } catch {}
     return fail(res, 500, error.message)
   }
 }

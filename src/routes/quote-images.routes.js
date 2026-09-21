@@ -21,6 +21,7 @@ router.post(
 router.patch(
   '/:imageId',
   auth, requireMembership, requireRole('owner', 'admin'),
+  upload.single('file'),
   updateQuoteImage
 )
 
