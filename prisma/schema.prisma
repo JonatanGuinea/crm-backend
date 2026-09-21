@@ -87,6 +87,7 @@ model Organization {
   financialCategories FinancialCategory[]
   cashAccounts        CashAccount[]
   cashMovements       CashMovement[]
+  quoteImages         QuoteImage[]
 
   @@index([name])
 }
@@ -273,6 +274,7 @@ model Quote {
   clientSignedAt    DateTime?
 
   items          QuoteItem[]
+  images         QuoteImage[]
   invoices       Invoice[]
   installments   Installment[]
   history        QuoteHistory[]
@@ -299,6 +301,23 @@ model QuoteItem {
 
   quoteId String
   quote   Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+}
+
+model QuoteImage {
+  id             String   @id @default(cuid())
+  quoteId        String
+  quote          Quote        @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  storedName     String
+  url            String
+  title          String?
+  description    String?
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  @@index([quoteId, order])
+  @@index([organizationId])
 }
 
 model Invoice {

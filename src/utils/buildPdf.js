@@ -407,6 +407,61 @@ export function buildPdf(type, data) {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
+  // IMÁGENES — grilla de 2 columnas: thumbnail + título + descripción
+  // ─────────────────────────────────────────────────────────────────────────
+  const quoteImages = (data.images || []).filter(img => {
+    const p = join(UPLOADS_DIR, img.storedName)
+    const ext = (img.storedName || '').split('.').pop()?.toLowerCase()
+    return ['png', 'jpg', 'jpeg', 'webp'].includes(ext) && existsSync(p)
+  })
+
+  if (quoteImages.length > 0) {
+    y = sectionLabel('Imágenes', y)
+    y += 10
+
+    const imgW    = tableW * 0.95
+    const imgX    = pad + (tableW - imgW) / 2
+    const textPad = 10
+
+    for (const img of quoteImages) {
+      const imgPath = join(UPLOADS_DIR, img.storedName)
+
+      // Cargar imagen para obtener dimensiones reales antes de dibujar
+      let pdfImg, imgH
+      try {
+        pdfImg = doc.openImage(imgPath)
+        imgH   = Math.round(imgW * pdfImg.height / pdfImg.width)
+      } catch (_) {
+        continue
+      }
+
+      const textH = (img.title ? 18 : 0) + (img.description ? 28 : 0) + 20
+      if (y + imgH + textH > pageH - 50) {
+        doc.addPage()
+        y = 30
+      }
+
+      doc.image(pdfImg, imgX, y, { width: imgW })
+      y += imgH + textPad
+
+      if (img.title) {
+        doc.font('Helvetica-Bold').fontSize(10).fillColor(C.zinc800)
+          .text(img.title, pad, y, { width: tableW })
+        y = doc.y + 4
+      }
+      if (img.description) {
+        doc.font('Helvetica').fontSize(9).fillColor(C.zinc500)
+          .text(img.description, pad, y, { width: tableW, lineGap: 2 })
+        y = doc.y + 4
+      }
+
+      y += 16
+    }
+
+    y += 4
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
   // FIRMAS — dos columnas: cliente (izq) | organización (der)
   // ─────────────────────────────────────────────────────────────────────────
   const hasClientSig = !!data.clientSignature

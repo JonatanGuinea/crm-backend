@@ -11,6 +11,7 @@ export const downloadQuotePdf = async (req, res) => {
       where: { id, organizationId: orgId },
       include: {
         items: true,
+        images: { orderBy: { order: 'asc' } },
         installments: { orderBy: { number: 'asc' } },
         client: { select: { id: true, name: true, email: true, phone: true, company: true, address: true, cuit: true, website: true } },
         project: { select: { id: true, title: true } },

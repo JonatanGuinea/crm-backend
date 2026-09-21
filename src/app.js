@@ -27,6 +27,7 @@ import financialCategoriesRoutes from './routes/financial-categories.routes.js'
 import cashAccountsRoutes from './routes/cash-accounts.routes.js'
 import cashMovementsRoutes from './routes/cash-movements.routes.js'
 import financesRoutes from './routes/finances.routes.js'
+import quoteImagesRoutes from './routes/quote-images.routes.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -62,5 +63,6 @@ app.use('/api/financial-categories', financialCategoriesRoutes)
 app.use('/api/cash-accounts', cashAccountsRoutes)
 app.use('/api/cash-movements', cashMovementsRoutes)
 app.use('/api/finances', financesRoutes)
+app.use('/api/quote-images', quoteImagesRoutes)
 
 export default app

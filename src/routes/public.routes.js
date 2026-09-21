@@ -9,6 +9,7 @@ const router = Router()
 
 const quotePublicInclude = {
   items: true,
+  images: { orderBy: { order: 'asc' } },
   installments: { orderBy: { number: 'asc' } },
   client: { select: { id: true, name: true, email: true, phone: true, company: true, address: true, city: true, province: true, postalCode: true, cuit: true, website: true } },
   project: { select: { id: true, title: true } },
