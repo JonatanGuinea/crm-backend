@@ -505,13 +505,15 @@ export function buildPdf(type, data) {
 
   const footerY = pageH - footerH + (footerH - 9) / 2
 
-  doc.font('Helvetica').fontSize(9).fillColor('rgba(255,255,255,0.6)')
+  doc.fillOpacity(0.6).font('Helvetica').fontSize(9).fillColor(C.white)
     .text('Presupuesto generado por ', pad, footerY, { continued: true })
-  doc.font('Helvetica-Bold').fontSize(9).fillColor('rgba(255,255,255,0.85)')
+  doc.fillOpacity(0.9).font('Helvetica-Bold').fontSize(9).fillColor(C.white)
     .text('danteup.com')
 
-  doc.font('Helvetica').fontSize(9).fillColor('rgba(255,255,255,0.6)')
+  doc.fillOpacity(0.6).font('Helvetica').fontSize(9).fillColor(C.white)
     .text(`${docLabel} #${numStr}`, pad, footerY, { width: tableW, align: 'right' })
+
+  doc.fillOpacity(1)
 
   doc.end()
   return doc
