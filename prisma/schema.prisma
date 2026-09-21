@@ -62,6 +62,8 @@ model Organization {
   postalCode          String?
   signature           String?
   signatureOwnerName  String?
+  brandPrimary        String?
+  brandSecondary      String?
   defaultCurrency      String  @default("USD")
   defaultCashAccountId String?
   ownerId         String

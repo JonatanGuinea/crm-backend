@@ -66,6 +66,10 @@ export function buildPdf(type, data) {
   const org    = data.organization || {}
   const numStr = String(data.number).padStart(3, '0')
 
+  // Colores de marca (fallback a la paleta slate predeterminada)
+  const brandP = org.brandPrimary   || C.slate900
+  const brandS = org.brandSecondary || C.slate700
+
   const validDays = (isQuote && data.validUntil && data.createdAt)
     ? Math.round((new Date(data.validUntil) - new Date(data.createdAt)) / (1000 * 60 * 60 * 24))
     : null
@@ -80,7 +84,7 @@ export function buildPdf(type, data) {
   const headerH = 140
 
   const hg = doc.linearGradient(0, 0, pageW, headerH)
-  hg.stop(0, C.slate900).stop(0.5, C.slate800).stop(1, C.slate700)
+  hg.stop(0, brandP).stop(1, brandS)
   doc.rect(0, 0, pageW, headerH).fill(hg)
 
   const leftMaxW = pageW - pad * 2 - 190
@@ -297,7 +301,7 @@ export function buildPdf(type, data) {
   // Banda total
   const tbH = 50
   const tg  = doc.linearGradient(totX, y, totX + totBlockW, y)
-  tg.stop(0, C.slate900).stop(1, C.slate700)
+  tg.stop(0, brandP).stop(1, brandS)
   doc.roundedRect(totX, y, totBlockW, tbH, 8).fill(tg)
 
   doc.font('Helvetica-Bold').fontSize(8).fillColor(C.slate400)
@@ -492,17 +496,22 @@ export function buildPdf(type, data) {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // FOOTER
+  // FOOTER — banda de color de marca
   // ─────────────────────────────────────────────────────────────────────────
-  doc.rect(0, pageH - 40, pageW, 0.5).fillColor(C.zinc200).fill()
+  const footerH = 32
+  const fg = doc.linearGradient(0, pageH - footerH, pageW, pageH - footerH)
+  fg.stop(0, brandP).stop(1, brandS)
+  doc.rect(0, pageH - footerH, pageW, footerH).fill(fg)
 
-  doc.font('Helvetica').fontSize(9).fillColor(C.zinc400)
-    .text('Presupuesto generado por ', pad, pageH - 24, { continued: true })
-  doc.font('Helvetica-Bold').fontSize(9).fillColor(C.zinc500)
+  const footerY = pageH - footerH + (footerH - 9) / 2
+
+  doc.font('Helvetica').fontSize(9).fillColor('rgba(255,255,255,0.6)')
+    .text('Presupuesto generado por ', pad, footerY, { continued: true })
+  doc.font('Helvetica-Bold').fontSize(9).fillColor('rgba(255,255,255,0.85)')
     .text('danteup.com')
 
-  doc.font('Helvetica').fontSize(9).fillColor(C.zinc400)
-    .text(`${docLabel} #${numStr}`, pad, pageH - 24, { width: tableW, align: 'right' })
+  doc.font('Helvetica').fontSize(9).fillColor('rgba(255,255,255,0.6)')
+    .text(`${docLabel} #${numStr}`, pad, footerY, { width: tableW, align: 'right' })
 
   doc.end()
   return doc

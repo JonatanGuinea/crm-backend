@@ -91,7 +91,7 @@ export const getOrganizations = async (req, res) => {
 
     const memberships = await prisma.organizationMembership.findMany({
       where: { userId, status: 'active' },
-      include: { organization: { select: { id: true, name: true, plan: true, cuit: true, email: true, website: true, phone: true, address: true, city: true, province: true, postalCode: true, logo: true, defaultCurrency: true, defaultCashAccountId: true, signature: true, signatureOwnerName: true } } }
+      include: { organization: { select: { id: true, name: true, plan: true, cuit: true, email: true, website: true, phone: true, address: true, city: true, province: true, postalCode: true, logo: true, defaultCurrency: true, defaultCashAccountId: true, signature: true, signatureOwnerName: true, brandPrimary: true, brandSecondary: true } } }
     })
 
     if (memberships.length === 0) {
@@ -115,6 +115,8 @@ export const getOrganizations = async (req, res) => {
       defaultCashAccountId: m.organization.defaultCashAccountId,
       signature:            m.organization.signature,
       signatureOwnerName:   m.organization.signatureOwnerName,
+      brandPrimary:         m.organization.brandPrimary,
+      brandSecondary:       m.organization.brandSecondary,
       role:                 m.role
     }))
 
@@ -144,7 +146,7 @@ export const getOrganizationBySlug = async (req, res) => {
 export const updateOrganization = async (req, res) => {
   try {
     const { id } = req.params
-    const { name, cuit, email, website, phone, address, city, province, postalCode, defaultCurrency, signature, signatureOwnerName } = req.body
+    const { name, cuit, email, website, phone, address, city, province, postalCode, defaultCurrency, signature, signatureOwnerName, brandPrimary, brandSecondary } = req.body
 
     if (!name?.trim()) {
       return fail(res, 400, 'El nombre es requerido')
@@ -161,6 +163,8 @@ export const updateOrganization = async (req, res) => {
       province:            province?.trim()           || null,
       postalCode:          postalCode?.trim()         || null,
       signatureOwnerName:  signatureOwnerName?.trim() || null,
+      brandPrimary:        brandPrimary  || null,
+      brandSecondary:      brandSecondary || null,
       defaultCurrency:     ['USD', 'ARS'].includes(defaultCurrency) ? defaultCurrency : undefined,
       ...(signature !== undefined && { signature: signature || null }),
     }
@@ -180,7 +184,7 @@ export const updateOrganization = async (req, res) => {
     const organization = await prisma.organization.update({
       where: { id },
       data: updates,
-      select: { id: true, name: true, slug: true, plan: true, cuit: true, email: true, website: true, phone: true, address: true, city: true, province: true, postalCode: true, logo: true, defaultCurrency: true, updatedAt: true }
+      select: { id: true, name: true, slug: true, plan: true, cuit: true, email: true, website: true, phone: true, address: true, city: true, province: true, postalCode: true, logo: true, defaultCurrency: true, brandPrimary: true, brandSecondary: true, updatedAt: true }
     })
 
     return success(res, 200, organization)

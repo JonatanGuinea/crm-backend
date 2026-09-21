@@ -13,7 +13,7 @@ const quotePublicInclude = {
   installments: { orderBy: { number: 'asc' } },
   client: { select: { id: true, name: true, email: true, phone: true, company: true, address: true, city: true, province: true, postalCode: true, cuit: true, website: true } },
   project: { select: { id: true, title: true } },
-  organization: { select: { id: true, name: true, cuit: true, email: true, website: true, phone: true, address: true, city: true, province: true, postalCode: true, logo: true, signature: true, signatureOwnerName: true } }
+  organization: { select: { id: true, name: true, cuit: true, email: true, website: true, phone: true, address: true, city: true, province: true, postalCode: true, logo: true, signature: true, signatureOwnerName: true, brandPrimary: true, brandSecondary: true } }
 }
 
 router.get('/quotes/:id', async (req, res) => {
