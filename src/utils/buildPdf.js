@@ -23,16 +23,15 @@ const C = {
   zinc500: '#71717a',
   zinc400: '#a1a1aa',
   // Fondos y bordes
-  zinc50:  '#fafafa',   // alt rows, section label bg
-  zinc100: '#f4f4f5',   // divide-y, row separators
-  zinc200: '#e4e4e7',   // borders, section rule line
+  zinc50:  '#fafafa',
+  zinc100: '#f4f4f5',
+  zinc200: '#e4e4e7',
   white:   '#ffffff',
-  // Badges de estado de cuotas (modo claro)
-  pendingBg:   '#f4f4f5', pendingText: '#71717a',  // bg-zinc-100 text-zinc-500
-  paidBg:      '#d1fae5', paidText:    '#047857',  // bg-emerald-100 text-emerald-700
-  overdueBg:   '#fee2e2', overdueText: '#dc2626',  // bg-red-100 text-red-600
+  // Badges de estado de cuotas
+  pendingBg:   '#f4f4f5', pendingText: '#71717a',
+  paidBg:      '#d1fae5', paidText:    '#047857',
+  overdueBg:   '#fee2e2', overdueText: '#dc2626',
 }
-
 
 const fmt = (n, cur = '') => {
   const sym = cur === 'USD' ? 'US$' : '$'
@@ -47,32 +46,20 @@ export function buildPdf(type, data) {
   const docLabel = isQuote ? 'Presupuesto' : 'Factura'
   const pageW  = doc.page.width   // 595
   const pageH  = doc.page.height  // 842
-  const pad    = 52               // margen horizontal (≈ px-7 escalado)
+  const pad    = 52
   const tableW = pageW - pad * 2  // 491
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  // SectionLabel: fondo zinc-50, borde superior zinc-100, texto + línea horizontal
-  // Retorna la nueva posición Y
   function sectionLabel(label, y) {
-    const h = 24
+    const h = 28
     doc.rect(0, y, pageW, h).fillColor(C.zinc50).fill()
     doc.rect(0, y, pageW, 0.5).fillColor(C.zinc100).fill()
-    doc.font('Helvetica-Bold').fontSize(7).fillColor(C.zinc400)
-      .text(label.toUpperCase(), pad, y + 9, { characterSpacing: 1.5 })
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(C.zinc400)
+      .text(label.toUpperCase(), pad, y + 10, { characterSpacing: 1.5 })
     const endX = pad + doc.widthOfString(label.toUpperCase()) + 10
-    doc.rect(endX, y + 12, pageW - pad - endX, 0.5).fillColor(C.zinc200).fill()
+    doc.rect(endX, y + 14, pageW - pad - endX, 0.5).fillColor(C.zinc200).fill()
     return y + h
-  }
-
-  // Badge de estado para las cuotas (rounded-full, text-xs)
-  function statusBadge(label, x, y, bgColor, textColor) {
-    doc.font('Helvetica').fontSize(7.5)
-    const tw = doc.widthOfString(label)
-    const bw = tw + 10
-    const bh = 13
-    doc.roundedRect(x, y, bw, bh, bh / 2).fillColor(bgColor).fill()
-    doc.fillColor(textColor).text(label, x + 5, y + 3, { width: tw })
   }
 
   // ── Datos ─────────────────────────────────────────────────────────────────
@@ -88,16 +75,14 @@ export function buildPdf(type, data) {
   const hasLogo     = orgLogoPath && existsSync(orgLogoPath)
 
   // ─────────────────────────────────────────────────────────────────────────
-  // HEADER — bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700
-  // px-7 py-6 | izquierda: logo/nombre + label + título | derecha: #001 + pill + contacto
+  // HEADER
   // ─────────────────────────────────────────────────────────────────────────
-  const headerH = 130
+  const headerH = 140
 
   const hg = doc.linearGradient(0, 0, pageW, headerH)
   hg.stop(0, C.slate900).stop(0.5, C.slate800).stop(1, C.slate700)
   doc.rect(0, 0, pageW, headerH).fill(hg)
 
-  // Lado izquierdo
   const leftMaxW = pageW - pad * 2 - 190
   let leftY = 18
 
@@ -105,20 +90,19 @@ export function buildPdf(type, data) {
     doc.image(orgLogoPath, pad, leftY, { height: 48, fit: [200, 48] })
     leftY += 58
   } else {
-    // text-slate-300 font-semibold text-sm
-    doc.font('Helvetica-Bold').fontSize(10).fillColor(C.slate300)
+    doc.font('Helvetica-Bold').fontSize(12).fillColor(C.slate300)
       .text(org.name || '', pad, leftY, { width: leftMaxW })
-    leftY += 16
+    leftY += 18
   }
 
-  // "PRESUPUESTO" — text-xs uppercase tracking-[0.18em] text-slate-400
-  doc.font('Helvetica').fontSize(7).fillColor(C.slate400)
+  // "PRESUPUESTO" label
+  doc.font('Helvetica').fontSize(8).fillColor(C.slate400)
     .text(docLabel.toUpperCase(), pad, leftY, { characterSpacing: 1.8 })
-  leftY += 12
+  leftY += 14
 
-  // Título — text-xl font-bold text-white
+  // Título
   if (data.title) {
-    doc.font('Helvetica-Bold').fontSize(13).fillColor(C.white)
+    doc.font('Helvetica-Bold').fontSize(15).fillColor(C.white)
       .text(data.title, pad, leftY, { width: leftMaxW })
   }
 
@@ -127,19 +111,19 @@ export function buildPdf(type, data) {
   const rx = pageW - pad - rw
   let ry   = 18
 
-  // #001 — text-3xl font-bold text-white
-  doc.font('Helvetica-Bold').fontSize(22).fillColor(C.white)
+  // Número #001
+  doc.font('Helvetica-Bold').fontSize(25).fillColor(C.white)
     .text(`#${numStr}`, rx, ry, { width: rw, align: 'right' })
-  ry += 34
+  ry += 38
 
-  // Nombre de org debajo del número (si hay logo)
+  // Nombre de org (si hay logo)
   if (hasLogo) {
-    doc.font('Helvetica-Bold').fontSize(7.5).fillColor(C.slate300)
+    doc.font('Helvetica-Bold').fontSize(9).fillColor(C.slate300)
       .text(org.name || '', rx, ry, { width: rw, align: 'right' })
-    ry += 12
+    ry += 14
   }
 
-  // Contacto — text-xs text-slate-400
+  // Contacto
   ;[
     org.cuit    ? `CUIL/CUIT: ${org.cuit}` : null,
     org.email   ? org.email                : null,
@@ -148,43 +132,41 @@ export function buildPdf(type, data) {
     (org.city || org.province) ? [org.city, org.province].filter(Boolean).join(', ') + (org.postalCode ? ` (${org.postalCode})` : '') : null,
     org.website ? org.website              : null,
   ].filter(Boolean).forEach(v => {
-    doc.font('Helvetica').fontSize(7.5).fillColor(C.slate400)
+    doc.font('Helvetica').fontSize(9).fillColor(C.slate400)
       .text(v, rx, ry, { width: rw, align: 'right' })
-    ry += 12
+    ry += 14
   })
 
   // ─────────────────────────────────────────────────────────────────────────
-  // INFO — grid cols-2, border-b border-zinc-100
-  // Izquierda: CLIENTE | Derecha: DETALLE
+  // INFO — CLIENTE | DETALLE
   // ─────────────────────────────────────────────────────────────────────────
   const infoTop  = headerH
-  const infoPadY = 15   // py-5 escalado
+  const infoPadY = 16
   const colGap   = 16
   const colL     = Math.floor(tableW * 0.50)
   const colR     = tableW - colL - colGap
   const xL       = pad
   const xR       = pad + colL + colGap
 
-  // CLIENTE
-  doc.font('Helvetica-Bold').fontSize(7).fillColor(C.zinc400)
+  doc.font('Helvetica-Bold').fontSize(8).fillColor(C.zinc400)
     .text('CLIENTE', xL, infoTop + infoPadY, { characterSpacing: 1.5 })
-  // nombre: font-semibold text-zinc-800 text-base
+
   const clientName    = data.client?.name    || data.potentialClientName    || '—'
   const clientCompany = data.client?.company || data.potentialClientCompany || null
   const clientEmail   = data.client?.email   || data.potentialClientEmail   || null
 
-  let cy = infoTop + infoPadY + 12
+  let cy = infoTop + infoPadY + 13
   if (clientCompany) {
-    doc.font('Helvetica-Bold').fontSize(13).fillColor(C.zinc800)
+    doc.font('Helvetica-Bold').fontSize(15).fillColor(C.zinc800)
       .text(clientCompany, xL, cy, { width: colL })
-    cy += 18
-    doc.font('Helvetica').fontSize(9.5).fillColor(C.zinc500)
+    cy += 21
+    doc.font('Helvetica').fontSize(11).fillColor(C.zinc500)
       .text(clientName, xL, cy, { width: colL })
-    cy += 14
+    cy += 16
   } else {
-    doc.font('Helvetica-Bold').fontSize(13).fillColor(C.zinc800)
+    doc.font('Helvetica-Bold').fontSize(15).fillColor(C.zinc800)
       .text(clientName, xL, cy, { width: colL })
-    cy += 18
+    cy += 21
   }
 
   ;[
@@ -194,12 +176,11 @@ export function buildPdf(type, data) {
     data.client?.address ? data.client.address : null,
     (data.client?.city || data.client?.province) ? [data.client.city, data.client.province].filter(Boolean).join(', ') + (data.client.postalCode ? ` (${data.client.postalCode})` : '') : null,
   ].filter(Boolean).forEach(v => {
-    doc.font('Helvetica').fontSize(8.5).fillColor(C.zinc500).text(v, xL, cy, { width: colL })
-    cy += 13
+    doc.font('Helvetica').fontSize(10).fillColor(C.zinc500).text(v, xL, cy, { width: colL })
+    cy += 15
   })
 
-  // DETALLE
-  doc.font('Helvetica-Bold').fontSize(7).fillColor(C.zinc400)
+  doc.font('Helvetica-Bold').fontSize(8).fillColor(C.zinc400)
     .text('DETALLE', xR, infoTop + infoPadY, { characterSpacing: 1.5 })
 
   const infoRows = isQuote
@@ -220,26 +201,21 @@ export function buildPdf(type, data) {
         data.dueDate  ? ['Vencimiento', fmtDate(data.dueDate)] : null,
       ].filter(Boolean)
 
-  let ry2 = infoTop + infoPadY + 12
+  let ry2 = infoTop + infoPadY + 13
   infoRows.forEach(([label, value]) => {
-    // label: text-zinc-400 w-24 (text-sm)
-    doc.font('Helvetica').fontSize(8).fillColor(C.zinc400).text(label, xR, ry2, { width: 78 })
-    // value: font-medium text-zinc-700
-    doc.font('Helvetica-Bold').fontSize(8.5).fillColor(C.zinc700)
+    doc.font('Helvetica').fontSize(9).fillColor(C.zinc400).text(label, xR, ry2, { width: 78 })
+    doc.font('Helvetica-Bold').fontSize(10).fillColor(C.zinc700)
       .text(String(value), xR + 80, ry2, { width: colR - 80 })
-    ry2 += 14
+    ry2 += 16
   })
 
-  // Separador vertical entre columnas: sm:border-r border-zinc-100
   const infoBot = Math.max(cy, ry2) + infoPadY
   doc.rect(xR - colGap / 2, infoTop + infoPadY, 0.5, infoBot - infoTop - infoPadY * 1.5)
     .fillColor(C.zinc100).fill()
-
-  // Borde inferior de info: border-b border-zinc-100
   doc.rect(0, infoBot, pageW, 0.5).fillColor(C.zinc100).fill()
 
   // ─────────────────────────────────────────────────────────────────────────
-  // ÍTEMS — SectionLabel + tabla con header claro
+  // ÍTEMS
   // ─────────────────────────────────────────────────────────────────────────
   let y = sectionLabel('Ítems', infoBot)
 
@@ -249,37 +225,32 @@ export function buildPdf(type, data) {
   const cAmt  = tableW * 0.21
   const xD = pad,  xQ = pad + cDesc,  xU = pad + cDesc + cQty,  xA = pad + cDesc + cQty + cUnit
 
-  // Header: bg-zinc-50 border-b border-zinc-200, th: text-xs font-semibold text-zinc-500 uppercase
-  const thH = 26
+  const thH = 30
   doc.rect(0, y, pageW, thH).fillColor(C.zinc50).fill()
   doc.rect(0, y + thH - 0.5, pageW, 0.5).fillColor(C.zinc200).fill()
-  doc.font('Helvetica-Bold').fontSize(7.5).fillColor(C.zinc500)
-  doc.text('DESCRIPCIÓN',  xD + 4, y + 9, { width: cDesc - 8,  characterSpacing: 0.5 })
-  doc.text('CANT.',        xQ,     y + 9, { width: cQty - 4,   align: 'right', characterSpacing: 0.5 })
-  doc.text('PRECIO UNIT.', xU,     y + 9, { width: cUnit - 4,  align: 'right', characterSpacing: 0.5 })
-  doc.text('TOTAL',        xA,     y + 9, { width: cAmt - 4,   align: 'right', characterSpacing: 0.5 })
+  doc.font('Helvetica-Bold').fontSize(9).fillColor(C.zinc500)
+  doc.text('DESCRIPCIÓN',  xD + 4, y + 10, { width: cDesc - 8,  characterSpacing: 0.5 })
+  doc.text('CANT.',        xQ,     y + 10, { width: cQty - 4,   align: 'right', characterSpacing: 0.5 })
+  doc.text('PRECIO UNIT.', xU,     y + 10, { width: cUnit - 4,  align: 'right', characterSpacing: 0.5 })
+  doc.text('TOTAL',        xA,     y + 10, { width: cAmt - 4,   align: 'right', characterSpacing: 0.5 })
   y += thH
 
-  // Filas: divide-y divide-zinc-100, impares bg-zinc-50/60
-  const rowH = 26
+  const rowH = 30
   ;(data.items || []).forEach((item, i) => {
     if (i % 2 !== 0) doc.rect(0, y, pageW, rowH).fillColor(C.zinc50).fill()
-    // Descripción: text-zinc-800
-    doc.font('Helvetica').fontSize(9.5).fillColor(C.zinc800)
-      .text(item.description, xD + 4, y + 8, { width: cDesc - 8, ellipsis: true })
-    // Cant / Precio: text-zinc-500
-    doc.font('Helvetica').fontSize(9).fillColor(C.zinc500)
-      .text(String(item.quantity), xQ, y + 8, { width: cQty - 4, align: 'right' })
-      .text(fmt(item.unitPrice),   xU, y + 8, { width: cUnit - 4, align: 'right' })
-    // Total: font-semibold text-zinc-800
-    doc.font('Helvetica-Bold').fontSize(9.5).fillColor(C.zinc800)
-      .text(fmt(item.amount), xA, y + 8, { width: cAmt - 4, align: 'right' })
+    doc.font('Helvetica').fontSize(11).fillColor(C.zinc800)
+      .text(item.description, xD + 4, y + 9, { width: cDesc - 8, ellipsis: true })
+    doc.font('Helvetica').fontSize(10.5).fillColor(C.zinc500)
+      .text(String(item.quantity), xQ, y + 9, { width: cQty - 4, align: 'right' })
+      .text(fmt(item.unitPrice),   xU, y + 9, { width: cUnit - 4, align: 'right' })
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(C.zinc800)
+      .text(fmt(item.amount), xA, y + 9, { width: cAmt - 4, align: 'right' })
     doc.rect(0, y + rowH - 0.5, pageW, 0.5).fillColor(C.zinc100).fill()
     y += rowH
   })
 
   // ─────────────────────────────────────────────────────────────────────────
-  // TOTALES — border-t border-zinc-100 bg-zinc-50/50 px-7 py-5
+  // TOTALES
   // ─────────────────────────────────────────────────────────────────────────
   const subtotal    = Number(data.subtotal)
   const total       = Number(data.total)
@@ -289,105 +260,85 @@ export function buildPdf(type, data) {
   const taxAmount   = (subtotal - discountAmt) * (Number(data.taxRate) / 100)
   const hasDiscount = discountAmt > 0
   const totRows     = 1 + (hasDiscount ? 1 : 0) + (data.taxRate > 0 ? 1 : 0)
-  const totSectH    = infoPadY + totRows * 18 + 4 + 46 + infoPadY
+  const totSectH    = infoPadY + totRows * 21 + 4 + 50 + infoPadY
 
   doc.rect(0, y, pageW, totSectH).fillColor(C.zinc50).fill()
-  doc.rect(0, y, pageW, 0.5).fillColor(C.zinc100).fill()   // border-t
+  doc.rect(0, y, pageW, 0.5).fillColor(C.zinc100).fill()
 
   y += infoPadY
 
   const totBlockW = 220
   const totX      = pageW - pad - totBlockW
 
-  // Subtotal
-  doc.font('Helvetica').fontSize(9).fillColor(C.zinc500)
+  doc.font('Helvetica').fontSize(10.5).fillColor(C.zinc500)
     .text('Subtotal', totX, y)
     .text(fmt(subtotal), totX, y, { width: totBlockW, align: 'right' })
-  y += 18
+  y += 21
 
-  // Descuento (si aplica)
   if (hasDiscount) {
     const discLabel = data.discountType === 'percent'
       ? `Descuento (${data.discountValue}%)`
       : 'Descuento'
-    doc.font('Helvetica').fontSize(9).fillColor('#16a34a')
+    doc.font('Helvetica').fontSize(10.5).fillColor('#16a34a')
       .text(discLabel, totX, y)
       .text(`-${fmt(discountAmt)}`, totX, y, { width: totBlockW, align: 'right' })
-    y += 18
+    y += 21
   }
 
-  // IVA (si aplica)
   if (data.taxRate > 0) {
-    doc.font('Helvetica').fontSize(9).fillColor(C.zinc500)
+    doc.font('Helvetica').fontSize(10.5).fillColor(C.zinc500)
       .text(`IVA (${data.taxRate}%)`, totX, y)
       .text(fmt(taxAmount), totX, y, { width: totBlockW, align: 'right' })
-    y += 18
+    y += 21
   }
 
-  y += 4  // mt-3
+  y += 4
 
-  // Banda total: rounded-xl bg-gradient-to-r from-slate-900 to-slate-700 px-4 py-3.5
-  const tbH = 46
+  // Banda total
+  const tbH = 50
   const tg  = doc.linearGradient(totX, y, totX + totBlockW, y)
   tg.stop(0, C.slate900).stop(1, C.slate700)
   doc.roundedRect(totX, y, totBlockW, tbH, 8).fill(tg)
 
-  // Izquierda: "TOTAL" + moneda
-  doc.font('Helvetica-Bold').fontSize(7).fillColor(C.slate400)
-    .text('TOTAL', totX + 12, y + 9, { characterSpacing: 1.2 })
-  doc.font('Helvetica').fontSize(7).fillColor(C.slate500)
-    .text(data.currency, totX + 12, y + 19)
+  doc.font('Helvetica-Bold').fontSize(8).fillColor(C.slate400)
+    .text('TOTAL', totX + 12, y + 10, { characterSpacing: 1.2 })
+  doc.font('Helvetica').fontSize(8).fillColor(C.slate500)
+    .text(data.currency, totX + 12, y + 22)
 
-  // Derecha: monto total — text-2xl font-bold text-white
-  doc.font('Helvetica-Bold').fontSize(20).fillColor(C.white)
-    .text(fmt(total, data.currency), totX + 12, y + 13, { width: totBlockW - 20, align: 'right' })
+  doc.font('Helvetica-Bold').fontSize(23).fillColor(C.white)
+    .text(fmt(total, data.currency), totX + 12, y + 14, { width: totBlockW - 20, align: 'right' })
 
   y += tbH + infoPadY
 
   // ─────────────────────────────────────────────────────────────────────────
-  // PLAN DE PAGOS — SectionLabel + tabla con header claro + badges de estado
+  // PLAN DE PAGOS
   // ─────────────────────────────────────────────────────────────────────────
   const installments = data.installments || []
   if (installments.length > 0) {
     y = sectionLabel('Plan de pagos', y)
 
-    const cNum  = tableW * 0.10,  iNum  = pad
-    const cDue  = tableW * 0.35,  iDue  = iNum + cNum
-    const cStat = tableW * 0.30,  iStat = iDue + cDue
-    const cIA   = tableW * 0.25,  iAmt  = iStat + cStat
+    const cNum  = tableW * 0.12,  iNum  = pad
+    const cDue  = tableW * 0.55,  iDue  = iNum + cNum
+    const cIA   = tableW * 0.33,  iAmt  = iDue + cDue
 
-    // Header claro — igual al de ítems
-    const ithH = 26
+    const ithH = 30
     doc.rect(0, y, pageW, ithH).fillColor(C.zinc50).fill()
     doc.rect(0, y + ithH - 0.5, pageW, 0.5).fillColor(C.zinc200).fill()
-    doc.font('Helvetica-Bold').fontSize(7.5).fillColor(C.zinc500)
-    doc.text('N°',          iNum,  y + 9, { width: cNum - 4,  characterSpacing: 0.5 })
-    doc.text('VENCIMIENTO', iDue,  y + 9, { width: cDue - 4,  characterSpacing: 0.5 })
-    doc.text('ESTADO',      iStat, y + 9, { width: cStat - 4, characterSpacing: 0.5 })
-    doc.text('IMPORTE',     iAmt,  y + 9, { width: cIA - 4,   align: 'right', characterSpacing: 0.5 })
+    doc.font('Helvetica-Bold').fontSize(9).fillColor(C.zinc500)
+    doc.text('N°',          iNum, y + 10, { width: cNum - 4, characterSpacing: 0.5 })
+    doc.text('VENCIMIENTO', iDue, y + 10, { width: cDue - 4, characterSpacing: 0.5 })
+    doc.text('IMPORTE',     iAmt, y + 10, { width: cIA - 4,  align: 'right', characterSpacing: 0.5 })
     y += ithH
 
-    const BADGES = {
-      pending: { label: 'Pendiente', bg: C.pendingBg, text: C.pendingText },
-      paid:    { label: 'Pagado',    bg: C.paidBg,    text: C.paidText    },
-      overdue: { label: 'Vencido',   bg: C.overdueBg, text: C.overdueText },
-    }
-
     installments.forEach((inst, i) => {
-      const rH    = 22
-      const badge = BADGES[inst.status] || BADGES.pending
+      const rH = 26
       if (i % 2 !== 0) doc.rect(0, y, pageW, rH).fillColor(C.zinc50).fill()
-      // N°: text-zinc-500
-      doc.font('Helvetica').fontSize(8.5).fillColor(C.zinc500)
-        .text(String(inst.number), iNum, y + 6, { width: cNum - 4 })
-      // Vencimiento: text-zinc-600
-      doc.font('Helvetica').fontSize(8.5).fillColor(C.zinc600)
-        .text(fmtDate(inst.dueDate), iDue, y + 6, { width: cDue - 4 })
-      // Badge de estado: px-2 py-0.5 rounded-full text-xs font-medium
-      statusBadge(badge.label, iStat, y + (rH - 13) / 2, badge.bg, badge.text)
-      // Importe: font-semibold text-zinc-800
-      doc.font('Helvetica-Bold').fontSize(8.5).fillColor(C.zinc800)
-        .text(fmt(inst.amount, data.currency), iAmt, y + 6, { width: cIA - 4, align: 'right' })
+      doc.font('Helvetica').fontSize(10).fillColor(C.zinc500)
+        .text(String(inst.number), iNum, y + 8, { width: cNum - 4 })
+      doc.font('Helvetica').fontSize(10).fillColor(C.zinc600)
+        .text(fmtDate(inst.dueDate), iDue, y + 8, { width: cDue - 4 })
+      doc.font('Helvetica-Bold').fontSize(10).fillColor(C.zinc800)
+        .text(fmt(inst.amount, data.currency), iAmt, y + 8, { width: cIA - 4, align: 'right' })
       doc.rect(0, y + rH - 0.5, pageW, 0.5).fillColor(C.zinc100).fill()
       y += rH
     })
@@ -396,18 +347,18 @@ export function buildPdf(type, data) {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // NOTAS — SectionLabel + px-7 pb-6 text-sm text-zinc-600 leading-relaxed
+  // NOTAS
   // ─────────────────────────────────────────────────────────────────────────
   if (data.notes) {
     y = sectionLabel('Notas', y)
     y += 6
-    doc.font('Helvetica').fontSize(9).fillColor(C.zinc600)
+    doc.font('Helvetica').fontSize(10.5).fillColor(C.zinc600)
       .text(data.notes, pad, y, { width: tableW, lineGap: 3 })
     y = doc.y + 16
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // IMÁGENES — grilla de 2 columnas: thumbnail + título + descripción
+  // IMÁGENES
   // ─────────────────────────────────────────────────────────────────────────
   const quoteImages = (data.images || []).filter(img => {
     const p = join(UPLOADS_DIR, img.storedName)
@@ -426,7 +377,6 @@ export function buildPdf(type, data) {
     for (const img of quoteImages) {
       const imgPath = join(UPLOADS_DIR, img.storedName)
 
-      // Cargar imagen para obtener dimensiones reales antes de dibujar
       let pdfImg, imgH
       try {
         pdfImg = doc.openImage(imgPath)
@@ -435,7 +385,7 @@ export function buildPdf(type, data) {
         continue
       }
 
-      const textH = (img.title ? 18 : 0) + (img.description ? 28 : 0) + 20
+      const textH = (img.title ? 20 : 0) + (img.description ? 30 : 0) + 20
       if (y + imgH + textH > pageH - 50) {
         doc.addPage()
         y = 30
@@ -445,12 +395,12 @@ export function buildPdf(type, data) {
       y += imgH + textPad
 
       if (img.title) {
-        doc.font('Helvetica-Bold').fontSize(10).fillColor(C.zinc800)
+        doc.font('Helvetica-Bold').fontSize(12).fillColor(C.zinc800)
           .text(img.title, pad, y, { width: tableW })
         y = doc.y + 4
       }
       if (img.description) {
-        doc.font('Helvetica').fontSize(9).fillColor(C.zinc500)
+        doc.font('Helvetica').fontSize(10.5).fillColor(C.zinc500)
           .text(img.description, pad, y, { width: tableW, lineGap: 2 })
         y = doc.y + 4
       }
@@ -462,22 +412,19 @@ export function buildPdf(type, data) {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // FIRMAS — dos columnas: cliente (izq) | organización (der)
+  // FIRMAS
   // ─────────────────────────────────────────────────────────────────────────
   const hasClientSig = !!data.clientSignature
   const hasOrgSig    = !!org.signature
 
   if (hasClientSig || hasOrgSig) {
-    const colGap    = 40
-    const sigColW   = (tableW - colGap) / 2
+    const sigColGap = 40
+    const sigColW   = (tableW - sigColGap) / 2
     const sigLX     = pad
-    const sigRX     = pad + sigColW + colGap
+    const sigRX     = pad + sigColW + sigColGap
     const imgH      = 52
-    // Altura total estimada del bloque (sectionLabel 24 + cláusula ~40 + sep 14 + labels 10 + img 52 + gap 8 + line 1 + gap 8 + text 28 + bottom 18)
-    const blockH    = 210
+    const blockH    = 220
 
-    // Si no entra en la página actual, saltar a una nueva para evitar
-    // que doc.text() con y > pageH dispare addPage() en cada llamada
     if (y + blockH > pageH - 42) {
       doc.addPage()
       y = 30
@@ -486,21 +433,18 @@ export function buildPdf(type, data) {
     y = sectionLabel('Firmas', y)
     y += 12
 
-    // ── Cláusula de aceptación
     const clauseText = 'Las partes declaran haber leído y aceptado el presente presupuesto en todas sus condiciones. La firma a continuación implica conformidad con los servicios, plazos y valores detallados en este documento.'
-    doc.font('Helvetica').fontSize(10.5).fillColor(C.zinc500)
+    doc.font('Helvetica').fontSize(12).fillColor(C.zinc500)
       .text(clauseText, pad, y, { width: tableW, align: 'justify', lineGap: 2.5 })
     y = doc.y + 10
     doc.rect(pad, y, tableW, 0.5).fillColor(C.zinc200).fill()
     y += 12
 
-    // ── Etiquetas de columna
-    doc.font('Helvetica').fontSize(6.5).fillColor(C.zinc400)
+    doc.font('Helvetica').fontSize(7.5).fillColor(C.zinc400)
     doc.text('CLIENTE', sigLX, y, { width: sigColW, align: 'center', characterSpacing: 1.2, lineBreak: false })
     doc.text('EMPRESA', sigRX, y, { width: sigColW, align: 'center', characterSpacing: 1.2, lineBreak: false })
     y += 10
 
-    // ── Imágenes de firma
     if (hasClientSig) {
       try {
         const b64 = data.clientSignature.includes(',') ? data.clientSignature.split(',')[1] : data.clientSignature
@@ -515,54 +459,49 @@ export function buildPdf(type, data) {
     }
     y += imgH + 8
 
-    // ── Separador vertical entre columnas
-    const divX = sigRX - colGap / 2
+    const divX = sigRX - sigColGap / 2
     doc.rect(divX, y - imgH - 8, 0.5, imgH + 8).fillColor(C.zinc100).fill()
 
-    // ── Líneas de firma
     doc.rect(sigLX, y, sigColW, 0.5).fillColor(C.zinc400).fill()
     doc.rect(sigRX, y, sigColW, 0.5).fillColor(C.zinc400).fill()
     y += 8
 
-    // ── Nombres (coordenadas Y explícitas y siempre < pageH)
     const cName    = data.client?.name    || data.potentialClientName    || ''
     const cCompany = data.client?.company || data.potentialClientCompany || ''
     const oName    = org.signatureOwnerName || ''
     const oOrg     = org.name || ''
 
     if (cName) {
-      doc.font('Helvetica-Bold').fontSize(8.5).fillColor(C.zinc700)
+      doc.font('Helvetica-Bold').fontSize(10).fillColor(C.zinc700)
         .text(cName, sigLX, y, { width: sigColW, align: 'center', lineBreak: false })
     }
     if (cCompany) {
-      doc.font('Helvetica').fontSize(7.5).fillColor(C.zinc500)
-        .text(cCompany, sigLX, y + (cName ? 13 : 0), { width: sigColW, align: 'center', lineBreak: false })
+      doc.font('Helvetica').fontSize(9).fillColor(C.zinc500)
+        .text(cCompany, sigLX, y + (cName ? 15 : 0), { width: sigColW, align: 'center', lineBreak: false })
     }
     if (oName) {
-      doc.font('Helvetica-Bold').fontSize(8.5).fillColor(C.zinc700)
+      doc.font('Helvetica-Bold').fontSize(10).fillColor(C.zinc700)
         .text(oName, sigRX, y, { width: sigColW, align: 'center', lineBreak: false })
     }
     if (oOrg) {
-      doc.font('Helvetica').fontSize(7.5).fillColor(C.zinc500)
-        .text(oOrg, sigRX, y + (oName ? 13 : 0), { width: sigColW, align: 'center', lineBreak: false })
+      doc.font('Helvetica').fontSize(9).fillColor(C.zinc500)
+        .text(oOrg, sigRX, y + (oName ? 15 : 0), { width: sigColW, align: 'center', lineBreak: false })
     }
 
-    y += 28
+    y += 32
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // FOOTER — igual al HTML: "Generado por [org]" (izquierda) + "Presupuesto #001" (derecha)
+  // FOOTER
   // ─────────────────────────────────────────────────────────────────────────
   doc.rect(0, pageH - 40, pageW, 0.5).fillColor(C.zinc200).fill()
 
-  // Izquierda: "Presupuesto generado por danteup.com"
-  doc.font('Helvetica').fontSize(7.5).fillColor(C.zinc400)
+  doc.font('Helvetica').fontSize(9).fillColor(C.zinc400)
     .text('Presupuesto generado por ', pad, pageH - 24, { continued: true })
-  doc.font('Helvetica-Bold').fontSize(7.5).fillColor(C.zinc500)
+  doc.font('Helvetica-Bold').fontSize(9).fillColor(C.zinc500)
     .text('danteup.com')
 
-  // Derecha: docLabel + número
-  doc.font('Helvetica').fontSize(7.5).fillColor(C.zinc400)
+  doc.font('Helvetica').fontSize(9).fillColor(C.zinc400)
     .text(`${docLabel} #${numStr}`, pad, pageH - 24, { width: tableW, align: 'right' })
 
   doc.end()
