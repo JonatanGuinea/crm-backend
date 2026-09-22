@@ -4,6 +4,7 @@ import { success, fail } from '../utils/response.js'
 import { buildPdf } from '../utils/buildPdf.js'
 import { notify } from '../services/notifications.service.js'
 import { syncQuoteMovements } from '../services/finances.service.js'
+import { applyDefaultTasks } from '../services/default-tasks.service.js'
 
 const router = Router()
 
@@ -113,6 +114,8 @@ router.post('/quotes/:id/confirm', async (req, res) => {
           organizationId: quote.organizationId,
         }
       })
+
+      await applyDefaultTasks(newProject.id, quote.organizationId, quote.createdById)
     }
 
     const resolvedClientId = updateData.clientId || quote.clientId || null
