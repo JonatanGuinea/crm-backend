@@ -242,7 +242,7 @@ export const getMembers = async (req, res) => {
 
     const memberships = await prisma.organizationMembership.findMany({
       where: { organizationId, status: { in: ['active', 'invited'] } },
-      include: { user: { select: { id: true, name: true, email: true } } },
+      include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
       orderBy: { createdAt: 'asc' }
     })
 
@@ -250,6 +250,7 @@ export const getMembers = async (req, res) => {
       userId: m.userId,
       name: m.user.name,
       email: m.user.email,
+      avatar: m.user.avatar ?? null,
       role: m.role,
       status: m.status,
       joinedAt: m.createdAt
