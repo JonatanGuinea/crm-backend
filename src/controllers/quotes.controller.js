@@ -4,6 +4,7 @@ import { parsePagination, buildPaginationMeta } from '../utils/paginate.js'
 import { notify } from '../services/notifications.service.js'
 import { sendQuoteEmail } from '../services/email.service.js'
 import { syncQuoteMovements } from '../services/finances.service.js'
+import { applyDefaultTasks } from '../services/default-tasks.service.js'
 
 const allowedTransitions = {
   draft:     ['sent', 'expired'],
@@ -289,6 +290,8 @@ export const updateQuote = async (req, res) => {
               organizationId: orgId,
             }
           })
+
+          await applyDefaultTasks(newProject.id, orgId, req.user.id)
         }
       }
 
@@ -314,6 +317,8 @@ export const updateQuote = async (req, res) => {
             organizationId: orgId,
           }
         })
+
+        await applyDefaultTasks(newProject.id, orgId, req.user.id)
       }
 
       if (['approved', 'rejected'].includes(status)) {

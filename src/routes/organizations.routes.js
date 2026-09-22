@@ -20,6 +20,14 @@ import {
   removeMember
 } from '../controllers/members.controller.js'
 
+import {
+  getDefaultTasks,
+  createDefaultTask,
+  updateDefaultTask,
+  deleteDefaultTask,
+  reorderDefaultTasks
+} from '../controllers/default-tasks.controller.js'
+
 const router = Router()
 
 router.get('/', auth, getOrganizations)
@@ -38,5 +46,12 @@ router.post('/:id/members', auth, requireMembership, requireRole('owner', 'admin
 router.get('/:id/members', auth, requireMembership, getMembers)
 router.patch('/:id/members/:userId', auth, requireMembership, requireRole('owner'), updateMemberRole)
 router.delete('/:id/members/:userId', auth, requireMembership, requireRole('owner'), removeMember)
+
+// Default Tasks
+router.get('/:id/default-tasks', auth, requireMembership, getDefaultTasks)
+router.post('/:id/default-tasks', auth, requireMembership, requireRole('owner', 'admin'), createDefaultTask)
+router.patch('/:id/default-tasks/:taskId', auth, requireMembership, requireRole('owner', 'admin'), updateDefaultTask)
+router.delete('/:id/default-tasks/:taskId', auth, requireMembership, requireRole('owner', 'admin'), deleteDefaultTask)
+router.put('/:id/default-tasks/order', auth, requireMembership, requireRole('owner', 'admin'), reorderDefaultTasks)
 
 export default router

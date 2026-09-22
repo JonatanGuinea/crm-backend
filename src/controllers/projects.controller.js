@@ -1,6 +1,7 @@
 import prisma from '../config/db.js'
 import { success, fail, paginated } from '../utils/response.js'
 import { parsePagination, buildPaginationMeta } from '../utils/paginate.js'
+import { applyDefaultTasks } from '../services/default-tasks.service.js'
 
 const allowedTransitions = {
   pending: ["approved", "cancelled"],
@@ -53,7 +54,8 @@ export const createProject = async (req, res) => {
             data: ids.map(uid => ({ projectId: project.id, userId: uid, organizationId: orgId })),
             skipDuplicates: true
           })
-        : Promise.resolve()
+        : Promise.resolve(),
+      applyDefaultTasks(project.id, orgId, userId)
     ])
 
     const projectWithMembers = await prisma.project.findUnique({
