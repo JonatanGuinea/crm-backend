@@ -189,6 +189,7 @@ export const getQuoteById = async (req, res) => {
       include: {
         items: true,
         images: { orderBy: { order: 'asc' } },
+        quoteNotes: { orderBy: { order: 'asc' } },
         client: { select: { id: true, name: true, email: true, phone: true, company: true } },
         project: { select: { id: true, title: true } }
       }

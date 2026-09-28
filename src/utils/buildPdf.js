@@ -353,12 +353,21 @@ export function buildPdf(type, data) {
   // ─────────────────────────────────────────────────────────────────────────
   // NOTAS
   // ─────────────────────────────────────────────────────────────────────────
-  if (data.notes) {
+  const quoteNotes = data.quoteNotes || []
+  if (quoteNotes.length > 0) {
     y = sectionLabel('Notas', y)
     y += 6
-    doc.font('Helvetica').fontSize(10.5).fillColor(C.zinc600)
-      .text(data.notes, pad, y, { width: tableW, lineGap: 3 })
-    y = doc.y + 16
+    for (const note of quoteNotes) {
+      if (note.title) {
+        doc.font('Helvetica-Bold').fontSize(10.5).fillColor(C.zinc800)
+          .text(note.title, pad, y, { width: tableW })
+        y = doc.y + 3
+      }
+      doc.font('Helvetica').fontSize(10.5).fillColor(C.zinc600)
+        .text(note.description, pad, y, { width: tableW, lineGap: 3 })
+      y = doc.y + 10
+    }
+    y += 6
   }
 
   // ─────────────────────────────────────────────────────────────────────────

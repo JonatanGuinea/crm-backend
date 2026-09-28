@@ -91,6 +91,7 @@ model Organization {
   cashAccounts        CashAccount[]
   cashMovements       CashMovement[]
   quoteImages         QuoteImage[]
+  quoteNotes          QuoteNote[]
   defaultTasks        DefaultTask[]
 
   @@index([name])
@@ -279,6 +280,7 @@ model Quote {
 
   items          QuoteItem[]
   images         QuoteImage[]
+  quoteNotes     QuoteNote[]
   invoices       Invoice[]
   installments   Installment[]
   history        QuoteHistory[]
@@ -319,6 +321,22 @@ model QuoteImage {
   description    String?
   order          Int      @default(0)
   createdAt      DateTime @default(now())
+
+  @@index([quoteId, order])
+  @@index([organizationId])
+}
+
+model QuoteNote {
+  id             String       @id @default(cuid())
+  quoteId        String
+  quote          Quote        @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String?
+  description    String
+  order          Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@index([quoteId, order])
   @@index([organizationId])
