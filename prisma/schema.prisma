@@ -928,6 +928,7 @@ enum NotificationType {
   task_assigned
   stock_out
   stock_low
+  announcement
 }
 
 model Notification {
