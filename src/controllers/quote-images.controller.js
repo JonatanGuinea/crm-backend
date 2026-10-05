@@ -3,6 +3,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import prisma from '../config/db.js'
 import { success, fail } from '../utils/response.js'
+import { toWebp } from '../utils/toWebp.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads')
@@ -24,6 +25,7 @@ export const uploadQuoteImage = async (req, res) => {
     }
 
     const { title, description } = req.body
+    const filename = await toWebp(req.file, UPLOADS_DIR)
 
     const lastImage = await prisma.quoteImage.findFirst({
       where: { quoteId },
@@ -36,8 +38,8 @@ export const uploadQuoteImage = async (req, res) => {
       data: {
         quoteId,
         organizationId: orgId,
-        storedName: req.file.filename,
-        url: `/uploads/${req.file.filename}`,
+        storedName: filename,
+        url: `/uploads/${filename}`,
         title: title?.trim() || null,
         description: description?.trim() || null,
         order,
@@ -73,8 +75,9 @@ export const updateQuoteImage = async (req, res) => {
 
     if (req.file) {
       try { fs.unlinkSync(path.join(UPLOADS_DIR, image.storedName)) } catch {}
-      updates.storedName = req.file.filename
-      updates.url        = `/uploads/${req.file.filename}`
+      const filename     = await toWebp(req.file, UPLOADS_DIR)
+      updates.storedName = filename
+      updates.url        = `/uploads/${filename}`
     }
 
     const updated = await prisma.quoteImage.update({ where: { id: imageId }, data: updates })

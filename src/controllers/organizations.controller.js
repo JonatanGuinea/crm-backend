@@ -4,6 +4,7 @@ import { seedDefaultCategories } from './financial-categories.controller.js'
 import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
+import { toWebp } from '../utils/toWebp.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const uploadsDir = path.join(__dirname, '..', '..', 'uploads')
@@ -252,9 +253,10 @@ export const uploadOrgLogo = async (req, res) => {
       fs.unlink(path.join(uploadsDir, current.logo), () => {})
     }
 
+    const filename = await toWebp(req.file, uploadsDir)
     const org = await prisma.organization.update({
       where: { id },
-      data: { logo: req.file.filename },
+      data: { logo: filename },
       select: { id: true, logo: true }
     })
 

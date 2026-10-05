@@ -6,6 +6,7 @@ import prisma from '../config/db.js'
 import { comparePassword, hashPassword } from '../utils/passwordHash.js'
 import { success, fail } from '../utils/response.js'
 import { sendPasswordChangeEmail } from '../services/email.service.js'
+import { toWebp } from '../utils/toWebp.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const uploadsDir = path.join(__dirname, '..', '..', 'uploads')
@@ -123,12 +124,13 @@ export const uploadAvatar = async (req, res) => {
     })
     if (current?.avatar) {
       const oldPath = path.join(uploadsDir, current.avatar)
-      fs.unlink(oldPath, () => {}) // silencioso si no existe
+      fs.unlink(oldPath, () => {})
     }
 
+    const filename = await toWebp(req.file, uploadsDir)
     const updated = await prisma.user.update({
       where: { id: req.user.id },
-      data: { avatar: req.file.filename },
+      data: { avatar: filename },
       select: { id: true, name: true, email: true, avatar: true }
     })
 
