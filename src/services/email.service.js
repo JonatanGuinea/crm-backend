@@ -24,93 +24,83 @@ function buildPasswordResetEmailHtml({ name, resetUrl }) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Restablecer contraseña</title>
+  <title>Restablecer contraseña — DANTEUP</title>
 </head>
-<body style="margin:0;padding:0;background-color:#eef9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef9f9;padding:40px 16px;">
+<body style="margin:0;padding:0;background-color:#0B0B0C;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0B0B0C;padding:48px 16px;">
     <tr>
       <td align="center">
-        <table width="100%" style="max-width:560px;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,178,169,0.10);background:#ffffff;">
+        <table width="100%" style="max-width:540px;border-radius:0 20px 20px 0;overflow:hidden;border:1px solid #2C2C2F;background:#141415;">
 
           <tr>
-            <td style="background:linear-gradient(90deg,#009990,#00B2A9,#33C4BE);height:4px;font-size:0;line-height:0;">&nbsp;</td>
-          </tr>
-
-          <tr>
-            <td style="background-color:#080e1a;padding:24px 32px;">
+            <td style="padding:24px 32px;background:#0B0B0C;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="vertical-align:middle;">
-                    <span style="color:#00B2A9;font-size:16px;font-weight:700;letter-spacing:-0.3px;">DANTEUP CRM</span>
+                    <span style="color:#F2EDE3;font-size:15px;font-weight:700;letter-spacing:-0.5px;">DANTEUP</span>
                   </td>
                   <td style="vertical-align:middle;text-align:right;">
-                    <span style="display:inline-block;background-color:rgba(0,178,169,0.15);color:#33C4BE;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;border-radius:20px;border:1px solid rgba(0,178,169,0.3);">
-                      Recuperar acceso
-                    </span>
+                    <span style="display:inline-block;background:#1E1E20;color:#8C877E;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border:1px solid #2C2C2F;border-radius:0 6px 6px 0;">Recuperar acceso</span>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
           <tr>
-            <td style="background:linear-gradient(135deg,#00B2A9,#009990);padding:28px 32px;">
-              <p style="margin:0 0 4px;color:rgba(255,255,255,0.65);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Solicitud recibida</p>
-              <h1 style="margin:0 0 6px;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">Restablecer contraseña</h1>
-              <p style="margin:0;color:rgba(255,255,255,0.80);font-size:14px;">Usá el botón para crear una nueva contraseña</p>
+            <td style="padding:32px;background:#1E1E20;">
+              <p style="margin:0 0 8px;color:#8C877E;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Solicitud recibida</p>
+              <h1 style="margin:0 0 8px;color:#F2EDE3;font-size:26px;font-weight:700;letter-spacing:-0.5px;">Restablecer contraseña</h1>
+              <p style="margin:0;color:#B9B4AA;font-size:14px;">Usá el botón para crear una nueva contraseña.</p>
             </td>
           </tr>
 
-          <tr>
-            <td style="padding:32px 32px 8px;">
-              <p style="margin:0 0 16px;color:#18181b;font-size:15px;font-weight:600;">
-                Hola, ${name} 👋
-              </p>
-              <p style="margin:0 0 14px;color:#52525b;font-size:14px;line-height:1.65;">
-                Recibimos una solicitud para restablecer la contraseña de tu cuenta en <strong style="color:#18181b;">DANTEUP CRM</strong>.
-              </p>
-              <p style="margin:0 0 28px;color:#52525b;font-size:14px;line-height:1.65;">
-                Si no fuiste vos, podés ignorar este email — tu contraseña actual no cambiará. El enlace expira en <strong style="color:#18181b;">30 minutos</strong>.
-              </p>
-            </td>
-          </tr>
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
 
           <tr>
-            <td style="padding:0 32px 24px;">
-              <table cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center">
-                    <a href="${resetUrl}"
-                       style="display:inline-block;background-color:#00B2A9;color:#ffffff;text-decoration:none;padding:14px 40px;border-radius:10px;font-size:14px;font-weight:700;letter-spacing:0.3px;">
-                      Crear nueva contraseña
-                    </a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:0 32px 32px;">
-              <p style="margin:0 0 6px;color:#a1a1aa;font-size:11px;text-align:center;">
-                O copiá este enlace en tu navegador:
+            <td style="padding:32px 32px 8px;background:#141415;">
+              <p style="margin:0 0 16px;color:#F2EDE3;font-size:15px;font-weight:600;">Hola, ${name}</p>
+              <p style="margin:0 0 14px;color:#B9B4AA;font-size:14px;line-height:1.65;">
+                Recibimos una solicitud para restablecer la contraseña de tu cuenta en <strong style="color:#F2EDE3;">DANTEUP</strong>.
               </p>
-              <p style="margin:0;color:#a1a1aa;font-size:11px;text-align:center;word-break:break-all;">
-                <a href="${resetUrl}" style="color:#00B2A9;text-decoration:none;">${resetUrl}</a>
+              <p style="margin:0 0 28px;color:#B9B4AA;font-size:14px;line-height:1.65;">
+                Si no fuiste vos, podés ignorar este email — tu contraseña actual no cambiará. El enlace expira en <strong style="color:#F2EDE3;">30 minutos</strong>.
               </p>
             </td>
           </tr>
 
           <tr>
-            <td style="padding:0 32px;">
-              <div style="height:1px;background-color:#f4f4f5;"></div>
+            <td style="padding:0 32px 32px;background:#141415;">
+              <a href="${resetUrl}"
+                 style="display:block;background:#F2EDE3;color:#0B0B0C;text-decoration:none;padding:14px 32px;border-radius:0 10px 10px 0;font-size:14px;font-weight:700;letter-spacing:0.2px;text-align:center;">
+                Crear nueva contraseña
+              </a>
             </td>
           </tr>
 
           <tr>
-            <td style="padding:18px 32px;text-align:center;">
-              <p style="margin:0;color:#a1a1aa;font-size:11px;">
-                Enviado por <a href="https://danteup.com" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
+            <td style="padding:0 32px;background:#141415;">
+              <div style="height:1px;background:#2C2C2F;"></div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:16px 32px 24px;background:#141415;">
+              <p style="margin:0 0 4px;color:#8C877E;font-size:11px;text-align:center;">O copiá este enlace en tu navegador:</p>
+              <p style="margin:0;color:#8C877E;font-size:11px;text-align:center;word-break:break-all;">
+                <a href="${resetUrl}" style="color:#B9B4AA;text-decoration:none;">${resetUrl}</a>
+              </p>
+            </td>
+          </tr>
+
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
+          <tr>
+            <td style="padding:18px 32px;text-align:center;background:#0B0B0C;">
+              <p style="margin:0;color:#8C877E;font-size:11px;">
+                Enviado por <a href="https://danteup.com" target="_blank" style="color:#B9B4AA;font-weight:600;text-decoration:none;">DANTEUP</a>
               </p>
             </td>
           </tr>
@@ -144,96 +134,84 @@ function buildPasswordChangeEmailHtml({ name, confirmUrl }) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Confirmá el cambio de contraseña</title>
+  <title>Confirmá el cambio de contraseña — DANTEUP</title>
 </head>
-<body style="margin:0;padding:0;background-color:#eef9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef9f9;padding:40px 16px;">
+<body style="margin:0;padding:0;background-color:#0B0B0C;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0B0B0C;padding:48px 16px;">
     <tr>
       <td align="center">
-        <table width="100%" style="max-width:560px;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,178,169,0.10);background:#ffffff;">
+        <table width="100%" style="max-width:540px;border-radius:0 20px 20px 0;overflow:hidden;border:1px solid #2C2C2F;background:#141415;">
 
           <tr>
-            <td style="background:linear-gradient(90deg,#009990,#00B2A9,#33C4BE);height:4px;font-size:0;line-height:0;">&nbsp;</td>
-          </tr>
-
-          <tr>
-            <td style="background-color:#080e1a;padding:24px 32px;">
+            <td style="padding:24px 32px;background:#0B0B0C;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="vertical-align:middle;">
-                    <span style="color:#00B2A9;font-size:16px;font-weight:700;letter-spacing:-0.3px;">DANTEUP CRM</span>
+                    <span style="color:#F2EDE3;font-size:15px;font-weight:700;letter-spacing:-0.5px;">DANTEUP</span>
                   </td>
                   <td style="vertical-align:middle;text-align:right;">
-                    <span style="display:inline-block;background-color:rgba(0,178,169,0.15);color:#33C4BE;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;border-radius:20px;border:1px solid rgba(0,178,169,0.3);">
-                      Seguridad
-                    </span>
+                    <span style="display:inline-block;background:#1E1E20;color:#8C877E;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border:1px solid #2C2C2F;border-radius:0 6px 6px 0;">Seguridad</span>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
           <tr>
-            <td style="background:linear-gradient(135deg,#00B2A9,#009990);padding:28px 32px;">
-              <p style="margin:0 0 4px;color:rgba(255,255,255,0.65);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Solicitud de cambio</p>
-              <h1 style="margin:0 0 6px;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">Cambio de contraseña</h1>
-              <p style="margin:0;color:rgba(255,255,255,0.80);font-size:14px;">Confirmá para aplicar el cambio</p>
+            <td style="padding:32px;background:#1E1E20;">
+              <p style="margin:0 0 8px;color:#8C877E;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Solicitud de cambio</p>
+              <h1 style="margin:0 0 8px;color:#F2EDE3;font-size:26px;font-weight:700;letter-spacing:-0.5px;">Cambio de contraseña</h1>
+              <p style="margin:0;color:#B9B4AA;font-size:14px;">Confirmá para aplicar el cambio.</p>
             </td>
           </tr>
 
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
           <tr>
-            <td style="padding:32px 32px 8px;">
-              <p style="margin:0 0 16px;color:#18181b;font-size:15px;font-weight:600;">
-                Hola, ${name} 👋
+            <td style="padding:32px 32px 8px;background:#141415;">
+              <p style="margin:0 0 16px;color:#F2EDE3;font-size:15px;font-weight:600;">Hola, ${name}</p>
+              <p style="margin:0 0 14px;color:#B9B4AA;font-size:14px;line-height:1.65;">
+                Recibimos una solicitud para cambiar la contraseña de tu cuenta en <strong style="color:#F2EDE3;">DANTEUP</strong>.
               </p>
-              <p style="margin:0 0 14px;color:#52525b;font-size:14px;line-height:1.65;">
-                Recibimos una solicitud para cambiar la contraseña de tu cuenta en <strong style="color:#18181b;">DANTEUP CRM</strong>.
-              </p>
-              <p style="margin:0 0 28px;color:#52525b;font-size:14px;line-height:1.65;">
+              <p style="margin:0 0 28px;color:#B9B4AA;font-size:14px;line-height:1.65;">
                 Hacé clic en el botón para confirmar el cambio. Si no fuiste vos, ignorá este email — tu contraseña actual seguirá siendo la misma.
               </p>
             </td>
           </tr>
 
           <tr>
-            <td style="padding:0 32px 24px;">
-              <table cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center">
-                    <a href="${confirmUrl}"
-                       style="display:inline-block;background-color:#00B2A9;color:#ffffff;text-decoration:none;padding:14px 40px;border-radius:10px;font-size:14px;font-weight:700;letter-spacing:0.3px;">
-                      Confirmar cambio de contraseña
-                    </a>
-                  </td>
-                </tr>
-              </table>
+            <td style="padding:0 32px 32px;background:#141415;">
+              <a href="${confirmUrl}"
+                 style="display:block;background:#F2EDE3;color:#0B0B0C;text-decoration:none;padding:14px 32px;border-radius:0 10px 10px 0;font-size:14px;font-weight:700;letter-spacing:0.2px;text-align:center;">
+                Confirmar cambio de contraseña
+              </a>
             </td>
           </tr>
 
           <tr>
-            <td style="padding:0 32px 32px;">
-              <p style="margin:0 0 6px;color:#a1a1aa;font-size:11px;text-align:center;">
-                O copiá este enlace en tu navegador:
-              </p>
-              <p style="margin:0;color:#a1a1aa;font-size:11px;text-align:center;word-break:break-all;">
-                <a href="${confirmUrl}" style="color:#00B2A9;text-decoration:none;">${confirmUrl}</a>
-              </p>
+            <td style="padding:0 32px;background:#141415;">
+              <div style="height:1px;background:#2C2C2F;"></div>
             </td>
           </tr>
 
           <tr>
-            <td style="padding:0 32px;">
-              <div style="height:1px;background-color:#f4f4f5;"></div>
+            <td style="padding:16px 32px 24px;background:#141415;">
+              <p style="margin:0 0 4px;color:#8C877E;font-size:11px;text-align:center;">O copiá este enlace en tu navegador:</p>
+              <p style="margin:0;color:#8C877E;font-size:11px;text-align:center;word-break:break-all;">
+                <a href="${confirmUrl}" style="color:#B9B4AA;text-decoration:none;">${confirmUrl}</a>
+              </p>
             </td>
           </tr>
 
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
           <tr>
-            <td style="padding:18px 32px;text-align:center;">
-              <p style="margin:0 0 4px;color:#a1a1aa;font-size:11px;">
-                Este enlace expira en 30 minutos. Si no solicitaste este cambio, ignorá este email.
-              </p>
-              <p style="margin:0;color:#a1a1aa;font-size:11px;">
-                Enviado por <a href="https://danteup.com" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
+            <td style="padding:18px 32px;text-align:center;background:#0B0B0C;">
+              <p style="margin:0 0 4px;color:#8C877E;font-size:11px;">Este enlace expira en 30 minutos. Si no solicitaste este cambio, ignorá este email.</p>
+              <p style="margin:0;color:#8C877E;font-size:11px;">
+                Enviado por <a href="https://danteup.com" target="_blank" style="color:#B9B4AA;font-weight:600;text-decoration:none;">DANTEUP</a>
               </p>
             </td>
           </tr>
@@ -267,116 +245,85 @@ function buildVerificationEmailHtml({ name, verifyUrl }) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Confirmá tu cuenta — DANTEUP CRM</title>
+  <title>Confirmá tu cuenta — DANTEUP</title>
 </head>
-<body style="margin:0;padding:0;background-color:#eef9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<body style="margin:0;padding:0;background-color:#0B0B0C;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef9f9;padding:40px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0B0B0C;padding:48px 16px;">
     <tr>
       <td align="center">
-        <table width="100%" style="max-width:560px;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,178,169,0.10);background:#ffffff;">
+        <table width="100%" style="max-width:540px;border-radius:0 20px 20px 0;overflow:hidden;border:1px solid #2C2C2F;background:#141415;">
 
-          <!-- Barra de acento teal superior -->
           <tr>
-            <td style="background:linear-gradient(90deg,#009990,#00B2A9,#33C4BE);height:4px;font-size:0;line-height:0;">&nbsp;</td>
-          </tr>
-
-          <!-- Header oscuro -->
-          <tr>
-            <td style="background-color:#080e1a;padding:24px 32px;">
+            <td style="padding:24px 32px;background:#0B0B0C;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="vertical-align:middle;">
-                    <span style="color:#00B2A9;font-size:16px;font-weight:700;letter-spacing:-0.3px;">DANTEUP CRM</span>
+                    <span style="color:#F2EDE3;font-size:15px;font-weight:700;letter-spacing:-0.5px;">DANTEUP</span>
                   </td>
                   <td style="vertical-align:middle;text-align:right;">
-                    <span style="display:inline-block;background-color:rgba(0,178,169,0.15);color:#33C4BE;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;border-radius:20px;border:1px solid rgba(0,178,169,0.3);">
-                      Verificación
-                    </span>
+                    <span style="display:inline-block;background:#1E1E20;color:#8C877E;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border:1px solid #2C2C2F;border-radius:0 6px 6px 0;">Verificación</span>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
-          <!-- Banner teal con ícono -->
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
           <tr>
-            <td style="background:linear-gradient(135deg,#00B2A9,#009990);padding:32px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="vertical-align:middle;padding-right:20px;">
-                    <p style="margin:0 0 4px;color:rgba(255,255,255,0.65);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Nuevo acceso</p>
-                    <h1 style="margin:0 0 6px;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.5px;">Confirmá tu cuenta</h1>
-                    <p style="margin:0;color:rgba(255,255,255,0.80);font-size:14px;">Estás a un paso de empezar</p>
-                  </td>
-                  <td style="vertical-align:middle;text-align:right;width:64px;">
-                    <div style="width:56px;height:56px;background:rgba(255,255,255,0.15);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;">
-                      <img src="https://cdn-icons-png.flaticon.com/512/9195/9195785.png" width="30" height="30" alt="" style="display:block;opacity:0.9;" />
-                    </div>
-                  </td>
-                </tr>
-              </table>
+            <td style="padding:32px;background:#1E1E20;">
+              <p style="margin:0 0 8px;color:#8C877E;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Nueva cuenta</p>
+              <h1 style="margin:0 0 8px;color:#F2EDE3;font-size:26px;font-weight:700;letter-spacing:-0.5px;">Confirmá tu cuenta</h1>
+              <p style="margin:0;color:#B9B4AA;font-size:14px;">Estás a un paso de empezar.</p>
             </td>
           </tr>
 
-          <!-- Cuerpo -->
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
           <tr>
-            <td style="padding:32px 32px 8px;">
-              <p style="margin:0 0 16px;color:#18181b;font-size:15px;font-weight:600;">
-                Hola, ${name} 👋
+            <td style="padding:32px 32px 8px;background:#141415;">
+              <p style="margin:0 0 16px;color:#F2EDE3;font-size:15px;font-weight:600;">Hola, ${name}</p>
+              <p style="margin:0 0 14px;color:#B9B4AA;font-size:14px;line-height:1.65;">
+                Gracias por registrarte en <strong style="color:#F2EDE3;">DANTEUP</strong>. Para activar tu cuenta y comenzar a usarla, confirmá tu dirección de email haciendo clic en el botón de abajo.
               </p>
-              <p style="margin:0 0 14px;color:#52525b;font-size:14px;line-height:1.65;">
-                Gracias por registrarte en <strong style="color:#18181b;">DANTEUP CRM</strong>. Para activar tu cuenta y comenzar a usarla, confirmá tu dirección de email haciendo clic en el botón de abajo.
-              </p>
-              <p style="margin:0 0 28px;color:#52525b;font-size:14px;line-height:1.65;">
-                Este enlace es válido por <strong style="color:#18181b;">24 horas</strong>.
+              <p style="margin:0 0 28px;color:#B9B4AA;font-size:14px;line-height:1.65;">
+                Este enlace es válido por <strong style="color:#F2EDE3;">24 horas</strong>.
               </p>
             </td>
           </tr>
 
-          <!-- CTA -->
           <tr>
-            <td style="padding:0 32px 24px;">
-              <table cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center">
-                    <a href="${verifyUrl}"
-                       style="display:inline-block;background-color:#00B2A9;color:#ffffff;text-decoration:none;padding:14px 40px;border-radius:10px;font-size:14px;font-weight:700;letter-spacing:0.3px;">
-                      Confirmar email
-                    </a>
-                  </td>
-                </tr>
-              </table>
+            <td style="padding:0 32px 32px;background:#141415;">
+              <a href="${verifyUrl}"
+                 style="display:block;background:#F2EDE3;color:#0B0B0C;text-decoration:none;padding:14px 32px;border-radius:0 10px 10px 0;font-size:14px;font-weight:700;letter-spacing:0.2px;text-align:center;">
+                Confirmar email
+              </a>
             </td>
           </tr>
 
-          <!-- Link plano -->
           <tr>
-            <td style="padding:0 32px 32px;">
-              <p style="margin:0 0 6px;color:#a1a1aa;font-size:11px;text-align:center;">
-                O copiá este enlace en tu navegador:
-              </p>
-              <p style="margin:0;color:#a1a1aa;font-size:11px;text-align:center;word-break:break-all;">
-                <a href="${verifyUrl}" style="color:#00B2A9;text-decoration:none;">${verifyUrl}</a>
+            <td style="padding:0 32px;background:#141415;">
+              <div style="height:1px;background:#2C2C2F;"></div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:16px 32px 24px;background:#141415;">
+              <p style="margin:0 0 4px;color:#8C877E;font-size:11px;text-align:center;">O copiá este enlace en tu navegador:</p>
+              <p style="margin:0;color:#8C877E;font-size:11px;text-align:center;word-break:break-all;">
+                <a href="${verifyUrl}" style="color:#B9B4AA;text-decoration:none;">${verifyUrl}</a>
               </p>
             </td>
           </tr>
 
-          <!-- Separador -->
-          <tr>
-            <td style="padding:0 32px;">
-              <div style="height:1px;background-color:#f4f4f5;"></div>
-            </td>
-          </tr>
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
 
-          <!-- Footer -->
           <tr>
-            <td style="padding:18px 32px;text-align:center;">
-              <p style="margin:0 0 4px;color:#a1a1aa;font-size:11px;">
-                Si no creaste esta cuenta, ignorá este email.
-              </p>
-              <p style="margin:0;color:#a1a1aa;font-size:11px;">
-                Enviado por <a href="https://danteup.com" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
+            <td style="padding:18px 32px;text-align:center;background:#0B0B0C;">
+              <p style="margin:0 0 4px;color:#8C877E;font-size:11px;">Si no creaste esta cuenta, ignorá este email.</p>
+              <p style="margin:0;color:#8C877E;font-size:11px;">
+                Enviado por <a href="https://danteup.com" target="_blank" style="color:#B9B4AA;font-weight:600;text-decoration:none;">DANTEUP</a>
               </p>
             </td>
           </tr>
@@ -419,7 +366,7 @@ export async function sendInvitationEmail({ to, inviteeName, orgName, role, invi
 
 function buildInvitationEmailHtml({ inviteeName, orgName, role, inviteLink, isNewUser }) {
   const roleLabel = role === 'admin' ? 'Administrador' : 'Miembro'
-  const greeting  = inviteeName ? `Hola, ${inviteeName} 👋` : '¡Hola! 👋'
+  const greeting  = inviteeName ? `Hola, ${inviteeName}` : '¡Hola!'
   const ctaText   = isNewUser ? 'Crear cuenta y unirse' : 'Aceptar invitación'
   const subtitle  = isNewUser
     ? 'Creá tu cuenta para comenzar'
@@ -430,93 +377,83 @@ function buildInvitationEmailHtml({ inviteeName, orgName, role, inviteLink, isNe
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Invitación a ${orgName}</title>
+  <title>Invitación a ${orgName} — DANTEUP</title>
 </head>
-<body style="margin:0;padding:0;background-color:#eef9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef9f9;padding:40px 16px;">
+<body style="margin:0;padding:0;background-color:#0B0B0C;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0B0B0C;padding:48px 16px;">
     <tr>
       <td align="center">
-        <table width="100%" style="max-width:560px;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,178,169,0.10);background:#ffffff;">
+        <table width="100%" style="max-width:540px;border-radius:0 20px 20px 0;overflow:hidden;border:1px solid #2C2C2F;background:#141415;">
 
           <tr>
-            <td style="background:linear-gradient(90deg,#009990,#00B2A9,#33C4BE);height:4px;font-size:0;line-height:0;">&nbsp;</td>
-          </tr>
-
-          <tr>
-            <td style="background-color:#080e1a;padding:24px 32px;">
+            <td style="padding:24px 32px;background:#0B0B0C;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="vertical-align:middle;">
-                    <span style="color:#00B2A9;font-size:16px;font-weight:700;letter-spacing:-0.3px;">DANTEUP CRM</span>
+                    <span style="color:#F2EDE3;font-size:15px;font-weight:700;letter-spacing:-0.5px;">DANTEUP</span>
                   </td>
                   <td style="vertical-align:middle;text-align:right;">
-                    <span style="display:inline-block;background-color:rgba(0,178,169,0.15);color:#33C4BE;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;border-radius:20px;border:1px solid rgba(0,178,169,0.3);">
-                      Invitación
-                    </span>
+                    <span style="display:inline-block;background:#1E1E20;color:#8C877E;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border:1px solid #2C2C2F;border-radius:0 6px 6px 0;">Invitación</span>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
           <tr>
-            <td style="background:linear-gradient(135deg,#00B2A9,#009990);padding:28px 32px;">
-              <p style="margin:0 0 4px;color:rgba(255,255,255,0.65);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Nueva invitación</p>
-              <h1 style="margin:0 0 6px;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">${orgName}</h1>
-              <p style="margin:0;color:rgba(255,255,255,0.80);font-size:14px;">${subtitle}</p>
+            <td style="padding:32px;background:#1E1E20;">
+              <p style="margin:0 0 8px;color:#8C877E;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Nueva invitación</p>
+              <h1 style="margin:0 0 8px;color:#F2EDE3;font-size:26px;font-weight:700;letter-spacing:-0.5px;">${orgName}</h1>
+              <p style="margin:0;color:#B9B4AA;font-size:14px;">${subtitle}</p>
             </td>
           </tr>
 
-          <tr>
-            <td style="padding:32px 32px 8px;">
-              <p style="margin:0 0 16px;color:#18181b;font-size:15px;font-weight:600;">
-                ${greeting}
-              </p>
-              <p style="margin:0 0 14px;color:#52525b;font-size:14px;line-height:1.65;">
-                Te invitaron a unirte a <strong style="color:#18181b;">${orgName}</strong> en DANTEUP CRM con el rol de <strong style="color:#18181b;">${roleLabel}</strong>.
-              </p>
-              <p style="margin:0 0 28px;color:#52525b;font-size:14px;line-height:1.65;">
-                Este enlace es válido por <strong style="color:#18181b;">7 días</strong>. Si no esperabas esta invitación, podés ignorar este email.
-              </p>
-            </td>
-          </tr>
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
 
           <tr>
-            <td style="padding:0 32px 24px;">
-              <table cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center">
-                    <a href="${inviteLink}"
-                       style="display:inline-block;background-color:#00B2A9;color:#ffffff;text-decoration:none;padding:14px 40px;border-radius:10px;font-size:14px;font-weight:700;letter-spacing:0.3px;">
-                      ${ctaText}
-                    </a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:0 32px 32px;">
-              <p style="margin:0 0 6px;color:#a1a1aa;font-size:11px;text-align:center;">
-                O copiá este enlace en tu navegador:
+            <td style="padding:32px 32px 8px;background:#141415;">
+              <p style="margin:0 0 16px;color:#F2EDE3;font-size:15px;font-weight:600;">${greeting}</p>
+              <p style="margin:0 0 14px;color:#B9B4AA;font-size:14px;line-height:1.65;">
+                Te invitaron a unirte a <strong style="color:#F2EDE3;">${orgName}</strong> en DANTEUP con el rol de <strong style="color:#F2EDE3;">${roleLabel}</strong>.
               </p>
-              <p style="margin:0;color:#a1a1aa;font-size:11px;text-align:center;word-break:break-all;">
-                <a href="${inviteLink}" style="color:#00B2A9;text-decoration:none;">${inviteLink}</a>
+              <p style="margin:0 0 28px;color:#B9B4AA;font-size:14px;line-height:1.65;">
+                Este enlace es válido por <strong style="color:#F2EDE3;">7 días</strong>. Si no esperabas esta invitación, podés ignorar este email.
               </p>
             </td>
           </tr>
 
           <tr>
-            <td style="padding:0 32px;">
-              <div style="height:1px;background-color:#f4f4f5;"></div>
+            <td style="padding:0 32px 32px;background:#141415;">
+              <a href="${inviteLink}"
+                 style="display:block;background:#F2EDE3;color:#0B0B0C;text-decoration:none;padding:14px 32px;border-radius:0 10px 10px 0;font-size:14px;font-weight:700;letter-spacing:0.2px;text-align:center;">
+                ${ctaText}
+              </a>
             </td>
           </tr>
 
           <tr>
-            <td style="padding:18px 32px;text-align:center;">
-              <p style="margin:0;color:#a1a1aa;font-size:11px;">
-                Enviado por <a href="https://danteup.com" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
+            <td style="padding:0 32px;background:#141415;">
+              <div style="height:1px;background:#2C2C2F;"></div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:16px 32px 24px;background:#141415;">
+              <p style="margin:0 0 4px;color:#8C877E;font-size:11px;text-align:center;">O copiá este enlace en tu navegador:</p>
+              <p style="margin:0;color:#8C877E;font-size:11px;text-align:center;word-break:break-all;">
+                <a href="${inviteLink}" style="color:#B9B4AA;text-decoration:none;">${inviteLink}</a>
+              </p>
+            </td>
+          </tr>
+
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
+          <tr>
+            <td style="padding:18px 32px;text-align:center;background:#0B0B0C;">
+              <p style="margin:0;color:#8C877E;font-size:11px;">
+                Enviado por <a href="https://danteup.com" target="_blank" style="color:#B9B4AA;font-weight:600;text-decoration:none;">DANTEUP</a>
               </p>
             </td>
           </tr>

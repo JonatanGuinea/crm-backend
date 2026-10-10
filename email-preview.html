@@ -3,87 +3,195 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Presupuesto #001</title>
+  <title>Email Preview — DANTEUP</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #18181b; font-family: system-ui, sans-serif; color: #f4f4f5; }
+    nav { position: sticky; top: 0; z-index: 10; background: #09090b; border-bottom: 1px solid #27272a; padding: 0 24px; display: flex; gap: 4px; overflow-x: auto; }
+    nav button { padding: 14px 16px; background: none; border: none; color: #a1a1aa; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; transition: all .15s; }
+    nav button:hover { color: #f4f4f5; }
+    nav button.active { color: #f4f4f5; border-bottom-color: #f4f4f5; }
+    .container { max-width: 760px; margin: 40px auto; padding: 0 16px 80px; }
+    .label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: #71717a; margin-bottom: 16px; }
+    iframe { width: 100%; border: 1px solid #27272a; border-radius: 12px; display: block; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+  </style>
 </head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<body>
 
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 16px;">
-    <tr>
-      <td align="center">
-        <table width="100%" style="max-width:560px;border-radius:12px;overflow:hidden;border:1px solid #e4e4e7;background:#ffffff;">
+<nav>
+  <button class="active" onclick="show('verification', this)">Verificación de cuenta</button>
+  <button onclick="show('reset', this)">Restablecer contraseña</button>
+  <button onclick="show('change', this)">Cambio de contraseña</button>
+  <button onclick="show('invitation', this)">Invitación</button>
+</nav>
 
-          <!-- Header: izquierda = logo | derecha = info del doc -->
-          <tr>
-            <td style="background-color:#1e293b;padding:28px 36px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <!-- Izquierda: logo de la empresa -->
-                  <td style="vertical-align:middle;width:140px;padding-right:20px;">
-                    <!-- Logo real: <img src="URL_DEL_LOGO" style="max-height:40px;max-width:130px;object-fit:contain;display:block;"> -->
-                    <!-- Placeholder para preview -->
-                    <table cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="background-color:#334155;border-radius:8px;padding:10px 18px;">
-                          <p style="margin:0;color:#94a3b8;font-size:12px;font-weight:700;letter-spacing:1px;">MI EMPRESA</p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                  <!-- Derecha: datos del presupuesto -->
-                  <td style="vertical-align:middle;text-align:right;">
-                    <p style="margin:0 0 4px;color:#94a3b8;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Presupuesto</p>
-                    <h1 style="margin:0 0 4px;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.5px;">#001</h1>
-                    <p style="margin:0;color:#cbd5e1;font-size:13px;">Diseño y desarrollo web corporativo</p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+<div class="container">
+  <div id="panel-verification" class="panel active">
+    <p class="label">Verificación de cuenta</p>
+    <iframe id="iframe-verification" srcdoc="" frameborder="0" scrolling="no"></iframe>
+  </div>
+  <div id="panel-reset" class="panel">
+    <p class="label">Restablecer contraseña</p>
+    <iframe id="iframe-reset" srcdoc="" frameborder="0" scrolling="no"></iframe>
+  </div>
+  <div id="panel-change" class="panel">
+    <p class="label">Cambio de contraseña</p>
+    <iframe id="iframe-change" srcdoc="" frameborder="0" scrolling="no"></iframe>
+  </div>
+  <div id="panel-invitation" class="panel">
+    <p class="label">Invitación a organización</p>
+    <iframe id="iframe-invitation" srcdoc="" frameborder="0" scrolling="no"></iframe>
+  </div>
+</div>
 
-          <!-- Body -->
-          <tr>
-            <td style="padding:32px 36px;">
-              <p style="margin:0 0 12px;color:#27272a;font-size:15px;">
-                Hola, <strong>Juan García</strong>
-              </p>
-              <p style="margin:0 0 6px;color:#71717a;font-size:14px;line-height:1.6;">
-                Te compartimos el presupuesto <strong style="color:#27272a;">Diseño y desarrollo web corporativo</strong>.
-              </p>
-              <p style="margin:0 0 28px;color:#71717a;font-size:14px;">
-                Total: <strong style="color:#27272a;font-size:15px;">$150.000,00</strong>
-              </p>
+<script>
+const NAME        = 'Mariano'
+const VERIFY_URL  = 'https://app.danteup.com/verify-email?token=eyJhbGciOiJIUzI1NiJ9.ejemplo'
+const RESET_URL   = 'https://app.danteup.com/reset-password?token=eyJhbGciOiJIUzI1NiJ9.ejemplo'
+const CONFIRM_URL = 'https://app.danteup.com/confirm-password-change?token=eyJhbGciOiJIUzI1NiJ9.ejemplo'
+const INVITE_URL  = 'https://app.danteup.com/invite?token=eyJhbGciOiJIUzI1NiJ9.ejemplo'
+const ORG_NAME    = 'Estudio Tallari'
+const ROLE_LABEL  = 'Miembro'
 
-              <!-- CTA -->
-              <table cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center" style="padding-bottom:24px;">
-                    <a href="#"
-                       style="display:inline-block;background-color:#1e293b;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:10px;font-size:14px;font-weight:600;">
-                      Ver presupuesto
-                    </a>
-                  </td>
-                </tr>
-              </table>
+const CARD = 'max-width:540px;border-radius:0 20px 20px 0;overflow:hidden;border:1px solid #2C2C2F;background:#141415;'
 
-              <p style="margin:0;color:#a1a1aa;font-size:12px;text-align:center;word-break:break-all;">
-                <a href="#" style="color:#64748b;">http://localhost:5173/p/presupuesto/abc123</a>
-              </p>
-            </td>
-          </tr>
+const LOGO_B64 = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1NTEuOCAxMDEuNSI+PGcgZmlsbD0iI0YyRURFMyI+PHBhdGggZD0iTTMyIDEwMEwwIDEwMEwwIDBMNDUgMEE0MCA0MCAwIDAgMSA4NSA0MEw4NSA2MC41QTI3IDI3IDAgMCAwIDEzOSA2MC41TDEzOSAwTDE1MyAwTDE1MyA2MC41QTQxIDQxIDAgMCAxIDcxIDYwLjVMNzEgNDBBMjYgMjYgMCAwIDAgNDUgMTRMMTQgMTRMMTQgODZMMzIgODZaIi8+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTk5IDIyKSBzY2FsZSgwLjU2KSI+PHBhdGggdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAwKSIgZD0iTTAgNTBMMCAwTDQwIDBBNDAgNDAgMCAwIDEgODAgNDBMODAgNjBBNDAgNDAgMCAwIDEgNDAgMTAwTDAgMTAwTDAgNDkuNEwyMCA0OS40TDIwIDgwTDQwIDgwQTIwIDIwIDAgMCAwIDYwIDYwTDYwIDQwQTIwIDIwIDAgMCAwIDQwIDIwTDIwIDIwTDIwIDUwWiIvPjxwYXRoIHRyYW5zZm9ybT0idHJhbnNsYXRlKDEwMCAwKSIgZD0iTTAgMTAwTDAgMzhBMzggMzggMCAwIDEgMzggMEEzOCAzOCAwIDAgMSA3NiAzOEw3NiAxMDBMNTYgMTAwTDU2IDM4QTE4IDE4IDAgMCAwIDM4IDIwQTE4IDE4IDAgMCAwIDIwIDM4TDIwIDEwMFoiLz48cGF0aCB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxMDAgMCkiIGQ9Ik0xMCA1MEw2NiA1MEw2NiA3MEwxMCA3MFoiLz48cGF0aCB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxOTggMCkiIGQ9Ik0wIDEwMEwwIDBMMjAgMEwyMCAxMDBaIi8+PHBhdGggdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTk4IDApIiBkPSJNNzggMEw3OCAxMDBMNTggMTAwTDU4IDBaIi8+PHBhdGggdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTk4IDApIiBkPSJNMCAwSDIzLjEyMUw3OCAxMDBINTQuODc5WiIvPjxwYXRoIHRyYW5zZm9ybT0idHJhbnNsYXRlKDI5MCAwKSIgZD0iTTAgMEw2OCAwTDY4IDIwTDAgMjBaIi8+PHBhdGggdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjkwIDApIiBkPSJNNDQgMTBMNDQgMTAwTDI0IDEwMEwyNCAxMFoiLz48cGF0aCB0cmFuc2Zvcm09InRyYW5zbGF0ZSgzNzEgMCkiIGQ9Ik02MCAyMEwyMCAyMEwyMCA4MEw2MCA4MEw2MCAxMDBMMCAxMDBMMCAwTDYwIDBaIi8+PHBhdGggdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMzcxIDApIiBkPSJNMTAgNDBMNTQgNDBMNTQgNjBMMTAgNjBaIi8+PHBhdGggdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNDUyIDApIiBkPSJNMjAgMEwyMCA2MUEyMCAyMCAwIDAgMCA2MCA2MUw2MCAwTDgwIDBMODAgNjFBNDAgNDAgMCAwIDEgMCA2MUwwIDBaIi8+PHBhdGggdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNTU0IDApIiBkPSJNMCAxMDBMMCAwTDQyIDBBMzQgMzQgMCAwIDEgNzYgMzRMNzYgMzZBMzQgMzQgMCAwIDEgNDIgNzBMMTAgNzBMMTAgNTBMNDIgNTBBMTQgMTQgMCAwIDAgNTYgMzZMNTYgMzRBMTQgMTQgMCAwIDAgNDIgMjBMMjAgMjBMMjAgMTAwWiIvPjwvZz48L2c+PC9zdmc+'
 
-          <!-- Footer -->
-          <tr>
-            <td style="border-top:1px solid #f4f4f5;padding:18px 36px;text-align:center;">
-              <p style="margin:0;color:#a1a1aa;font-size:11px;">
-                Generado por <a href="https://danteup.com" target="_blank" style="color:#71717a;font-weight:600;text-decoration:none;">danteup.com</a>
-              </p>
-            </td>
-          </tr>
+function header(badge) {
+  return `<tr>
+    <td style="padding:24px 32px;background:#0B0B0C;">
+      <table width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align:middle;"><img src="${LOGO_B64}" alt="DANTEUP" style="height:28px;width:auto;display:block;"></td>
+        <td style="vertical-align:middle;text-align:right;"><span style="display:inline-block;background:#1E1E20;color:#8C877E;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border:1px solid #2C2C2F;border-radius:0 6px 6px 0;">${badge}</span></td>
+      </tr></table>
+    </td>
+  </tr>
+  <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>`
+}
 
-        </table>
-      </td>
-    </tr>
+function hero(eyebrow, title, subtitle) {
+  return `<tr>
+    <td style="padding:32px;background:#1E1E20;">
+      <p style="margin:0 0 8px;color:#8C877E;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">${eyebrow}</p>
+      <h1 style="margin:0 0 8px;color:#F2EDE3;font-size:26px;font-weight:700;letter-spacing:-0.5px;">${title}</h1>
+      <p style="margin:0;color:#B9B4AA;font-size:14px;">${subtitle}</p>
+    </td>
+  </tr>
+  <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>`
+}
+
+function bodyRows(greeting, p1, p2) {
+  return `<tr>
+    <td style="padding:32px 32px 8px;background:#141415;">
+      <p style="margin:0 0 16px;color:#F2EDE3;font-size:15px;font-weight:600;">${greeting}</p>
+      <p style="margin:0 0 14px;color:#B9B4AA;font-size:14px;line-height:1.65;">${p1}</p>
+      <p style="margin:0 0 28px;color:#B9B4AA;font-size:14px;line-height:1.65;">${p2}</p>
+    </td>
+  </tr>`
+}
+
+function cta(url, label) {
+  return `<tr>
+    <td style="padding:0 32px 32px;background:#141415;">
+      <a href="${url}" style="display:block;background:#F2EDE3;color:#0B0B0C;text-decoration:none;padding:14px 32px;border-radius:0 10px 10px 0;font-size:14px;font-weight:700;letter-spacing:0.2px;text-align:center;">${label}</a>
+    </td>
+  </tr>`
+}
+
+function linkRow(url) {
+  return `<tr><td style="padding:0 32px;background:#141415;"><div style="height:1px;background:#2C2C2F;"></div></td></tr>
+  <tr>
+    <td style="padding:16px 32px 24px;background:#141415;">
+      <p style="margin:0 0 4px;color:#8C877E;font-size:11px;text-align:center;">O copiá este enlace en tu navegador:</p>
+      <p style="margin:0;color:#8C877E;font-size:11px;text-align:center;word-break:break-all;"><a href="${url}" style="color:#B9B4AA;text-decoration:none;">${url}</a></p>
+    </td>
+  </tr>`
+}
+
+function footer(note) {
+  return `<tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+  <tr>
+    <td style="padding:18px 32px;text-align:center;background:#0B0B0C;">
+      ${note ? `<p style="margin:0 0 4px;color:#8C877E;font-size:11px;">${note}</p>` : ''}
+      <p style="margin:0;color:#8C877E;font-size:11px;">Enviado por <a href="https://danteup.com" style="color:#B9B4AA;font-weight:600;text-decoration:none;">DANTEUP</a></p>
+    </td>
+  </tr>`
+}
+
+function wrap(rows) {
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background-color:#0B0B0C;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0B0B0C;padding:48px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="${CARD}">${rows}</table>
+    </td></tr>
   </table>
+</body></html>`
+}
 
+const emails = {
+  verification: wrap(
+    header('Verificación') +
+    hero('Nueva cuenta', 'Confirmá tu cuenta', 'Estás a un paso de empezar.') +
+    bodyRows(`Hola, ${NAME}`,
+      `Gracias por registrarte en <strong style="color:#F2EDE3;">DANTEUP</strong>. Para activar tu cuenta y comenzar a usarla, confirmá tu dirección de email haciendo clic en el botón de abajo.`,
+      `Este enlace es válido por <strong style="color:#F2EDE3;">24 horas</strong>.`) +
+    cta(VERIFY_URL, 'Confirmar email') +
+    linkRow(VERIFY_URL) +
+    footer('Si no creaste esta cuenta, ignorá este email.')
+  ),
+  reset: wrap(
+    header('Recuperar acceso') +
+    hero('Solicitud recibida', 'Restablecer contraseña', 'Usá el botón para crear una nueva contraseña.') +
+    bodyRows(`Hola, ${NAME}`,
+      `Recibimos una solicitud para restablecer la contraseña de tu cuenta en <strong style="color:#F2EDE3;">DANTEUP</strong>.`,
+      `Si no fuiste vos, podés ignorar este email — tu contraseña actual no cambiará. El enlace expira en <strong style="color:#F2EDE3;">30 minutos</strong>.`) +
+    cta(RESET_URL, 'Crear nueva contraseña') +
+    linkRow(RESET_URL) +
+    footer(null)
+  ),
+  change: wrap(
+    header('Seguridad') +
+    hero('Solicitud de cambio', 'Cambio de contraseña', 'Confirmá para aplicar el cambio.') +
+    bodyRows(`Hola, ${NAME}`,
+      `Recibimos una solicitud para cambiar la contraseña de tu cuenta en <strong style="color:#F2EDE3;">DANTEUP</strong>.`,
+      `Hacé clic en el botón para confirmar el cambio. Si no fuiste vos, ignorá este email — tu contraseña actual seguirá siendo la misma.`) +
+    cta(CONFIRM_URL, 'Confirmar cambio de contraseña') +
+    linkRow(CONFIRM_URL) +
+    footer('Este enlace expira en 30 minutos. Si no solicitaste este cambio, ignorá este email.')
+  ),
+  invitation: wrap(
+    header('Invitación') +
+    hero('Nueva invitación', ORG_NAME, 'Hacé clic para unirte al equipo.') +
+    bodyRows(`Hola, ${NAME}`,
+      `Te invitaron a unirte a <strong style="color:#F2EDE3;">${ORG_NAME}</strong> en DANTEUP con el rol de <strong style="color:#F2EDE3;">${ROLE_LABEL}</strong>.`,
+      `Este enlace es válido por <strong style="color:#F2EDE3;">7 días</strong>. Si no esperabas esta invitación, podés ignorar este email.`) +
+    cta(INVITE_URL, 'Aceptar invitación') +
+    linkRow(INVITE_URL) +
+    footer(null)
+  ),
+}
+
+function autoHeight(iframe) {
+  try { iframe.style.height = iframe.contentDocument.body.scrollHeight + 'px' } catch(e) {}
+}
+
+function show(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'))
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'))
+  document.getElementById('panel-' + id).classList.add('active')
+  btn.classList.add('active')
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  Object.entries(emails).forEach(([id, html]) => {
+    const iframe = document.getElementById('iframe-' + id)
+    iframe.srcdoc = html
+    iframe.addEventListener('load', () => autoHeight(iframe))
+  })
+})
+</script>
 </body>
 </html>
