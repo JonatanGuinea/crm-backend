@@ -254,7 +254,7 @@ router.get('/quotes/:id/pdf', async (req, res) => {
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename="presupuesto-${quote.number}.pdf"`)
 
-    const doc = buildPdf('quote', quote)
+    const doc = await buildPdf('quote', quote)
     doc.pipe(res)
   } catch (error) {
     return fail(res, 500, error.message)

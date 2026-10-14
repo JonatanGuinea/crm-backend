@@ -13,9 +13,10 @@ export const downloadQuotePdf = async (req, res) => {
         items: true,
         images: { orderBy: { order: 'asc' } },
         installments: { orderBy: { number: 'asc' } },
-        client: { select: { id: true, name: true, email: true, phone: true, company: true, address: true, cuit: true, website: true } },
+        quoteNotes: { orderBy: { order: 'asc' } },
+        client: { select: { id: true, name: true, email: true, phone: true, company: true, address: true, city: true, province: true, postalCode: true, cuit: true, website: true } },
         project: { select: { id: true, title: true } },
-        organization: { select: { id: true, name: true, cuit: true, email: true, website: true, phone: true, address: true, logo: true } }
+        organization: { select: { id: true, name: true, cuit: true, email: true, website: true, phone: true, address: true, city: true, province: true, postalCode: true, logo: true, signature: true, signatureOwnerName: true, brandPrimary: true, brandSecondary: true } }
       }
     })
 
@@ -24,7 +25,7 @@ export const downloadQuotePdf = async (req, res) => {
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename="presupuesto-${quote.number}.pdf"`)
 
-    const doc = buildPdf('quote', quote)
+    const doc = await buildPdf('quote', quote)
     doc.pipe(res)
   } catch (error) {
     return fail(res, 500, error.message)

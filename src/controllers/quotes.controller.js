@@ -164,7 +164,7 @@ export const getQuotes = async (req, res) => {
     const quotes = await prisma.quote.findMany({
       where,
       include: {
-        client: { select: { id: true, name: true, phone: true } },
+        client: { select: { id: true, name: true, email: true, phone: true } },
         project: { select: { id: true, title: true } },
         _count: { select: { installments: true } },
         installments: { where: { status: { in: ['pending', 'overdue'] } }, select: { id: true } }
