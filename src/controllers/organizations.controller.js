@@ -149,38 +149,32 @@ export const updateOrganization = async (req, res) => {
     const { id } = req.params
     const { name, cuit, email, website, phone, address, city, province, postalCode, defaultCurrency, signature, signatureOwnerName, brandPrimary, brandSecondary } = req.body
 
-    if (!name?.trim()) {
+    if (name !== undefined && !name?.trim()) {
       return fail(res, 400, 'El nombre es requerido')
     }
 
     const updates = {
-      name:                name.trim(),
-      cuit:                cuit?.trim()               || null,
-      email:               email?.trim()              || null,
-      website:             website?.trim()            || null,
-      phone:               phone?.trim()              || null,
-      address:             address?.trim()            || null,
-      city:                city?.trim()               || null,
-      province:            province?.trim()           || null,
-      postalCode:          postalCode?.trim()         || null,
-      signatureOwnerName:  signatureOwnerName?.trim() || null,
-      brandPrimary:        brandPrimary  || null,
-      brandSecondary:      brandSecondary || null,
-      defaultCurrency:     ['USD', 'ARS'].includes(defaultCurrency) ? defaultCurrency : undefined,
-      ...(signature !== undefined && { signature: signature || null }),
+      ...(name !== undefined && { name: name.trim() }),
+      ...(cuit               !== undefined && { cuit:               cuit?.trim()               || null }),
+      ...(email              !== undefined && { email:              email?.trim()              || null }),
+      ...(website            !== undefined && { website:            website?.trim()            || null }),
+      ...(phone              !== undefined && { phone:              phone?.trim()              || null }),
+      ...(address            !== undefined && { address:            address?.trim()            || null }),
+      ...(city               !== undefined && { city:               city?.trim()               || null }),
+      ...(province           !== undefined && { province:           province?.trim()           || null }),
+      ...(postalCode         !== undefined && { postalCode:         postalCode?.trim()         || null }),
+      ...(signatureOwnerName !== undefined && { signatureOwnerName: signatureOwnerName?.trim() || null }),
+      ...(brandPrimary       !== undefined && { brandPrimary:       brandPrimary              || null }),
+      ...(brandSecondary     !== undefined && { brandSecondary:     brandSecondary            || null }),
+      ...(defaultCurrency    !== undefined && { defaultCurrency:    ['USD', 'ARS'].includes(defaultCurrency) ? defaultCurrency : undefined }),
+      ...(signature          !== undefined && { signature:          signature                 || null }),
     }
 
-    const newSlug = name
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, '-')
-      .replace(/[^\w-]+/g, '')
-
-    const slugConflict = await prisma.organization.findFirst({
-      where: { slug: newSlug, NOT: { id } }
-    })
-
-    updates.slug = slugConflict ? `${newSlug}-${Date.now()}` : newSlug
+    if (name !== undefined) {
+      const newSlug = name.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '')
+      const slugConflict = await prisma.organization.findFirst({ where: { slug: newSlug, NOT: { id } } })
+      updates.slug = slugConflict ? `${newSlug}-${Date.now()}` : newSlug
+    }
 
     const organization = await prisma.organization.update({
       where: { id },

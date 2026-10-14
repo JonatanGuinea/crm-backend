@@ -530,7 +530,7 @@ export async function buildPdf(type, data) {
   y += BG_PAD + 8
 
   // Logo DanteUP para el footer
-  const DANTEUP_LOGO_PATH = join(__dirname, '../assets/logo.png')
+  const DANTEUP_LOGO_PATH = join(__dirname, '../assets/logotipo-horizontal-negro.png')
   const FOOTER_LOGO_H = 13
   let footerLogoImg = null
   let footerLogoW   = 0
