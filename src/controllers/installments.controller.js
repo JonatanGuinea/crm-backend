@@ -2,6 +2,12 @@ import prisma from '../config/db.js'
 import { success, fail } from '../utils/response.js'
 import { syncQuoteMovements } from '../services/finances.service.js'
 
+function todayArgUTC() {
+  const now = new Date()
+  const arg = new Date(now.getTime() - 3 * 60 * 60 * 1000)
+  return new Date(Date.UTC(arg.getUTCFullYear(), arg.getUTCMonth(), arg.getUTCDate(), 0, 0, 0, 0))
+}
+
 export const createInstallments = async (req, res) => {
   try {
     const orgId = req.user.organizationId
@@ -121,6 +127,7 @@ export const payInstallment = async (req, res) => {
           description: { contains: `Cuota ${installment.number} —` },
         },
       })
+
       if (movement) {
         const account = await prisma.cashAccount.findFirst({ where: { id: movement.accountId, orgId } })
         if (account) {
@@ -130,13 +137,59 @@ export const payInstallment = async (req, res) => {
           await prisma.$transaction(async (tx) => {
             await tx.cashMovement.update({
               where: { id: movement.id },
-              data: { status: 'confirmed', balanceBefore: before, balanceAfter: after, date: new Date() },
+              data: { status: 'confirmed', balanceBefore: before, balanceAfter: after, date: todayArgUTC() },
             })
             await tx.cashAccount.update({
               where: { id: account.id },
               data: { currentBalance: after },
             })
           })
+        }
+      } else {
+        // No había movimiento pendiente (ej: cuotas creadas con presupuesto en draft/sent)
+        // Crear el movimiento confirmado directamente al cobrar
+        const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { defaultCashAccountId: true } })
+        let accountId = org?.defaultCashAccountId
+        if (!accountId) {
+          const first = await prisma.cashAccount.findFirst({ where: { orgId, status: 'active' }, orderBy: { createdAt: 'asc' } })
+          accountId = first?.id
+        }
+        if (accountId) {
+          const account = await prisma.cashAccount.findFirst({ where: { id: accountId, orgId } })
+          if (account) {
+            const quote = await prisma.quote.findFirst({
+              where: { id: installment.quoteId },
+              select: { number: true, clientId: true, projectId: true },
+            })
+            const qty = Number(installment.amount)
+            const before = Number(account.currentBalance)
+            const after = before + qty
+            await prisma.$transaction(async (tx) => {
+              await tx.cashMovement.create({
+                data: {
+                  orgId,
+                  accountId,
+                  type: 'income',
+                  concept: 'quote_installment',
+                  amount: qty,
+                  balanceBefore: before,
+                  balanceAfter: after,
+                  paymentMethod: 'cash',
+                  status: 'confirmed',
+                  date: todayArgUTC(),
+                  description: `Cuota ${installment.number} — Presupuesto #${quote?.number}`,
+                  quoteId: installment.quoteId,
+                  clientId: quote?.clientId ?? null,
+                  projectId: quote?.projectId ?? null,
+                  createdById: req.user.id,
+                },
+              })
+              await tx.cashAccount.update({
+                where: { id: account.id },
+                data: { currentBalance: after },
+              })
+            })
+          }
         }
       }
     }
