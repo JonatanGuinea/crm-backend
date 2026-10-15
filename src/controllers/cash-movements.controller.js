@@ -31,7 +31,7 @@ export async function getMovements(req, res) {
     prisma.cashMovement.findMany({
       where,
       include: INCLUDE_MOVEMENT,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
       skip,
       take: Number(limit),
     }),
