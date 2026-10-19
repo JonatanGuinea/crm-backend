@@ -4,8 +4,9 @@ import { dirname, join } from 'path'
 import { existsSync } from 'fs'
 import sharp from 'sharp'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
+const __dirname  = dirname(fileURLToPath(import.meta.url))
 const UPLOADS_DIR = join(__dirname, '../../uploads')
+const FONTS_DIR   = join(__dirname, '../assets/fonts')
 
 // ── Paleta idéntica a QuotePublicPage.jsx ─────────────────────────────────────
 const BG   = '#EDE8DF'
@@ -35,10 +36,15 @@ const CON_W   = CARD_W - C_PAD * 2     // ≈ 495
 // ─────────────────────────────────────────────────────────────────────────────
 export async function buildPdf(type, data) {
   const doc = new PDFDocument({ margin: 0, size: 'A4', autoFirstPage: true })
+  doc.registerFont('Geist',         join(FONTS_DIR, 'Geist-Regular.woff2'))
+  doc.registerFont('Geist-SemiBold', join(FONTS_DIR, 'Geist-SemiBold.woff2'))
+  doc.registerFont('Geist-Bold',    join(FONTS_DIR, 'Geist-Bold.woff2'))
 
   const org    = data.organization || {}
   const numStr = String(data.number).padStart(3, '0')
   const sym    = data.currency === 'USD' ? 'US$' : '$'
+  const bp     = org.brandPrimary  || null
+  const bs     = org.brandSecondary || null
 
   const _ext        = (org.logo || '').split('.').pop()?.toLowerCase()
   const orgLogoPath = ['png', 'jpg', 'jpeg', 'webp'].includes(_ext) ? join(UPLOADS_DIR, org.logo) : null
@@ -79,9 +85,17 @@ export async function buildPdf(type, data) {
 
   // ── Helpers de dibujo ──────────────────────────────────────────────────────
 
-  // Rellena de crema toda la página activa
+  // Rellena el fondo de página: gradiente de marca si hay colores, crema si no
   function paintPageBg() {
-    doc.rect(0, 0, PAGE_W, PAGE_H).fillColor(BG).fill()
+    if (bp && bs) {
+      const grad = doc.linearGradient(0, 0, PAGE_W, PAGE_H)
+      grad.stop(0, bp).stop(1, bs)
+      doc.rect(0, 0, PAGE_W, PAGE_H).fill(grad)
+    } else if (bp) {
+      doc.rect(0, 0, PAGE_W, PAGE_H).fillColor(bp).fill()
+    } else {
+      doc.rect(0, 0, PAGE_W, PAGE_H).fillColor(BG).fill()
+    }
   }
 
   // Rellena blanco dentro de la card (x=CARD_X, w=CARD_W)
@@ -102,7 +116,7 @@ export async function buildPdf(type, data) {
 
   // Label de sección (10px, uppercase, INK3)
   function secLabel(text, y) {
-    doc.font('Helvetica-Bold').fontSize(8).fillColor(INK3)
+    doc.font('Geist-Bold').fontSize(8).fillColor(INK3)
       .text(text.toUpperCase(), CON_X, y, { characterSpacing: 1.2, lineBreak: false })
   }
 
@@ -149,7 +163,7 @@ export async function buildPdf(type, data) {
     const sz = 44
     doc.rect(CON_X, logoY, sz, sz).fillColor(INK).fill()
     const initials = (org.name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-    doc.font('Helvetica-Bold').fontSize(14).fillColor(CARD)
+    doc.font('Geist-Bold').fontSize(14).fillColor(CARD)
       .text(initials, CON_X, logoY + 13, { width: sz, align: 'center', lineBreak: false })
   }
 
@@ -158,11 +172,11 @@ export async function buildPdf(type, data) {
   // Columna izquierda (org name + contacto)
   const orgLW = Math.floor(CON_W * 0.56)
   let ly = infoY
-  doc.font('Helvetica-Bold').fontSize(12).fillColor(INK)
+  doc.font('Geist-Bold').fontSize(12).fillColor(INK)
     .text(org.name || '', CON_X, ly, { width: orgLW, lineBreak: false })
   ly += nameH
   orgInfoLines.forEach(line => {
-    doc.font('Helvetica').fontSize(9).fillColor(INK2)
+    doc.font('Geist').fontSize(9).fillColor(INK2)
       .text(line, CON_X, ly, { width: orgLW, lineBreak: false })
     ly += 13
   })
@@ -171,14 +185,14 @@ export async function buildPdf(type, data) {
   const orgRX = CON_X + orgLW + 10
   const orgRW = CON_W - orgLW - 10
   let ry = infoY
-  doc.font('Helvetica-Bold').fontSize(8).fillColor(INK3)
+  doc.font('Geist-Bold').fontSize(8).fillColor(INK3)
     .text(`PRESUPUESTO #${numStr}`, orgRX, ry, { width: orgRW, align: 'right', characterSpacing: 0.8, lineBreak: false })
   ry += numH
   dateRows.forEach(([lbl, val]) => {
     const halfW = Math.floor(orgRW / 2)
-    doc.font('Helvetica').fontSize(9).fillColor(INK3)
+    doc.font('Geist').fontSize(9).fillColor(INK3)
       .text(lbl, orgRX, ry, { width: halfW, lineBreak: false })
-    doc.font('Helvetica-Bold').fontSize(9).fillColor(INK)
+    doc.font('Geist-Bold').fontSize(9).fillColor(INK)
       .text(val, orgRX + halfW, ry, { width: orgRW - halfW, align: 'right', lineBreak: false, ellipsis: true })
     ry += 15
   })
@@ -194,7 +208,7 @@ export async function buildPdf(type, data) {
   cardFill(y, titleSectionH)
   hr(y)
   y += 18
-  doc.font('Helvetica-Bold').fontSize(22).fillColor(INK)
+  doc.font('Geist-Bold').fontSize(22).fillColor(INK)
     .text(titleText, CON_X, y, { width: CON_W })
   y = doc.y + 18
 
@@ -208,19 +222,19 @@ export async function buildPdf(type, data) {
     secLabel('Cliente', y)
     y += 14
     if (clientCompany) {
-      doc.font('Helvetica-Bold').fontSize(11).fillColor(INK)
+      doc.font('Geist-Bold').fontSize(11).fillColor(INK)
         .text(clientCompany, CON_X, y, { width: CON_W, lineBreak: false })
       y += 15
-      doc.font('Helvetica').fontSize(10.5).fillColor(INK2)
+      doc.font('Geist').fontSize(10.5).fillColor(INK2)
         .text(clientName, CON_X, y, { width: CON_W, lineBreak: false })
       y += 14
     } else {
-      doc.font('Helvetica-Bold').fontSize(11).fillColor(INK)
+      doc.font('Geist-Bold').fontSize(11).fillColor(INK)
         .text(clientName, CON_X, y, { width: CON_W, lineBreak: false })
       y += 15
     }
     if (clientEmail) {
-      doc.font('Helvetica').fontSize(9.5).fillColor(INK3)
+      doc.font('Geist').fontSize(9.5).fillColor(INK3)
         .text(clientEmail, CON_X, y, { width: CON_W, lineBreak: false })
       y += 13
     }
@@ -247,7 +261,7 @@ export async function buildPdf(type, data) {
 
   // Header tabla
   const tHeaders = [['Descripción', xDesc, wDesc, 'left'], ['Cant.', xQty, wQty, 'right'], ['Precio unit.', xUnit, wUnit, 'right'], ['Importe', xAmt, wAmt, 'right']]
-  doc.font('Helvetica-Bold').fontSize(8).fillColor(INK3)
+  doc.font('Geist-Bold').fontSize(8).fillColor(INK3)
   tHeaders.forEach(([h, x, w, align]) => doc.text(h.toUpperCase(), x, y, { width: w, align, lineBreak: false, characterSpacing: 0.8 }))
   y += 13
   hrInner(y, 1)
@@ -257,12 +271,12 @@ export async function buildPdf(type, data) {
     if (y + 32 > PAGE_H - BG_PAD - 30) { y = newPage(); cardFill(y, 400) }
     doc.rect(CARD_X, y, CARD_W, 32).fillColor(CARD).fill()
     const ry = y + 9
-    doc.font('Helvetica').fontSize(10.5).fillColor(INK)
+    doc.font('Geist').fontSize(10.5).fillColor(INK)
       .text(item.description, xDesc, ry, { width: wDesc - 6, lineBreak: false, ellipsis: true })
-    doc.font('Helvetica').fontSize(10).fillColor(INK2)
+    doc.font('Geist').fontSize(10).fillColor(INK2)
       .text(String(Number(item.quantity)), xQty, ry, { width: wQty, align: 'right', lineBreak: false })
       .text(fmtNum(item.unitPrice, data.currency), xUnit, ry, { width: wUnit, align: 'right', lineBreak: false })
-    doc.font('Helvetica-Bold').fontSize(10.5).fillColor(INK)
+    doc.font('Geist-Bold').fontSize(10.5).fillColor(INK)
       .text(fmtNum(item.amount, data.currency), xAmt, ry, { width: wAmt, align: 'right', lineBreak: false })
     y += 32
     hrInner(y)
@@ -282,20 +296,20 @@ export async function buildPdf(type, data) {
   const totX = CON_X + CON_W - totW
 
   if (subtotal !== total) {
-    doc.font('Helvetica').fontSize(11).fillColor(INK2)
+    doc.font('Geist').fontSize(11).fillColor(INK2)
       .text('Subtotal', totX, y, { width: totW * 0.5, lineBreak: false })
       .text(fmtNum(subtotal, data.currency), totX, y, { width: totW, align: 'right', lineBreak: false })
     y += 20
   }
   if (hasDiscount) {
     const discLabel = `Descuento${data.discountType === 'percent' ? ` ${data.discountValue}%` : ''}`
-    doc.font('Helvetica').fontSize(11).fillColor(INK2)
+    doc.font('Geist').fontSize(11).fillColor(INK2)
       .text(discLabel, totX, y, { width: totW * 0.5, lineBreak: false })
       .text(`– ${fmtNum(discountAmt, data.currency)}`, totX, y, { width: totW, align: 'right', lineBreak: false })
     y += 20
   }
   if (hasTax) {
-    doc.font('Helvetica').fontSize(11).fillColor(INK2)
+    doc.font('Geist').fontSize(11).fillColor(INK2)
       .text(`IVA ${data.taxRate}%`, totX, y, { width: totW * 0.5, lineBreak: false })
       .text(fmtNum(taxAmount, data.currency), totX, y, { width: totW, align: 'right', lineBreak: false })
     y += 20
@@ -304,7 +318,7 @@ export async function buildPdf(type, data) {
   y += 16
 
   // Label "Total" alineado a la izquierda del bloque
-  doc.font('Helvetica-Bold').fontSize(11).fillColor(INK)
+  doc.font('Geist-Bold').fontSize(11).fillColor(INK)
     .text('Total', CON_X, y + totBlockH / 2 - 6, { lineBreak: false })
 
   // Bloque oscuro  [ $XXXX ]
@@ -313,14 +327,14 @@ export async function buildPdf(type, data) {
   const amtStr = fmtNum(total, data.currency)
   const brkY   = y + 11
 
-  doc.font('Helvetica').fontSize(20).fillOpacity(0.3).fillColor(CARD)
+  doc.font('Geist').fontSize(20).fillOpacity(0.3).fillColor(CARD)
     .text('[', totX + 10, brkY, { lineBreak: false })
   doc.fillOpacity(1)
 
-  doc.font('Helvetica-Bold').fontSize(22).fillColor(CARD)
+  doc.font('Geist-Bold').fontSize(22).fillColor(CARD)
     .text(amtStr, totX + 28, y + 13, { width: totW - 56, align: 'center', lineBreak: false })
 
-  doc.font('Helvetica').fontSize(20).fillOpacity(0.3).fillColor(CARD)
+  doc.font('Geist').fontSize(20).fillOpacity(0.3).fillColor(CARD)
     .text(']', totX + totW - 22, brkY, { lineBreak: false })
   doc.fillOpacity(1)
 
@@ -340,7 +354,7 @@ export async function buildPdf(type, data) {
     const iNW = CON_W * 0.08, iDW = CON_W * 0.30, iSW = CON_W * 0.30, iAW = CON_W * 0.32
     const iNX = CON_X, iDX = iNX + iNW, iSX = iDX + iDW, iAX = iSX + iSW
 
-    doc.font('Helvetica-Bold').fontSize(8).fillColor(INK3)
+    doc.font('Geist-Bold').fontSize(8).fillColor(INK3)
     ;[['N°', iNX, iNW, 'left'], ['Vencimiento', iDX, iDW, 'left'], ['Estado', iSX, iSW, 'left'], ['Importe', iAX, iAW, 'right']]
       .forEach(([h, x, w, align]) => doc.text(h.toUpperCase(), x, y, { width: w, align, lineBreak: false, characterSpacing: 0.8 }))
     y += 13
@@ -357,14 +371,14 @@ export async function buildPdf(type, data) {
       if (y + 28 > PAGE_H - BG_PAD - 30) { y = newPage(); cardFill(y, 400) }
       doc.rect(CARD_X, y, CARD_W, 28).fillColor(CARD).fill()
       const ry = y + 8
-      doc.font('Helvetica').fontSize(10).fillColor(INK2)
+      doc.font('Geist').fontSize(10).fillColor(INK2)
         .text(String(inst.number), iNX, ry, { width: iNW, lineBreak: false })
         .text(fmtDate(inst.dueDate), iDX, ry, { width: iDW - 4, lineBreak: false })
       const [stLabel, stBg, stColor] = stMap[inst.status] || stMap.pending
       doc.roundedRect(iSX, ry - 1, 58, 16, 8).fillColor(stBg).fill()
-      doc.font('Helvetica-Bold').fontSize(8).fillColor(stColor)
+      doc.font('Geist-Bold').fontSize(8).fillColor(stColor)
         .text(stLabel, iSX, ry + 2, { width: 58, align: 'center', lineBreak: false })
-      doc.font('Helvetica-Bold').fontSize(10.5).fillColor(INK)
+      doc.font('Geist-Bold').fontSize(10.5).fillColor(INK)
         .text(fmtNum(inst.amount, data.currency), iAX, ry, { width: iAW, align: 'right', lineBreak: false })
       y += 28
       hrInner(y)
@@ -385,11 +399,11 @@ export async function buildPdf(type, data) {
     for (const note of quoteNotes) {
       if (y + 40 > PAGE_H - BG_PAD - 30) { y = newPage(); cardFill(y, 400) }
       if (note.title) {
-        doc.font('Helvetica-Bold').fontSize(11).fillColor(INK)
+        doc.font('Geist-Bold').fontSize(11).fillColor(INK)
           .text(note.title, CON_X, y, { width: CON_W })
         y = doc.y + 4
       }
-      doc.font('Helvetica').fontSize(10.5).fillColor(INK2)
+      doc.font('Geist').fontSize(10.5).fillColor(INK2)
         .text(note.description, CON_X, y, { width: CON_W, lineGap: 2.5 })
       y = doc.y + 14
     }
@@ -441,12 +455,12 @@ export async function buildPdf(type, data) {
           doc.rect(CON_X, y, CON_W, capH).fillColor(BG).fill()
           let cy = y + 8
           if (img.title) {
-            doc.font('Helvetica-Bold').fontSize(11).fillColor(INK)
+            doc.font('Geist-Bold').fontSize(11).fillColor(INK)
               .text(img.title, CON_X + 10, cy, { width: CON_W - 20, lineBreak: false })
             cy += 17
           }
           if (img.description) {
-            doc.font('Helvetica').fontSize(10).fillColor(INK2)
+            doc.font('Geist').fontSize(10).fillColor(INK2)
               .text(img.description, CON_X + 10, cy, { width: CON_W - 20, lineGap: 2 })
             cy = doc.y + 4
           }
@@ -506,19 +520,19 @@ export async function buildPdf(type, data) {
     const oOrg     = org.name || ''
 
     if (cName) {
-      doc.font('Helvetica-Bold').fontSize(9.5).fillColor(INK)
+      doc.font('Geist-Bold').fontSize(9.5).fillColor(INK)
         .text(cName, sLX, y, { width: sColW, align: 'center', lineBreak: false })
     }
     if (cCompany) {
-      doc.font('Helvetica').fontSize(9).fillColor(INK3)
+      doc.font('Geist').fontSize(9).fillColor(INK3)
         .text(cCompany, sLX, y + (cName ? 13 : 0), { width: sColW, align: 'center', lineBreak: false })
     }
     if (oName) {
-      doc.font('Helvetica-Bold').fontSize(9.5).fillColor(INK)
+      doc.font('Geist-Bold').fontSize(9.5).fillColor(INK)
         .text(oName, sRX, y, { width: sColW, align: 'center', lineBreak: false })
     }
     if (oOrg) {
-      doc.font('Helvetica').fontSize(9).fillColor(INK3)
+      doc.font('Geist').fontSize(9).fillColor(INK3)
         .text(oOrg, sRX, y + (oName ? 13 : 0), { width: sColW, align: 'center', lineBreak: false })
     }
     y += 30
@@ -539,13 +553,13 @@ export async function buildPdf(type, data) {
     footerLogoW   = Math.round(FOOTER_LOGO_H * footerLogoImg.width / footerLogoImg.height)
   } catch (_) {}
 
-  doc.font('Helvetica').fontSize(9)
+  doc.font('Geist').fontSize(9)
   const ftxt = 'Presupuesto generado con '
   const ftxtW = doc.widthOfString(ftxt)
   const fTotalW = ftxtW + footerLogoW
   const fX = (PAGE_W - fTotalW) / 2
 
-  doc.font('Helvetica').fontSize(9).fillColor(INK3)
+  doc.font('Geist').fontSize(9).fillColor(INK3)
     .text(ftxt, fX, y + 1, { lineBreak: false })
   if (footerLogoImg) {
     doc.image(footerLogoImg, fX + ftxtW, y, { height: FOOTER_LOGO_H })
