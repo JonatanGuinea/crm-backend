@@ -29,7 +29,6 @@ import cashMovementsRoutes from './routes/cash-movements.routes.js'
 import financesRoutes from './routes/finances.routes.js'
 import quoteImagesRoutes from './routes/quote-images.routes.js'
 import quoteNotesRoutes from './routes/quote-notes.routes.js'
-import { runDatabaseBackup } from './services/backup.service.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -68,14 +67,5 @@ app.use('/api/cash-movements', cashMovementsRoutes)
 app.use('/api/finances', financesRoutes)
 app.use('/api/quote-images', quoteImagesRoutes)
 app.use('/api/quote-notes', quoteNotesRoutes)
-
-// Ruta temporal de prueba — eliminar después de verificar
-app.post('/api/admin/test-backup', async (req, res) => {
-  if (req.headers['x-admin-key'] !== process.env.JWT_SECRET) {
-    return res.status(401).json({ error: 'No autorizado' })
-  }
-  runDatabaseBackup().catch(() => {})
-  res.json({ message: 'Backup iniciado, revisá los logs' })
-})
 
 export default app
