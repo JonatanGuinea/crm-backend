@@ -848,6 +848,42 @@ export async function sendQuoteEmail({ to, clientName, orgName, orgLogo, quoteId
   console.log(`[email] Presupuesto → ${to} | #${num} | ${publicUrl}`)
 }
 
+export async function sendBackupFailureEmail(errorMessage) {
+  const to      = process.env.SMTP_USER
+  const subject = '[DANTEUP CRM] Error en backup automático de base de datos'
+  const html    = `<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>Error en backup</title></head>
+<body style="margin:0;padding:40px 16px;background:#0B0B0C;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center">
+      <table width="100%" style="max-width:540px;border-radius:0 16px 16px 0;overflow:hidden;border:1px solid #2C2C2F;background:#141415;">
+        <tr><td style="padding:20px 28px;background:#0B0B0C;">
+          <span style="color:#F2EDE3;font-size:14px;font-weight:700;">DANTEUP CRM</span>
+          <span style="float:right;background:#E58373;color:#0B0B0C;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:0 4px 4px 0;">Error backup</span>
+        </td></tr>
+        <tr><td style="padding:28px;background:#141415;">
+          <p style="margin:0 0 12px;color:#F2EDE3;font-size:15px;font-weight:600;">Falló el backup automático</p>
+          <p style="margin:0 0 20px;color:#B9B4AA;font-size:13px;line-height:1.6;">
+            El backup diario de la base de datos no pudo completarse. Revisá el servidor lo antes posible.
+          </p>
+          <div style="background:#0B0B0C;border:1px solid #2C2C2F;border-radius:0 8px 8px 0;padding:14px 16px;">
+            <p style="margin:0;color:#E58373;font-size:12px;font-family:monospace;word-break:break-word;">${errorMessage}</p>
+          </div>
+        </td></tr>
+        <tr><td style="padding:16px 28px;background:#0B0B0C;text-align:center;">
+          <p style="margin:0;color:#5C5850;font-size:11px;">DANTEUP CRM — alerta automática</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
+
+  await createTransporter().sendMail({ from: process.env.EMAIL_FROM, to, subject, html })
+  console.log(`[backup] Alerta de error enviada → ${to}`)
+}
+
 function buildEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, totalFmt, publicUrl }) {
   const logoCell = orgLogoUrl
     ? `<img src="${orgLogoUrl}" alt="${orgName}" style="max-height:40px;max-width:130px;object-fit:contain;display:block;">`

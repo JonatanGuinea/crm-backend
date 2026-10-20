@@ -6,13 +6,15 @@ import { checkTimeAlerts } from './services/notifications.service.js'
 import { getMonthlyReportData } from './services/report.service.js'
 import { buildMonthlyReportPdf } from './utils/buildReportPdf.js'
 import { sendMonthlyReportEmail, sendQuoteReminderEmail, sendPaymentReminderEmail } from './services/email.service.js'
+import { runDatabaseBackup } from './services/backup.service.js'
 
 dotenv.config({ override: true })
 
 const PORT = process.env.PORT || 3000
 
-// Guarda el último mes en que se enviaron los reportes para evitar duplicados
+// Guarda el último mes/día en que corrieron los jobs para evitar duplicados
 let lastReportMonth = null
+let lastBackupDate  = null
 
 async function runTimeAlerts() {
   try {
@@ -61,6 +63,17 @@ async function runMonthlyReports() {
   } catch (err) {
     console.error('[cron] Error general en informes:', err.message)
   }
+}
+
+async function scheduleDatabaseBackup() {
+  const now     = new Date()
+  const hour    = now.getHours()
+  const dateKey = now.toISOString().slice(0, 10)
+
+  if (hour !== 3 || lastBackupDate === dateKey) return
+
+  lastBackupDate = dateKey
+  await runDatabaseBackup()
 }
 
 async function runQuoteReminders() {
@@ -229,10 +242,11 @@ prisma.$connect()
       runTimeAlerts()
       runQuoteReminders()
       runPaymentReminders()
-      setInterval(runTimeAlerts,      6  * 60 * 60 * 1000) // cada 6 horas
-      setInterval(runMonthlyReports,       60 * 60 * 1000) // cada hora
-      setInterval(runQuoteReminders,  12  * 60 * 60 * 1000) // cada 12 horas
-      setInterval(runPaymentReminders,     60 * 60 * 1000) // cada hora
+      setInterval(runTimeAlerts,          6  * 60 * 60 * 1000) // cada 6 horas
+      setInterval(runMonthlyReports,          60 * 60 * 1000) // cada hora
+      setInterval(runQuoteReminders,      12  * 60 * 60 * 1000) // cada 12 horas
+      setInterval(runPaymentReminders,        60 * 60 * 1000) // cada hora
+      setInterval(scheduleDatabaseBackup,     60 * 60 * 1000) // cada hora, ejecuta a las 3 AM
     })
   })
   .catch((error) => {
