@@ -127,7 +127,6 @@ export const uploadAvatar = async (req, res) => {
 
     return success(res, 200, updated)
   } catch (error) {
-    console.error('[uploadAvatar] error:', error)
     return fail(res, 500, error.message)
   }
 }

@@ -10,6 +10,6 @@ export async function toWebp(file) {
     return { buffer: file.buffer, name: `${randomUUID()}${ext}`, mimetype: file.mimetype }
   }
   const name   = `${randomUUID()}.webp`
-  const buffer = await sharp(file.buffer).webp({ quality: 80 }).toBuffer()
+  const buffer = await sharp(Buffer.from(file.buffer)).webp({ quality: 80 }).toBuffer()
   return { buffer, name, mimetype: 'image/webp' }
 }
