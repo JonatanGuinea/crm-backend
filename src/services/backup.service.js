@@ -15,8 +15,8 @@ async function ensureBucket() {
 
 function pgDumpToBuffer() {
   return new Promise((resolve, reject) => {
-    const url = process.env.SUPABASE_DIRECT_URL || process.env.SUPABASE_DATABASE_URL
-    if (!url) return reject(new Error('SUPABASE_DIRECT_URL o SUPABASE_DATABASE_URL no configuradas'))
+    const url = process.env.SUPABASE_DATABASE_URL
+    if (!url) return reject(new Error('SUPABASE_DATABASE_URL no configurada'))
 
     const dump  = spawn('pg_dump', ['--no-owner', '--no-privileges', '--format=plain', url])
     const gzip  = createGzip()
