@@ -1,15 +1,10 @@
 import crypto from 'crypto'
-import path from 'path'
-import fs from 'fs'
-import { fileURLToPath } from 'url'
 import prisma from '../config/db.js'
 import { comparePassword, hashPassword } from '../utils/passwordHash.js'
 import { success, fail } from '../utils/response.js'
 import { sendPasswordChangeEmail } from '../services/email.service.js'
 import { toWebp } from '../utils/toWebp.js'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const uploadsDir = path.join(__dirname, '..', '..', 'uploads')
+import { uploadFile, deleteFile } from '../config/supabase.js'
 
 export const getProfile = async (req, res) => {
   try {
@@ -99,7 +94,7 @@ export const confirmPasswordChange = async (req, res) => {
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        password:           user.passwordChangeHash,
+        password:            user.passwordChangeHash,
         passwordChangeToken: null,
         passwordChangeHash:  null,
       }
@@ -113,24 +108,20 @@ export const confirmPasswordChange = async (req, res) => {
 
 export const uploadAvatar = async (req, res) => {
   try {
-    if (!req.file) {
-      return fail(res, 400, 'No se recibió ninguna imagen')
-    }
+    if (!req.file) return fail(res, 400, 'No se recibió ninguna imagen')
 
-    // Borrar avatar anterior si existe
     const current = await prisma.user.findUnique({
       where: { id: req.user.id },
       select: { avatar: true }
     })
-    if (current?.avatar) {
-      const oldPath = path.join(uploadsDir, current.avatar)
-      fs.unlink(oldPath, () => {})
-    }
+    if (current?.avatar) await deleteFile(current.avatar)
 
-    const filename = await toWebp(req.file, uploadsDir)
+    const { buffer, name, mimetype } = await toWebp(req.file)
+    const url = await uploadFile(buffer, name, mimetype)
+
     const updated = await prisma.user.update({
       where: { id: req.user.id },
-      data: { avatar: filename },
+      data: { avatar: url },
       select: { id: true, name: true, email: true, avatar: true }
     })
 

@@ -1,12 +1,7 @@
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
 import prisma from '../config/db.js'
 import { success, fail } from '../utils/response.js'
 import { toWebp } from '../utils/toWebp.js'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads')
+import { uploadFile, deleteFile } from '../config/supabase.js'
 
 export const uploadQuoteImage = async (req, res) => {
   try {
@@ -19,13 +14,11 @@ export const uploadQuoteImage = async (req, res) => {
       where: { id: quoteId, organizationId: orgId },
       select: { id: true }
     })
-    if (!quote) {
-      fs.unlinkSync(path.join(UPLOADS_DIR, req.file.filename))
-      return fail(res, 404, 'Presupuesto no encontrado')
-    }
+    if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
 
     const { title, description } = req.body
-    const filename = await toWebp(req.file, UPLOADS_DIR)
+    const { buffer, name, mimetype } = await toWebp(req.file)
+    const url = await uploadFile(buffer, name, mimetype)
 
     const lastImage = await prisma.quoteImage.findFirst({
       where: { quoteId },
@@ -38,8 +31,8 @@ export const uploadQuoteImage = async (req, res) => {
       data: {
         quoteId,
         organizationId: orgId,
-        storedName: filename,
-        url: `/uploads/${filename}`,
+        storedName: name,
+        url,
         title: title?.trim() || null,
         description: description?.trim() || null,
         order,
@@ -48,9 +41,6 @@ export const uploadQuoteImage = async (req, res) => {
 
     return success(res, 201, image)
   } catch (error) {
-    if (req.file) {
-      try { fs.unlinkSync(path.join(UPLOADS_DIR, req.file.filename)) } catch {}
-    }
     return fail(res, 500, error.message)
   }
 }
@@ -63,10 +53,7 @@ export const updateQuoteImage = async (req, res) => {
     const image = await prisma.quoteImage.findFirst({
       where: { id: imageId, organizationId: orgId }
     })
-    if (!image) {
-      if (req.file) try { fs.unlinkSync(path.join(UPLOADS_DIR, req.file.filename)) } catch {}
-      return fail(res, 404, 'Imagen no encontrada')
-    }
+    if (!image) return fail(res, 404, 'Imagen no encontrada')
 
     const { title, description } = req.body
     const updates = {}
@@ -74,16 +61,16 @@ export const updateQuoteImage = async (req, res) => {
     if (description !== undefined) updates.description = description?.trim() || null
 
     if (req.file) {
-      try { fs.unlinkSync(path.join(UPLOADS_DIR, image.storedName)) } catch {}
-      const filename     = await toWebp(req.file, UPLOADS_DIR)
-      updates.storedName = filename
-      updates.url        = `/uploads/${filename}`
+      await deleteFile(image.storedName)
+      const { buffer, name, mimetype } = await toWebp(req.file)
+      const url = await uploadFile(buffer, name, mimetype)
+      updates.storedName = name
+      updates.url        = url
     }
 
     const updated = await prisma.quoteImage.update({ where: { id: imageId }, data: updates })
     return success(res, 200, updated)
   } catch (error) {
-    if (req.file) try { fs.unlinkSync(path.join(UPLOADS_DIR, req.file.filename)) } catch {}
     return fail(res, 500, error.message)
   }
 }
@@ -99,8 +86,7 @@ export const deleteQuoteImage = async (req, res) => {
     if (!image) return fail(res, 404, 'Imagen no encontrada')
 
     await prisma.quoteImage.delete({ where: { id: imageId } })
-
-    try { fs.unlinkSync(path.join(UPLOADS_DIR, image.storedName)) } catch {}
+    await deleteFile(image.storedName)
 
     return success(res, 200, { message: 'Imagen eliminada' })
   } catch (error) {

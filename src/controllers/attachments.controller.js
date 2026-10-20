@@ -1,11 +1,8 @@
-import fs from 'fs'
 import path from 'path'
-import { fileURLToPath } from 'url'
+import { randomUUID } from 'crypto'
 import prisma from '../config/db.js'
 import { success, fail } from '../utils/response.js'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads')
+import { uploadFile, deleteFile } from '../config/supabase.js'
 
 const VALID_ENTITY_TYPES = ['client', 'project', 'quote', 'invoice']
 
@@ -27,35 +24,32 @@ export const uploadAttachment = async (req, res) => {
     if (!req.file) return fail(res, 400, 'No se envió ningún archivo')
 
     if (!VALID_ENTITY_TYPES.includes(entityType)) {
-      fs.unlinkSync(path.join(UPLOADS_DIR, req.file.filename))
       return fail(res, 400, `Tipo de entidad no válido. Permitidos: ${VALID_ENTITY_TYPES.join(', ')}`)
     }
 
     const entity = await findEntity(entityType, entityId, orgId)
-    if (!entity) {
-      fs.unlinkSync(path.join(UPLOADS_DIR, req.file.filename))
-      return fail(res, 404, 'Entidad no encontrada en esta organización')
-    }
+    if (!entity) return fail(res, 404, 'Entidad no encontrada en esta organización')
+
+    const ext        = path.extname(req.file.originalname) || ''
+    const storedName = `${randomUUID()}${ext}`
+    const url        = await uploadFile(req.file.buffer, storedName, req.file.mimetype)
 
     const attachment = await prisma.attachment.create({
       data: {
-        filename: req.file.originalname,
-        storedName: req.file.filename,
-        url: `/uploads/${req.file.filename}`,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
+        filename:     req.file.originalname,
+        storedName,
+        url,
+        mimetype:     req.file.mimetype,
+        size:         req.file.size,
         entityType,
         entityId,
         organizationId: orgId,
-        uploadedById: req.user.id
+        uploadedById:   req.user.id
       }
     })
 
     return success(res, 201, attachment)
   } catch (error) {
-    if (req.file) {
-      try { fs.unlinkSync(path.join(UPLOADS_DIR, req.file.filename)) } catch {}
-    }
     return fail(res, 500, error.message)
   }
 }
@@ -124,12 +118,13 @@ export const serveFile = async (req, res) => {
     })
     if (!attachment) return fail(res, 404, 'Archivo no encontrado')
 
-    const filePath = path.join(UPLOADS_DIR, filename)
-    if (!fs.existsSync(filePath)) return fail(res, 404, 'Archivo no encontrado en el servidor')
+    // Archivos nuevos: URL pública de Supabase
+    if (attachment.url.startsWith('http')) {
+      return res.redirect(attachment.url)
+    }
 
-    res.setHeader('Content-Disposition', `inline; filename="${attachment.filename}"`)
-    res.setHeader('Content-Type', attachment.mimetype)
-    res.sendFile(filePath)
+    // Archivos legacy: redirigir a ruta estática del backend
+    return res.redirect(`/uploads/${attachment.storedName}`)
   } catch (error) {
     return fail(res, 500, error.message)
   }
@@ -146,10 +141,7 @@ export const deleteAttachment = async (req, res) => {
     if (!attachment) return fail(res, 404, 'Archivo no encontrado')
 
     await prisma.attachment.delete({ where: { id } })
-
-    try {
-      fs.unlinkSync(path.join(UPLOADS_DIR, attachment.storedName))
-    } catch {}
+    await deleteFile(attachment.storedName)
 
     return success(res, 200, { message: 'Archivo eliminado' })
   } catch (error) {
