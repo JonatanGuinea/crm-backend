@@ -1,10 +1,12 @@
-import { spawn } from 'child_process'
-import { createGzip } from 'zlib'
+import { gzip } from 'zlib'
+import { promisify } from 'util'
+import prisma from '../config/db.js'
 import supabase from '../config/supabase.js'
 import { sendBackupFailureEmail } from './email.service.js'
 
-const BUCKET  = 'backups'
-const KEEP_DAYS = 7
+const gzipAsync  = promisify(gzip)
+const BUCKET     = 'backups'
+const KEEP_DAYS  = 7
 
 async function ensureBucket() {
   const { data: buckets } = await supabase.storage.listBuckets()
@@ -13,27 +15,72 @@ async function ensureBucket() {
   }
 }
 
-function pgDumpToBuffer() {
-  return new Promise((resolve, reject) => {
-    const url = process.env.SUPABASE_DATABASE_URL
-    if (!url) return reject(new Error('SUPABASE_DATABASE_URL no configurada'))
+async function exportAllTables() {
+  const [
+    users, organizations, memberships,
+    clients, projects, projectMembers,
+    quotes, quoteItems, quoteImages, quoteNotes,
+    invoices, invoiceItems, installments,
+    expenseCategories, expenses,
+    tasks, taskHistory, taskStockItems,
+    quoteHistory, projectHistory, clientHistory,
+    attachments,
+    productCategories, products, stockMovements, suppliers,
+    financialCategories, cashAccounts, cashMovements,
+    defaultTasks, notifications,
+  ] = await Promise.all([
+    prisma.user.findMany(),
+    prisma.organization.findMany(),
+    prisma.organizationMembership.findMany(),
+    prisma.client.findMany(),
+    prisma.project.findMany(),
+    prisma.projectMember.findMany(),
+    prisma.quote.findMany(),
+    prisma.quoteItem.findMany(),
+    prisma.quoteImage.findMany(),
+    prisma.quoteNote.findMany(),
+    prisma.invoice.findMany(),
+    prisma.invoiceItem.findMany(),
+    prisma.installment.findMany(),
+    prisma.expenseCategory.findMany(),
+    prisma.expense.findMany(),
+    prisma.task.findMany(),
+    prisma.taskHistory.findMany(),
+    prisma.taskStockItem.findMany(),
+    prisma.quoteHistory.findMany(),
+    prisma.projectHistory.findMany(),
+    prisma.clientHistory.findMany(),
+    prisma.attachment.findMany(),
+    prisma.productCategory.findMany(),
+    prisma.product.findMany(),
+    prisma.stockMovement.findMany(),
+    prisma.supplier.findMany(),
+    prisma.financialCategory.findMany(),
+    prisma.cashAccount.findMany(),
+    prisma.cashMovement.findMany(),
+    prisma.defaultTask.findMany(),
+    prisma.notification.findMany(),
+  ])
 
-    const dump  = spawn('pg_dump', ['--no-owner', '--no-privileges', '--format=plain', url])
-    const gzip  = createGzip()
-    const parts = []
-
-    dump.stdout.pipe(gzip)
-    gzip.on('data', chunk => parts.push(chunk))
-    gzip.on('end',  () => resolve(Buffer.concat(parts)))
-    gzip.on('error', reject)
-
-    dump.stderr.on('data', d => console.error('[backup] pg_dump:', d.toString().trim()))
-    dump.on('close', code => { if (code !== 0) reject(new Error(`pg_dump salió con código ${code}`)) })
-  })
+  return {
+    users, organizations, memberships,
+    clients, projects, projectMembers,
+    quotes, quoteItems, quoteImages, quoteNotes,
+    invoices, invoiceItems, installments,
+    expenseCategories, expenses,
+    tasks, taskHistory, taskStockItems,
+    quoteHistory, projectHistory, clientHistory,
+    attachments,
+    productCategories, products, stockMovements, suppliers,
+    financialCategories, cashAccounts, cashMovements,
+    defaultTasks, notifications,
+  }
 }
 
 async function deleteOldBackups() {
-  const { data: files } = await supabase.storage.from(BUCKET).list('', { sortBy: { column: 'created_at', order: 'asc' } })
+  const { data: files } = await supabase.storage
+    .from(BUCKET)
+    .list('', { sortBy: { column: 'created_at', order: 'asc' } })
   if (!files?.length) return
 
   const cutoff = new Date(Date.now() - KEEP_DAYS * 24 * 60 * 60 * 1000)
@@ -46,13 +93,16 @@ async function deleteOldBackups() {
 
 export async function runDatabaseBackup() {
   const date     = new Date().toISOString().slice(0, 10)
-  const filename = `backup-${date}.sql.gz`
+  const filename = `backup-${date}.json.gz`
 
   try {
     await ensureBucket()
 
-    console.log(`[backup] Iniciando dump → ${filename}`)
-    const buffer = await pgDumpToBuffer()
+    console.log(`[backup] Exportando tablas → ${filename}`)
+    const tables = await exportAllTables()
+
+    const payload = JSON.stringify({ exportedAt: new Date().toISOString(), tables }, null, 0)
+    const buffer  = await gzipAsync(Buffer.from(payload))
 
     const { error } = await supabase.storage
       .from(BUCKET)
