@@ -493,46 +493,86 @@ function buildReportEmailHtml({ ownerName, orgName, monthStr, filename }) {
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Informe mensual ${monthStr}</title>
 </head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 16px;">
+<body style="margin:0;padding:0;background-color:#0B0B0C;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0B0B0C;padding:48px 16px;">
     <tr>
       <td align="center">
-        <table width="100%" style="max-width:560px;border-radius:12px;overflow:hidden;border:1px solid #e4e4e7;background:#ffffff;">
+        <table width="100%" style="max-width:540px;border-radius:0 20px 20px 0;overflow:hidden;border:1px solid #2C2C2F;background:#141415;">
 
           <tr>
-            <td style="background-color:#4f46e5;padding:28px 36px;">
-              <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">Informe Mensual</h1>
-              <p style="margin:6px 0 0;color:#c7d2fe;font-size:13px;">${orgName} · ${monthStr.charAt(0).toUpperCase() + monthStr.slice(1)}</p>
+            <td style="padding:24px 32px;background:#0B0B0C;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <span style="color:#F2EDE3;font-size:15px;font-weight:700;letter-spacing:-0.5px;">DANTEUP</span>
+                  </td>
+                  <td style="vertical-align:middle;text-align:right;">
+                    <span style="display:inline-block;background:#1E1E20;color:#8C877E;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border:1px solid #2C2C2F;border-radius:0 6px 6px 0;">Informe mensual</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
+          <tr>
+            <td style="padding:32px;background:#1E1E20;">
+              <p style="margin:0 0 8px;color:#8C877E;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">${orgName}</p>
+              <h1 style="margin:0 0 8px;color:#F2EDE3;font-size:26px;font-weight:700;letter-spacing:-0.5px;text-transform:capitalize;">${monthStr}</h1>
+              <p style="margin:0;color:#B9B4AA;font-size:14px;">Resumen ejecutivo del período.</p>
+            </td>
+          </tr>
+
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
+          <tr>
+            <td style="padding:32px 32px 8px;background:#141415;">
+              <p style="margin:0 0 16px;color:#F2EDE3;font-size:15px;font-weight:600;">Hola, ${ownerName}</p>
+              <p style="margin:0 0 14px;color:#B9B4AA;font-size:14px;line-height:1.65;">
+                Adjunto encontrás el informe mensual de <strong style="color:#F2EDE3;">${orgName}</strong> correspondiente a <strong style="color:#F2EDE3;">${monthStr}</strong>.
+              </p>
+              <p style="margin:0 0 8px;color:#B9B4AA;font-size:14px;line-height:1.65;">El reporte incluye:</p>
             </td>
           </tr>
 
           <tr>
-            <td style="padding:32px 36px;">
-              <p style="margin:0 0 12px;color:#27272a;font-size:15px;">
-                Hola, <strong>${ownerName}</strong>
-              </p>
-              <p style="margin:0 0 20px;color:#71717a;font-size:14px;line-height:1.6;">
-                Adjunto encontrás el informe mensual de <strong style="color:#27272a;">${orgName}</strong> correspondiente a <strong style="color:#27272a;">${monthStr}</strong>.
-              </p>
-              <p style="margin:0 0 20px;color:#71717a;font-size:14px;line-height:1.6;">
-                El reporte incluye:
-              </p>
-              <ul style="margin:0 0 24px;padding-left:20px;color:#71717a;font-size:14px;line-height:1.8;">
-                <li>Resumen financiero del mes</li>
-                <li>Estado de presupuestos</li>
-                <li>Situación de proyectos</li>
-                <li>Inventario y alertas de stock</li>
-              </ul>
-              <p style="margin:0;color:#a1a1aa;font-size:12px;">
-                Archivo: <strong>${filename}</strong>
-              </p>
+            <td style="padding:0 32px 28px;background:#141415;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr><td style="padding:6px 0;color:#B9B4AA;font-size:13px;line-height:1.5;">
+                  <span style="display:inline-block;width:10px;height:2px;background:#2C2C2F;vertical-align:middle;margin-right:10px;"></span>Resumen financiero del mes
+                </td></tr>
+                <tr><td style="padding:6px 0;color:#B9B4AA;font-size:13px;line-height:1.5;">
+                  <span style="display:inline-block;width:10px;height:2px;background:#2C2C2F;vertical-align:middle;margin-right:10px;"></span>Estado de presupuestos
+                </td></tr>
+                <tr><td style="padding:6px 0;color:#B9B4AA;font-size:13px;line-height:1.5;">
+                  <span style="display:inline-block;width:10px;height:2px;background:#2C2C2F;vertical-align:middle;margin-right:10px;"></span>Situación de proyectos
+                </td></tr>
+                <tr><td style="padding:6px 0;color:#B9B4AA;font-size:13px;line-height:1.5;">
+                  <span style="display:inline-block;width:10px;height:2px;background:#2C2C2F;vertical-align:middle;margin-right:10px;"></span>Inventario y alertas de stock
+                </td></tr>
+              </table>
             </td>
           </tr>
 
           <tr>
-            <td style="border-top:1px solid #f4f4f5;padding:18px 36px;text-align:center;">
-              <p style="margin:0;color:#a1a1aa;font-size:11px;">
-                Generado automáticamente por <strong>DANTEUP CRM</strong>
+            <td style="padding:0 32px;background:#141415;">
+              <div style="height:1px;background:#2C2C2F;"></div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:16px 32px 24px;background:#141415;">
+              <p style="margin:0;color:#8C877E;font-size:11px;text-align:center;">Archivo adjunto: <strong style="color:#B9B4AA;">${filename}</strong></p>
+            </td>
+          </tr>
+
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
+          <tr>
+            <td style="padding:18px 32px;text-align:center;background:#0B0B0C;">
+              <p style="margin:0;color:#8C877E;font-size:11px;">
+                Generado automáticamente por <a href="https://danteup.com" target="_blank" style="color:#B9B4AA;font-weight:600;text-decoration:none;">DANTEUP</a>
               </p>
             </td>
           </tr>
@@ -568,7 +608,7 @@ export async function sendQuoteReminderEmail({ to, clientName, orgName, orgLogo,
 function buildReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, totalFmt, publicUrl }) {
   const logoBlock = orgLogoUrl
     ? `<img src="${orgLogoUrl}" alt="${orgName}" style="max-height:36px;max-width:120px;object-fit:contain;display:block;">`
-    : `<span style="color:#00B2A9;font-size:15px;font-weight:700;letter-spacing:-0.3px;">${orgName}</span>`
+    : `<span style="color:#F2EDE3;font-size:15px;font-weight:700;letter-spacing:-0.5px;">${orgName}</span>`
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -577,73 +617,58 @@ function buildReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTit
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Recordatorio · Presupuesto #${num}</title>
 </head>
-<body style="margin:0;padding:0;background-color:#eef9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef9f9;padding:40px 16px;">
+<body style="margin:0;padding:0;background-color:#0B0B0C;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0B0B0C;padding:48px 16px;">
     <tr>
       <td align="center">
-        <table width="100%" style="max-width:560px;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,178,169,0.10);background:#ffffff;">
+        <table width="100%" style="max-width:540px;border-radius:0 20px 20px 0;overflow:hidden;border:1px solid #2C2C2F;background:#141415;">
 
           <tr>
-            <td style="background:linear-gradient(90deg,#009990,#00B2A9,#33C4BE);height:4px;font-size:0;line-height:0;">&nbsp;</td>
-          </tr>
-
-          <tr>
-            <td style="background-color:#080e1a;padding:24px 32px;">
+            <td style="padding:24px 32px;background:#0B0B0C;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="vertical-align:middle;">
                     ${logoBlock}
                   </td>
                   <td style="vertical-align:middle;text-align:right;">
-                    <span style="display:inline-block;background-color:rgba(0,178,169,0.15);color:#33C4BE;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;border-radius:20px;border:1px solid rgba(0,178,169,0.3);">
-                      Recordatorio
-                    </span>
+                    <span style="display:inline-block;background:#1E1E20;color:#8C877E;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border:1px solid #2C2C2F;border-radius:0 6px 6px 0;">Recordatorio</span>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
           <tr>
-            <td style="background:linear-gradient(135deg,#00B2A9,#009990);padding:28px 32px;">
-              <p style="margin:0 0 4px;color:rgba(255,255,255,0.65);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Presupuesto</p>
-              <h1 style="margin:0 0 6px;color:#ffffff;font-size:32px;font-weight:700;letter-spacing:-1px;">#${num}</h1>
-              <p style="margin:0 0 16px;color:rgba(255,255,255,0.85);font-size:14px;">${quoteTitle}</p>
-              <table cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="background:rgba(255,255,255,0.15);border-radius:8px;padding:10px 18px;">
-                    <p style="margin:0;color:rgba(255,255,255,0.7);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">Total</p>
-                    <p style="margin:4px 0 0;color:#ffffff;font-size:20px;font-weight:700;">${totalFmt}</p>
-                  </td>
-                </tr>
-              </table>
+            <td style="padding:32px;background:#1E1E20;">
+              <p style="margin:0 0 8px;color:#8C877E;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Presupuesto</p>
+              <h1 style="margin:0 0 8px;color:#F2EDE3;font-size:26px;font-weight:700;letter-spacing:-0.5px;">#${num}</h1>
+              <p style="margin:0;color:#B9B4AA;font-size:14px;">${quoteTitle}</p>
             </td>
           </tr>
 
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
           <tr>
-            <td style="padding:32px 32px 8px;">
-              <p style="margin:0 0 16px;color:#18181b;font-size:15px;font-weight:600;">
-                Hola, ${clientName} 👋
+            <td style="padding:32px 32px 16px;background:#141415;">
+              <p style="margin:0 0 16px;color:#F2EDE3;font-size:15px;font-weight:600;">Hola, ${clientName}</p>
+              <p style="margin:0 0 14px;color:#B9B4AA;font-size:14px;line-height:1.65;">
+                Hace unos días te enviamos el presupuesto <strong style="color:#F2EDE3;">${quoteTitle}</strong> y aún no recibimos tu respuesta.
               </p>
-              <p style="margin:0 0 14px;color:#52525b;font-size:14px;line-height:1.65;">
-                Hace unos días te enviamos el presupuesto <strong style="color:#18181b;">${quoteTitle}</strong> y aún no recibimos tu respuesta.
-              </p>
-              <p style="margin:0 0 28px;color:#52525b;font-size:14px;line-height:1.65;">
+              <p style="margin:0 0 20px;color:#B9B4AA;font-size:14px;line-height:1.65;">
                 Si tenés alguna consulta o necesitás algún ajuste, no dudes en contactarnos. El presupuesto sigue disponible en el enlace de abajo.
               </p>
             </td>
           </tr>
 
           <tr>
-            <td style="padding:0 32px 28px;">
-              <table cellpadding="0" cellspacing="0" width="100%">
+            <td style="padding:0 32px 24px;background:#141415;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#1E1E20;border-radius:0 8px 8px 0;border:1px solid #2C2C2F;">
                 <tr>
-                  <td align="center">
-                    <a href="${publicUrl}"
-                       style="display:inline-block;background-color:#00B2A9;color:#ffffff;text-decoration:none;padding:14px 40px;border-radius:10px;font-size:14px;font-weight:700;letter-spacing:0.3px;">
-                      Ver presupuesto
-                    </a>
+                  <td style="padding:12px 16px;">
+                    <p style="margin:0 0 2px;color:#8C877E;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;">Total</p>
+                    <p style="margin:0;color:#F2EDE3;font-size:18px;font-weight:700;">${totalFmt}</p>
                   </td>
                 </tr>
               </table>
@@ -651,24 +676,34 @@ function buildReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTit
           </tr>
 
           <tr>
-            <td style="padding:0 32px 32px;">
-              <p style="margin:0;color:#a1a1aa;font-size:11px;text-align:center;word-break:break-all;">
-                <a href="${publicUrl}" style="color:#00B2A9;text-decoration:none;">${publicUrl}</a>
+            <td style="padding:0 32px 28px;background:#141415;">
+              <a href="${publicUrl}"
+                 style="display:block;background:#F2EDE3;color:#0B0B0C;text-decoration:none;padding:14px 32px;border-radius:0 10px 10px 0;font-size:14px;font-weight:700;letter-spacing:0.2px;text-align:center;">
+                Ver presupuesto
+              </a>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px;background:#141415;">
+              <div style="height:1px;background:#2C2C2F;"></div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:16px 32px 24px;background:#141415;">
+              <p style="margin:0;color:#8C877E;font-size:11px;text-align:center;word-break:break-all;">
+                <a href="${publicUrl}" style="color:#B9B4AA;text-decoration:none;">${publicUrl}</a>
               </p>
             </td>
           </tr>
 
-          <tr>
-            <td style="padding:0 32px;">
-              <div style="height:1px;background-color:#f4f4f5;"></div>
-            </td>
-          </tr>
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
 
           <tr>
-            <td style="padding:18px 32px;text-align:center;">
-              <p style="margin:0;color:#a1a1aa;font-size:11px;">
-                Enviado por
-                <a href="https://danteup.com" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
+            <td style="padding:18px 32px;text-align:center;background:#0B0B0C;">
+              <p style="margin:0;color:#8C877E;font-size:11px;">
+                Enviado por <a href="https://danteup.com" target="_blank" style="color:#B9B4AA;font-weight:600;text-decoration:none;">DANTEUP</a>
               </p>
             </td>
           </tr>
@@ -677,7 +712,6 @@ function buildReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTit
       </td>
     </tr>
   </table>
-
 </body>
 </html>`
 }
@@ -719,7 +753,7 @@ export async function sendPaymentReminderEmail({
 function buildPaymentReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, cuotaLabel, amountFmt, publicUrl }) {
   const logoBlock = orgLogoUrl
     ? `<img src="${orgLogoUrl}" alt="${orgName}" style="max-height:36px;max-width:120px;object-fit:contain;display:block;">`
-    : `<span style="color:#00B2A9;font-size:15px;font-weight:700;letter-spacing:-0.3px;">${orgName}</span>`
+    : `<span style="color:#F2EDE3;font-size:15px;font-weight:700;letter-spacing:-0.5px;">${orgName}</span>`
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -728,41 +762,58 @@ function buildPaymentReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, q
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Recordatorio de pago · ${cuotaLabel}</title>
 </head>
-<body style="margin:0;padding:0;background-color:#eef9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef9f9;padding:40px 16px;">
+<body style="margin:0;padding:0;background-color:#0B0B0C;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0B0B0C;padding:48px 16px;">
     <tr>
       <td align="center">
-        <table width="100%" style="max-width:560px;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,178,169,0.10);background:#ffffff;">
+        <table width="100%" style="max-width:540px;border-radius:0 20px 20px 0;overflow:hidden;border:1px solid #2C2C2F;background:#141415;">
 
           <tr>
-            <td style="background:linear-gradient(90deg,#009990,#00B2A9,#33C4BE);height:4px;font-size:0;line-height:0;">&nbsp;</td>
-          </tr>
-
-          <tr>
-            <td style="background-color:#080e1a;padding:24px 32px;">
+            <td style="padding:24px 32px;background:#0B0B0C;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="vertical-align:middle;">${logoBlock}</td>
+                  <td style="vertical-align:middle;">
+                    ${logoBlock}
+                  </td>
                   <td style="vertical-align:middle;text-align:right;">
-                    <span style="display:inline-block;background-color:rgba(0,178,169,0.15);color:#33C4BE;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;border-radius:20px;border:1px solid rgba(0,178,169,0.3);">
-                      Recordatorio de pago
-                    </span>
+                    <span style="display:inline-block;background:#1E1E20;color:#8C877E;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border:1px solid #2C2C2F;border-radius:0 6px 6px 0;">Recordatorio de pago</span>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
           <tr>
-            <td style="background:linear-gradient(135deg,#00B2A9,#009990);padding:28px 32px;">
-              <p style="margin:0 0 4px;color:rgba(255,255,255,0.65);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Presupuesto #${num}</p>
-              <h1 style="margin:0 0 6px;color:#ffffff;font-size:24px;font-weight:700;letter-spacing:-0.5px;">${cuotaLabel}</h1>
-              <p style="margin:0 0 16px;color:rgba(255,255,255,0.85);font-size:14px;">${quoteTitle}</p>
-              <table cellpadding="0" cellspacing="0">
+            <td style="padding:32px;background:#1E1E20;">
+              <p style="margin:0 0 8px;color:#8C877E;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Presupuesto #${num}</p>
+              <h1 style="margin:0 0 8px;color:#F2EDE3;font-size:26px;font-weight:700;letter-spacing:-0.5px;">${cuotaLabel}</h1>
+              <p style="margin:0;color:#B9B4AA;font-size:14px;">${quoteTitle}</p>
+            </td>
+          </tr>
+
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
+          <tr>
+            <td style="padding:32px 32px 16px;background:#141415;">
+              <p style="margin:0 0 16px;color:#F2EDE3;font-size:15px;font-weight:600;">Hola, ${clientName}</p>
+              <p style="margin:0 0 14px;color:#B9B4AA;font-size:14px;line-height:1.65;">
+                Te recordamos que hoy vence el <strong style="color:#F2EDE3;">${cuotaLabel}</strong> del presupuesto <strong style="color:#F2EDE3;">${quoteTitle}</strong>.
+              </p>
+              <p style="margin:0 0 20px;color:#B9B4AA;font-size:14px;line-height:1.65;">
+                Podés revisar el detalle completo en el enlace de abajo. Si ya realizaste el pago, ignorá este mensaje.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px 24px;background:#141415;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#1E1E20;border-radius:0 8px 8px 0;border:1px solid #2C2C2F;">
                 <tr>
-                  <td style="background:rgba(255,255,255,0.15);border-radius:8px;padding:10px 18px;">
-                    <p style="margin:0;color:rgba(255,255,255,0.7);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">Monto a abonar</p>
-                    <p style="margin:4px 0 0;color:#ffffff;font-size:22px;font-weight:700;">${amountFmt}</p>
+                  <td style="padding:12px 16px;">
+                    <p style="margin:0 0 2px;color:#8C877E;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;">Monto a abonar</p>
+                    <p style="margin:0;color:#F2EDE3;font-size:18px;font-weight:700;">${amountFmt}</p>
                   </td>
                 </tr>
               </table>
@@ -770,52 +821,34 @@ function buildPaymentReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, q
           </tr>
 
           <tr>
-            <td style="padding:32px 32px 8px;">
-              <p style="margin:0 0 16px;color:#18181b;font-size:15px;font-weight:600;">
-                Hola, ${clientName} 👋
-              </p>
-              <p style="margin:0 0 14px;color:#52525b;font-size:14px;line-height:1.65;">
-                Te recordamos que hoy vence el <strong style="color:#18181b;">${cuotaLabel}</strong> del presupuesto <strong style="color:#18181b;">${quoteTitle}</strong>.
-              </p>
-              <p style="margin:0 0 28px;color:#52525b;font-size:14px;line-height:1.65;">
-                Podés revisar el detalle completo del presupuesto en el siguiente enlace. Si ya realizaste el pago, ignorá este mensaje.
-              </p>
+            <td style="padding:0 32px 28px;background:#141415;">
+              <a href="${publicUrl}"
+                 style="display:block;background:#F2EDE3;color:#0B0B0C;text-decoration:none;padding:14px 32px;border-radius:0 10px 10px 0;font-size:14px;font-weight:700;letter-spacing:0.2px;text-align:center;">
+                Ver presupuesto
+              </a>
             </td>
           </tr>
 
           <tr>
-            <td style="padding:0 32px 28px;">
-              <table cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                  <td align="center">
-                    <a href="${publicUrl}"
-                       style="display:inline-block;background-color:#00B2A9;color:#ffffff;text-decoration:none;padding:14px 40px;border-radius:10px;font-size:14px;font-weight:700;letter-spacing:0.3px;">
-                      Ver presupuesto
-                    </a>
-                  </td>
-                </tr>
-              </table>
+            <td style="padding:0 32px;background:#141415;">
+              <div style="height:1px;background:#2C2C2F;"></div>
             </td>
           </tr>
 
           <tr>
-            <td style="padding:0 32px 32px;">
-              <p style="margin:0;color:#a1a1aa;font-size:11px;text-align:center;word-break:break-all;">
-                <a href="${publicUrl}" style="color:#00B2A9;text-decoration:none;">${publicUrl}</a>
+            <td style="padding:16px 32px 24px;background:#141415;">
+              <p style="margin:0;color:#8C877E;font-size:11px;text-align:center;word-break:break-all;">
+                <a href="${publicUrl}" style="color:#B9B4AA;text-decoration:none;">${publicUrl}</a>
               </p>
             </td>
           </tr>
 
-          <tr>
-            <td style="padding:0 32px;">
-              <div style="height:1px;background-color:#f4f4f5;"></div>
-            </td>
-          </tr>
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
 
           <tr>
-            <td style="padding:18px 32px;text-align:center;">
-              <p style="margin:0;color:#a1a1aa;font-size:11px;">
-                Enviado por <a href="https://danteup.com" target="_blank" style="color:#00B2A9;font-weight:600;text-decoration:none;">DANTEUP CRM</a>
+            <td style="padding:18px 32px;text-align:center;background:#0B0B0C;">
+              <p style="margin:0;color:#8C877E;font-size:11px;">
+                Enviado por <a href="https://danteup.com" target="_blank" style="color:#B9B4AA;font-weight:600;text-decoration:none;">DANTEUP</a>
               </p>
             </td>
           </tr>
@@ -885,9 +918,9 @@ export async function sendBackupFailureEmail(errorMessage) {
 }
 
 function buildEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, totalFmt, publicUrl }) {
-  const logoCell = orgLogoUrl
-    ? `<img src="${orgLogoUrl}" alt="${orgName}" style="max-height:40px;max-width:130px;object-fit:contain;display:block;">`
-    : `<p style="margin:0;color:#cbd5e1;font-size:12px;font-weight:600;">${orgName}</p>`
+  const logoBlock = orgLogoUrl
+    ? `<img src="${orgLogoUrl}" alt="${orgName}" style="max-height:36px;max-width:120px;object-fit:contain;display:block;">`
+    : `<span style="color:#F2EDE3;font-size:15px;font-weight:700;letter-spacing:-0.5px;">${orgName}</span>`
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -896,63 +929,93 @@ function buildEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, tota
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Presupuesto #${num}</title>
 </head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 16px;">
+<body style="margin:0;padding:0;background-color:#0B0B0C;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0B0B0C;padding:48px 16px;">
     <tr>
       <td align="center">
-        <table width="100%" style="max-width:560px;border-radius:12px;overflow:hidden;border:1px solid #e4e4e7;background:#ffffff;">
+        <table width="100%" style="max-width:540px;border-radius:0 20px 20px 0;overflow:hidden;border:1px solid #2C2C2F;background:#141415;">
 
           <tr>
-            <td style="background-color:#1e293b;padding:28px 36px;">
+            <td style="padding:24px 32px;background:#0B0B0C;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="vertical-align:middle;width:140px;padding-right:20px;">
-                    ${logoCell}
+                  <td style="vertical-align:middle;">
+                    ${logoBlock}
                   </td>
                   <td style="vertical-align:middle;text-align:right;">
-                    <p style="margin:0 0 4px;color:#94a3b8;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Presupuesto</p>
-                    <h1 style="margin:0 0 4px;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.5px;">#${num}</h1>
-                    <p style="margin:0;color:#cbd5e1;font-size:13px;">${quoteTitle}</p>
+                    <span style="display:inline-block;background:#1E1E20;color:#8C877E;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border:1px solid #2C2C2F;border-radius:0 6px 6px 0;">Presupuesto</span>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
-          <tr>
-            <td style="padding:32px 36px;">
-              <p style="margin:0 0 12px;color:#27272a;font-size:15px;">
-                Hola, <strong>${clientName}</strong>
-              </p>
-              <p style="margin:0 0 6px;color:#71717a;font-size:14px;line-height:1.6;">
-                Te compartimos el presupuesto <strong style="color:#27272a;">${quoteTitle}</strong>.
-              </p>
-              <p style="margin:0 0 28px;color:#71717a;font-size:14px;">
-                Total: <strong style="color:#27272a;font-size:15px;">${totalFmt}</strong>
-              </p>
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
 
-              <table cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td style="padding:32px;background:#1E1E20;">
+              <p style="margin:0 0 8px;color:#8C877E;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Nuevo presupuesto</p>
+              <h1 style="margin:0 0 8px;color:#F2EDE3;font-size:26px;font-weight:700;letter-spacing:-0.5px;">#${num}</h1>
+              <p style="margin:0;color:#B9B4AA;font-size:14px;">${quoteTitle}</p>
+            </td>
+          </tr>
+
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
+          <tr>
+            <td style="padding:32px 32px 16px;background:#141415;">
+              <p style="margin:0 0 16px;color:#F2EDE3;font-size:15px;font-weight:600;">Hola, ${clientName}</p>
+              <p style="margin:0 0 14px;color:#B9B4AA;font-size:14px;line-height:1.65;">
+                Te compartimos el presupuesto <strong style="color:#F2EDE3;">${quoteTitle}</strong> para tu revisión.
+              </p>
+              <p style="margin:0 0 20px;color:#B9B4AA;font-size:14px;line-height:1.65;">
+                Podés ver el detalle completo, aceptar o solicitar modificaciones desde el enlace de abajo.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px 24px;background:#141415;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#1E1E20;border-radius:0 8px 8px 0;border:1px solid #2C2C2F;">
                 <tr>
-                  <td align="center" style="padding-bottom:24px;">
-                    <a href="${publicUrl}"
-                       style="display:inline-block;background-color:#1e293b;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:10px;font-size:14px;font-weight:600;">
-                      Ver presupuesto
-                    </a>
+                  <td style="padding:12px 16px;">
+                    <p style="margin:0 0 2px;color:#8C877E;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;">Total</p>
+                    <p style="margin:0;color:#F2EDE3;font-size:18px;font-weight:700;">${totalFmt}</p>
                   </td>
                 </tr>
               </table>
-
-              <p style="margin:0;color:#a1a1aa;font-size:12px;text-align:center;word-break:break-all;">
-                <a href="${publicUrl}" style="color:#64748b;">${publicUrl}</a>
-              </p>
             </td>
           </tr>
 
           <tr>
-            <td style="border-top:1px solid #f4f4f5;padding:18px 36px;text-align:center;">
-              <p style="margin:0;color:#a1a1aa;font-size:11px;">
-                Generado por <a href="https://danteup.com" target="_blank" style="color:#71717a;font-weight:600;text-decoration:none;">danteup.com</a>
+            <td style="padding:0 32px 28px;background:#141415;">
+              <a href="${publicUrl}"
+                 style="display:block;background:#F2EDE3;color:#0B0B0C;text-decoration:none;padding:14px 32px;border-radius:0 10px 10px 0;font-size:14px;font-weight:700;letter-spacing:0.2px;text-align:center;">
+                Ver presupuesto
+              </a>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px;background:#141415;">
+              <div style="height:1px;background:#2C2C2F;"></div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:16px 32px 24px;background:#141415;">
+              <p style="margin:0;color:#8C877E;font-size:11px;text-align:center;word-break:break-all;">
+                <a href="${publicUrl}" style="color:#B9B4AA;text-decoration:none;">${publicUrl}</a>
+              </p>
+            </td>
+          </tr>
+
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
+          <tr>
+            <td style="padding:18px 32px;text-align:center;background:#0B0B0C;">
+              <p style="margin:0;color:#8C877E;font-size:11px;">
+                Enviado por <a href="https://danteup.com" target="_blank" style="color:#B9B4AA;font-weight:600;text-decoration:none;">DANTEUP</a>
               </p>
             </td>
           </tr>
@@ -961,7 +1024,6 @@ function buildEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, tota
       </td>
     </tr>
   </table>
-
 </body>
 </html>`
 }

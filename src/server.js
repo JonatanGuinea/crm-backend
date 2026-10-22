@@ -102,6 +102,11 @@ async function runQuoteReminders() {
       if (!to) continue
 
       try {
+        const { count } = await prisma.quote.updateMany({
+          where: { id: q.id, reminderSentAt: null },
+          data:  { reminderSentAt: new Date() },
+        })
+        if (count === 0) continue
         await sendQuoteReminderEmail({
           to, clientName: name,
           orgName:    q.organization.name,
@@ -111,10 +116,6 @@ async function runQuoteReminders() {
           quoteTitle:  q.title,
           total:       q.total,
           currency:    q.currency,
-        })
-        await prisma.quote.update({
-          where: { id: q.id },
-          data:  { reminderSentAt: new Date() },
         })
         console.log(`[cron] Recordatorio enviado → ${to} (presupuesto #${q.number})`)
       } catch (err) {
@@ -155,6 +156,11 @@ async function runPaymentReminders() {
       if (!to) continue
 
       try {
+        const { count } = await prisma.quote.updateMany({
+          where: { id: q.id, paymentReminderSentAt: null },
+          data:  { paymentReminderSentAt: new Date() },
+        })
+        if (count === 0) continue
         await sendPaymentReminderEmail({
           to, clientName: name,
           orgName:           q.organization.name,
@@ -166,10 +172,6 @@ async function runPaymentReminders() {
           installmentTotal:  1,
           amount:            q.total,
           currency:          q.currency,
-        })
-        await prisma.quote.update({
-          where: { id: q.id },
-          data:  { paymentReminderSentAt: new Date() },
         })
         console.log(`[cron] Recordatorio de pago único → ${to} | Presupuesto #${q.number}`)
       } catch (err) {
@@ -208,6 +210,11 @@ async function runPaymentReminders() {
       if (!to) continue
 
       try {
+        const { count } = await prisma.installment.updateMany({
+          where: { id: inst.id, reminderSentAt: null },
+          data:  { reminderSentAt: new Date() },
+        })
+        if (count === 0) continue
         await sendPaymentReminderEmail({
           to, clientName: name,
           orgName:            q.organization.name,
@@ -219,10 +226,6 @@ async function runPaymentReminders() {
           installmentTotal:   q.installments.length,
           amount:             inst.amount,
           currency:           q.currency,
-        })
-        await prisma.installment.update({
-          where: { id: inst.id },
-          data:  { reminderSentAt: new Date() },
         })
         console.log(`[cron] Recordatorio de pago → ${to} | Cuota ${inst.number} | Presupuesto #${q.number}`)
       } catch (err) {
