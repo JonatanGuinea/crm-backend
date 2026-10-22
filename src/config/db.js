@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client'
 dotenv.config()
 
 const prisma = new PrismaClient({
-  datasourceUrl: process.env.SUPABASE_DIRECT_URL,
+  datasourceUrl: process.env.SUPABASE_DATABASE_URL,
 })
 
 export default prisma
