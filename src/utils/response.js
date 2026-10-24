@@ -4,7 +4,10 @@ export const success = (res, status = 200, data = null) => {
 }
 
 export const fail = (res, status = 500, message = 'Error interno') => {
-  return res.status(status).json({ error: message, data: null })
+  const safeMessage = status === 500 && process.env.NODE_ENV === 'production'
+    ? 'Error interno del servidor'
+    : message
+  return res.status(status).json({ error: safeMessage, data: null })
 }
 
 export const paginated = (res, data, pagination) => {

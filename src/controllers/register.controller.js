@@ -20,7 +20,7 @@ export const register = async (req, res) => {
 
     const existingUser = await prisma.user.findUnique({ where: { email } })
     if (existingUser) {
-      return fail(res, 400, 'El usuario ya existe')
+      return success(res, 201, { message: 'Cuenta creada. Revisá tu email para activarla.' })
     }
 
     const hashedPassword     = await hashPassword(password)
