@@ -14,6 +14,10 @@ export const register = async (req, res) => {
     const phone       = req.body.userPhone?.trim() || null
     const inviteToken = req.body.inviteToken || null
 
+    if (process.env.REGISTRATIONS_OPEN === 'false' && !inviteToken) {
+      return fail(res, 503, 'Los registros están temporalmente suspendidos.')
+    }
+
     if (!name || !email || !password || !phone) {
       return fail(res, 400, 'Nombre, email, contraseña y teléfono son obligatorios')
     }
