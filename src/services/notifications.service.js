@@ -155,24 +155,10 @@ export async function checkTimeAlerts(orgId) {
     ))
   }
 
-  // Anuncios de novedades — update vacío para no re-activar si ya fue leído
-  const ANNOUNCEMENTS = [
-    {
-      refId: 'feature_notes_2026-09-28',
-      title: '✨ Nueva función: Notas en presupuestos',
-      message: 'Ahora podés agregar múltiples notas con título y descripción a tus presupuestos. Aparecen en el PDF y en la vista del cliente.',
-    },
-  ]
+  // Anuncios de novedades discontinuados — limpia los que ya se habían creado
+  const RETIRED_ANNOUNCEMENTS = ['feature_notes_2026-09-28']
 
-  await Promise.all(
-    allMembers.flatMap(m =>
-      ANNOUNCEMENTS.map(a =>
-        prisma.notification.upsert({
-          where: { type_userId_organizationId_refId: { type: 'announcement', userId: m.userId, organizationId: orgId, refId: a.refId } },
-          update: {},
-          create: { type: 'announcement', title: a.title, message: a.message, userId: m.userId, organizationId: orgId, refId: a.refId }
-        })
-      )
-    )
-  )
+  await prisma.notification.deleteMany({
+    where: { type: 'announcement', organizationId: orgId, refId: { in: RETIRED_ANNOUNCEMENTS } }
+  })
 }
