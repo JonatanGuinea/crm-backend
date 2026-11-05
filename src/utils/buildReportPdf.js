@@ -180,7 +180,7 @@ function drawSectionHeader(doc, title, orgName, year, month) {
 // ── Pie de página ─────────────────────────────────────────────────────────────
 
 function addPageNumbers(doc, orgName, startPage = 2) {
-  const total = doc.bufferedPageRange().count + startPage - 1
+  const total = doc.bufferedPageRange().count
   for (let i = startPage; i <= total; i++) {
     doc.switchToPage(i - 1)
     doc.save()

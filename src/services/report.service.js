@@ -115,8 +115,8 @@ export async function getMonthlyReportData(orgId, year, month) {
   const catMap = Object.fromEntries(catNames.map(c => [c.id, c.name]))
 
   // Saldo total de cuentas
-  const accounts = await prisma.cashAccount.findMany({ where: { orgId, status: 'active' }, select: { balance: true } })
-  const totalBalance = accounts.reduce((s, a) => s + Number(a.balance), 0)
+  const accounts = await prisma.cashAccount.findMany({ where: { orgId, status: 'active' }, select: { currentBalance: true } })
+  const totalBalance = accounts.reduce((s, a) => s + Number(a.currentBalance), 0)
 
   const incomeMonth  = Number(finIncome._sum.amount  ?? 0)
   const expenseMonth = Number(finExpense._sum.amount ?? 0)
