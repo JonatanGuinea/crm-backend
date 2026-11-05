@@ -251,8 +251,20 @@ async function runMemberships() {
 prisma.$connect()
   .then(() => {
     console.log('PostgreSQL conectado')
-    app.listen(PORT, () => {
+    app.listen(PORT, (err) => {
+      // Express 5 llama este callback también cuando falla el listen (ej. puerto ocupado)
+      if (err) {
+        console.error(`No se pudo iniciar el servidor en el puerto ${PORT}:`, err.message)
+        process.exit(1)
+      }
       console.log(`Servidor corriendo en puerto ${PORT}`)
+
+      // En local conectado a la DB de producción: no enviar emails, informes ni backups duplicados
+      if (process.env.DISABLE_CRONS === 'true') {
+        console.log('[cron] Jobs desactivados (DISABLE_CRONS=true)')
+        return
+      }
+
       runTimeAlerts()
       runQuoteReminders()
       runPaymentReminders()
