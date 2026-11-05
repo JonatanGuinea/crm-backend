@@ -8,6 +8,15 @@ import { applyDefaultTasks } from '../services/default-tasks.service.js'
 
 const router = Router()
 
+// La validez incluye el día de validUntil; vence desde el día siguiente (hora Argentina).
+// Cubre el intervalo hasta que el cron pase el presupuesto a "expired".
+function isPastValidity(validUntil) {
+  if (!validUntil) return false
+  const arg      = new Date(Date.now() - 3 * 60 * 60 * 1000)
+  const todayArg = new Date(Date.UTC(arg.getUTCFullYear(), arg.getUTCMonth(), arg.getUTCDate(), 0, 0, 0, 0))
+  return new Date(validUntil) < todayArg
+}
+
 const quotePublicInclude = {
   items: true,
   images: { orderBy: { order: 'asc' } },
@@ -36,7 +45,7 @@ router.post('/quotes/:id/confirm', async (req, res) => {
       where: { id },
       select: {
         id: true, status: true, number: true, title: true, clientId: true, projectId: true,
-        total: true, currency: true,
+        total: true, currency: true, validUntil: true,
         client: { select: { name: true, phone: true, company: true } },
         potentialClientName: true, potentialClientEmail: true, potentialClientPhone: true, potentialClientCompany: true,
         potentialProjectTitle: true,
@@ -48,7 +57,7 @@ router.post('/quotes/:id/confirm', async (req, res) => {
     if (quote.status === 'signed')   return fail(res, 400, 'El presupuesto ya fue firmado')
     if (quote.status === 'approved') return fail(res, 400, 'El presupuesto ya fue confirmado')
     if (quote.status === 'rejected') return fail(res, 400, 'El presupuesto fue rechazado')
-    if (quote.status === 'expired')  return fail(res, 400, 'El presupuesto ha expirado')
+    if (quote.status === 'expired' || isPastValidity(quote.validUntil)) return fail(res, 400, 'El presupuesto ha expirado')
 
     const updateData = { status: 'signed' }
 
@@ -188,7 +197,7 @@ router.post('/quotes/:id/reject', async (req, res) => {
     const quote = await prisma.quote.findUnique({
       where: { id },
       select: {
-        id: true, status: true, number: true, title: true,
+        id: true, status: true, number: true, title: true, validUntil: true,
         organizationId: true, createdById: true,
         client: { select: { name: true, phone: true, company: true } },
         potentialClientName: true, potentialClientPhone: true, potentialClientCompany: true
@@ -198,7 +207,7 @@ router.post('/quotes/:id/reject', async (req, res) => {
     if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
     if (quote.status === 'rejected') return fail(res, 400, 'El presupuesto ya fue rechazado')
     if (quote.status === 'signed')   return fail(res, 400, 'El presupuesto ya fue firmado')
-    if (quote.status === 'expired')  return fail(res, 400, 'El presupuesto ha expirado')
+    if (quote.status === 'expired' || isPastValidity(quote.validUntil)) return fail(res, 400, 'El presupuesto ha expirado')
     if (!['draft', 'sent'].includes(quote.status)) return fail(res, 400, 'Este presupuesto no puede ser rechazado')
 
     const trimmedReason = reason?.trim() || null

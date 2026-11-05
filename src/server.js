@@ -238,6 +238,45 @@ async function runPaymentReminders() {
   }
 }
 
+// Pasa a "Vencido" los presupuestos enviados cuya fecha de validez ya pasó (hora Argentina).
+// Vencen el día siguiente a validUntil; los borradores no se tocan.
+async function runQuoteExpiration() {
+  try {
+    const arg      = new Date(Date.now() - 3 * 60 * 60 * 1000)
+    const todayArg = new Date(Date.UTC(arg.getUTCFullYear(), arg.getUTCMonth(), arg.getUTCDate(), 0, 0, 0, 0))
+
+    const quotes = await prisma.quote.findMany({
+      where:  { status: 'sent', validUntil: { lt: todayArg } },
+      select: { id: true, number: true, organizationId: true, createdById: true },
+    })
+
+    for (const q of quotes) {
+      try {
+        // Condición sobre el estado: si alguien lo aprobó/rechazó mientras tanto, no se pisa
+        const { count } = await prisma.quote.updateMany({
+          where: { id: q.id, status: 'sent' },
+          data:  { status: 'expired' },
+        })
+        if (count === 0) continue
+        await prisma.quoteHistory.create({
+          data: {
+            quoteId:        q.id,
+            userId:         q.createdById,
+            action:         'auto_expired',
+            detail:         'Enviado → Vencido',
+            organizationId: q.organizationId,
+          }
+        })
+        console.log(`[cron] Presupuesto #${q.number} vencido automáticamente (${q.id})`)
+      } catch (err) {
+        console.error(`[cron] Error venciendo presupuesto ${q.id}:`, err.message)
+      }
+    }
+  } catch (err) {
+    console.error('[cron] Error en vencimiento de presupuestos:', err.message)
+  }
+}
+
 // Extiende el horizonte de cobros de membresías y avisa a los clientes con cobros atrasados
 async function runMemberships() {
   try {
@@ -269,7 +308,9 @@ prisma.$connect()
       runQuoteReminders()
       runPaymentReminders()
       runMemberships()
+      runQuoteExpiration()
       setInterval(runTimeAlerts,          6  * 60 * 60 * 1000) // cada 6 horas
+      setInterval(runQuoteExpiration,         60 * 60 * 1000) // cada hora
       setInterval(runMemberships,         6  * 60 * 60 * 1000) // cada 6 horas
       setInterval(runMonthlyReports,          60 * 60 * 1000) // cada hora
       setInterval(runQuoteReminders,      12  * 60 * 60 * 1000) // cada 12 horas
