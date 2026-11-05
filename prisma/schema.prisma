@@ -1,30 +1,28 @@
-
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider   = "postgresql"
-  url        = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id            String   @id @default(cuid())
-  name          String
-  email         String   @unique
-  password      String
-  avatar        String?
-  phone         String?
-  isSystemAdmin      Boolean  @default(false)
-  emailVerified      Boolean  @default(false)
-  emailVerifyToken   String?  @unique
-  passwordChangeToken String? @unique
+  id                  String    @id @default(cuid())
+  name                String
+  email               String    @unique
+  password            String
+  avatar              String?
+  phone               String?
+  isSystemAdmin       Boolean   @default(false)
+  emailVerified       Boolean   @default(false)
+  emailVerifyToken    String?   @unique
+  passwordChangeToken String?   @unique
   passwordChangeHash  String?
-  passwordResetToken  String? @unique
+  passwordResetToken  String?   @unique
   passwordResetExpiry DateTime?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   ownedOrganizations Organization[]
   memberships        OrganizationMembership[]
@@ -36,8 +34,8 @@ model User {
   notifications      Notification[]
   attachments        Attachment[]
   expenses           Expense[]
-  assignedTasks      Task[]           @relation("TaskAssignee")
-  createdTasks       Task[]           @relation("TaskCreator")
+  assignedTasks      Task[]                   @relation("TaskAssignee")
+  createdTasks       Task[]                   @relation("TaskCreator")
   taskHistory        TaskHistory[]
   clientHistory      ClientHistory[]
   projectHistory     ProjectHistory[]
@@ -45,54 +43,56 @@ model User {
   stockMovements     StockMovement[]
   cashMovements      CashMovement[]
   defaultTasks       DefaultTask[]
+  clientMemberships  ClientMembership[]
 }
 
 model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  plan      Plan     @default(free)
-  cuit      String?
-  email     String?
-  website   String?
-  phone     String?
-  address   String?
-  logo                String?
-  city                String?
-  province            String?
-  postalCode          String?
-  signature           String?
-  signatureOwnerName  String?
-  brandPrimary        String?
-  brandSecondary      String?
-  defaultCurrency      String  @default("USD")
+  id                   String   @id @default(cuid())
+  name                 String
+  slug                 String   @unique
+  plan                 Plan     @default(free)
+  cuit                 String?
+  email                String?
+  website              String?
+  phone                String?
+  address              String?
+  logo                 String?
+  city                 String?
+  province             String?
+  postalCode           String?
+  signature            String?
+  signatureOwnerName   String?
+  brandPrimary         String?
+  brandSecondary       String?
+  defaultCurrency      String   @default("USD")
   defaultCashAccountId String?
-  ownerId         String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  ownerId              String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
-  owner       User                     @relation(fields: [ownerId], references: [id])
-  memberships OrganizationMembership[]
-  clients     Client[]
-  projects    Project[]
-  quotes        Quote[]
-  invoices      Invoice[]
-  notifications      Notification[]
-  attachments        Attachment[]
-  installments       Installment[]
-  expenseCategories  ExpenseCategory[]
-  expenses           Expense[]
-  tasks              Task[]
-  productCategories  ProductCategory[]
-  products           Product[]
-  stockMovements     StockMovement[]
-  suppliers          Supplier[]
+  owner               User                     @relation(fields: [ownerId], references: [id])
+  memberships         OrganizationMembership[]
+  clients             Client[]
+  projects            Project[]
+  quotes              Quote[]
+  invoices            Invoice[]
+  notifications       Notification[]
+  attachments         Attachment[]
+  installments        Installment[]
+  expenseCategories   ExpenseCategory[]
+  expenses            Expense[]
+  tasks               Task[]
+  productCategories   ProductCategory[]
+  products            Product[]
+  stockMovements      StockMovement[]
+  suppliers           Supplier[]
   financialCategories FinancialCategory[]
   cashAccounts        CashAccount[]
   cashMovements       CashMovement[]
   quoteImages         QuoteImage[]
   quoteNotes          QuoteNote[]
   defaultTasks        DefaultTask[]
+  clientMemberships   ClientMembership[]
 
   @@index([name])
 }
@@ -150,14 +150,15 @@ model Client {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdBy      User            @relation(fields: [createdById], references: [id])
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      User               @relation(fields: [createdById], references: [id])
   projects       Project[]
   quotes         Quote[]
   invoices       Invoice[]
   history        ClientHistory[]
   stockMovements StockMovement[]
   cashMovements  CashMovement[]
+  memberships    ClientMembership[]
 
   @@index([organizationId, createdAt(sort: Desc)])
   @@index([organizationId, name])
@@ -177,9 +178,9 @@ model Project {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  client       Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdBy    User            @relation(fields: [createdById], references: [id])
+  client         Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      User             @relation(fields: [createdById], references: [id])
   quotes         Quote[]
   invoices       Invoice[]
   tasks          Task[]
@@ -236,20 +237,20 @@ enum InvoiceStatus {
 }
 
 model Quote {
-  id         String      @id @default(cuid())
-  number     Int
-  title      String
-  status     QuoteStatus @default(draft)
-  notes        String?
-  validUntil      DateTime?
-  deliveryDate    DateTime?
-  paymentDueDate  DateTime?
-  subtotal      Float
-  discountType  String?
-  discountValue Float?
-  taxRate       Float    @default(0)
-  total         Float
-  currency      String   @default("USD")
+  id             String      @id @default(cuid())
+  number         Int
+  title          String
+  status         QuoteStatus @default(draft)
+  notes          String?
+  validUntil     DateTime?
+  deliveryDate   DateTime?
+  paymentDueDate DateTime?
+  subtotal       Float
+  discountType   String?
+  discountValue  Float?
+  taxRate        Float       @default(0)
+  total          Float
+  currency       String      @default("USD")
 
   clientId       String?
   client         Client?      @relation(fields: [clientId], references: [id])
@@ -260,12 +261,12 @@ model Quote {
   createdById    String
   createdBy      User         @relation(fields: [createdById], references: [id])
 
-  sentByEmail            Boolean   @default(false)
-  sentByWhatsapp         Boolean   @default(false)
-  sentAt                 DateTime?
-  reminderSentAt         DateTime?
-  paymentReminderSentAt  DateTime?
-  rejectionReason        String?
+  sentByEmail           Boolean   @default(false)
+  sentByWhatsapp        Boolean   @default(false)
+  sentAt                DateTime?
+  reminderSentAt        DateTime?
+  paymentReminderSentAt DateTime?
+  rejectionReason       String?
 
   // Datos temporales de cliente potencial (se eliminan al aprobar)
   potentialClientName    String?
@@ -275,8 +276,8 @@ model Quote {
   potentialProjectTitle  String?
 
   // Firma digital del cliente al confirmar
-  clientSignature   String?
-  clientSignedAt    DateTime?
+  clientSignature String?
+  clientSignedAt  DateTime?
 
   items          QuoteItem[]
   images         QuoteImage[]
@@ -297,7 +298,7 @@ model Quote {
 }
 
 model QuoteItem {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   description String
   quantity    Float
   unitPrice   Float
@@ -310,7 +311,7 @@ model QuoteItem {
 }
 
 model QuoteImage {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   quoteId        String
   quote          Quote        @relation(fields: [quoteId], references: [id], onDelete: Cascade)
   organizationId String
@@ -319,8 +320,8 @@ model QuoteImage {
   url            String
   title          String?
   description    String?
-  order          Int      @default(0)
-  createdAt      DateTime @default(now())
+  order          Int          @default(0)
+  createdAt      DateTime     @default(now())
 
   @@index([quoteId, order])
   @@index([organizationId])
@@ -343,16 +344,16 @@ model QuoteNote {
 }
 
 model Invoice {
-  id      String        @id @default(cuid())
-  number  Int
-  title   String
-  status  InvoiceStatus @default(draft)
-  notes   String?
-  dueDate DateTime?
+  id       String        @id @default(cuid())
+  number   Int
+  title    String
+  status   InvoiceStatus @default(draft)
+  notes    String?
+  dueDate  DateTime?
   subtotal Float
-  taxRate  Float        @default(0)
+  taxRate  Float         @default(0)
   total    Float
-  currency String       @default("USD")
+  currency String        @default("USD")
 
   clientId       String
   client         Client       @relation(fields: [clientId], references: [id])
@@ -378,7 +379,7 @@ model Invoice {
 }
 
 model InvoiceItem {
-  id          String  @id @default(cuid())
+  id          String @id @default(cuid())
   description String
   quantity    Float
   unitPrice   Float
@@ -391,20 +392,20 @@ model InvoiceItem {
 // ─── Installments ────────────────────────────────────────────────────────────
 
 model Installment {
-  id        String   @id @default(cuid())
-  number    Int
-  amount    Float
-  dueDate   DateTime
-  status          String    @default("pending")
-  paidAt          DateTime?
-  reminderSentAt  DateTime?
+  id             String    @id @default(cuid())
+  number         Int
+  amount         Float
+  dueDate        DateTime
+  status         String    @default("pending")
+  paidAt         DateTime?
+  reminderSentAt DateTime?
 
   invoiceId      String?
-  invoice        Invoice?      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice        Invoice?     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   quoteId        String?
-  quote          Quote?        @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quote          Quote?       @relation(fields: [quoteId], references: [id], onDelete: Cascade)
   organizationId String
-  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -417,33 +418,33 @@ model Installment {
 // ─── Expenses ────────────────────────────────────────────────────────────────
 
 model ExpenseCategory {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   name           String
-  isDefault      Boolean  @default(false)
+  isDefault      Boolean      @default(false)
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   expenses       Expense[]
-  createdAt      DateTime @default(now())
+  createdAt      DateTime     @default(now())
 
   @@unique([organizationId, name])
   @@index([organizationId])
 }
 
 model Expense {
-  id             String   @id @default(cuid())
+  id             String          @id @default(cuid())
   title          String
   amount         Float
-  currency       String   @default("USD")
+  currency       String          @default("USD")
   date           DateTime
   notes          String?
   categoryId     String
   category       ExpenseCategory @relation(fields: [categoryId], references: [id])
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdById    String
-  createdBy      User @relation(fields: [createdById], references: [id])
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdBy      User            @relation(fields: [createdById], references: [id])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@index([organizationId, date(sort: Desc)])
   @@index([organizationId, categoryId])
@@ -483,8 +484,8 @@ model Task {
   createdById    String
   createdBy      User         @relation("TaskCreator", fields: [createdById], references: [id])
 
-  history     TaskHistory[]
-  stockItems  TaskStockItem[]
+  history    TaskHistory[]
+  stockItems TaskStockItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -585,14 +586,14 @@ enum AttachmentEntity {
 }
 
 model Attachment {
-  id          String           @id @default(cuid())
-  filename    String
-  storedName  String
-  url         String
-  mimetype    String
-  size        Int
-  entityType  AttachmentEntity
-  entityId    String
+  id         String           @id @default(cuid())
+  filename   String
+  storedName String
+  url        String
+  mimetype   String
+  size       Int
+  entityType AttachmentEntity
+  entityId   String
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -614,25 +615,25 @@ enum ProductStatus {
 }
 
 enum InventoryType {
-  sale         // Producto para venta a clientes
-  internal     // Insumo / material de uso interno
+  sale // Producto para venta a clientes
+  internal // Insumo / material de uso interno
   raw_material // Materia prima
 }
 
 enum MovementType {
-  initial               // Carga inicial de stock
-  purchase              // Compra a proveedor
-  sale                  // Venta a cliente
-  adjustment_in         // Ajuste positivo manual
-  adjustment_out        // Ajuste negativo manual
-  return_in             // Devolución de cliente
-  return_out            // Devolución a proveedor
-  production_in         // Producto terminado / ensamblado
-  production_out        // Consumo en producción
-  transfer_in           // Transferencia recibida
-  transfer_out          // Transferencia enviada
-  correction            // Corrección de error
-  internal_consumption  // Consumo interno (insumos / materias primas)
+  initial // Carga inicial de stock
+  purchase // Compra a proveedor
+  sale // Venta a cliente
+  adjustment_in // Ajuste positivo manual
+  adjustment_out // Ajuste negativo manual
+  return_in // Devolución de cliente
+  return_out // Devolución a proveedor
+  production_in // Producto terminado / ensamblado
+  production_out // Consumo en producción
+  transfer_in // Transferencia recibida
+  transfer_out // Transferencia enviada
+  correction // Corrección de error
+  internal_consumption // Consumo interno (insumos / materias primas)
 }
 
 enum MovementDirection {
@@ -641,16 +642,16 @@ enum MovementDirection {
 }
 
 model ProductCategory {
-  id             String   @id @default(cuid())
-  orgId          String
-  parentId       String?
-  name           String
-  description    String?
-  color          String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id          String   @id @default(cuid())
+  orgId       String
+  parentId    String?
+  name        String
+  description String?
+  color       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  organization Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  organization Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
   parent       ProductCategory?  @relation("CategoryTree", fields: [parentId], references: [id])
   children     ProductCategory[] @relation("CategoryTree")
   products     Product[]
@@ -661,7 +662,7 @@ model ProductCategory {
 }
 
 model Product {
-  id         String        @id @default(cuid())
+  id         String  @id @default(cuid())
   orgId      String
   categoryId String?
   supplierId String?
@@ -669,23 +670,23 @@ model Product {
   sku         String
   name        String
   description String?
-  unit        String        @default("unidad")
+  unit        String  @default("unidad")
 
-  stock    Decimal       @default(0) @db.Decimal(15, 4)
-  minStock Decimal       @default(0) @db.Decimal(15, 4)
-  maxStock Decimal?      @db.Decimal(15, 4)
+  stock    Decimal  @default(0) @db.Decimal(15, 4)
+  minStock Decimal  @default(0) @db.Decimal(15, 4)
+  maxStock Decimal? @db.Decimal(15, 4)
 
-  costPrice     Decimal? @db.Decimal(15, 2)
-  salePrice     Decimal? @db.Decimal(15, 2)
+  costPrice Decimal? @db.Decimal(15, 2)
+  salePrice Decimal? @db.Decimal(15, 2)
 
   inventoryType InventoryType @default(sale)
   status        ProductStatus @default(active)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
-  organization Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  category     ProductCategory? @relation(fields: [categoryId], references: [id])
-  supplier     Supplier?        @relation(fields: [supplierId], references: [id])
+  organization   Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  category       ProductCategory? @relation(fields: [categoryId], references: [id])
+  supplier       Supplier?        @relation(fields: [supplierId], references: [id])
   movements      StockMovement[]
   quoteItems     QuoteItem[]
   taskStockItems TaskStockItem[]
@@ -699,7 +700,7 @@ model Product {
 }
 
 model StockMovement {
-  id        String            @id @default(cuid())
+  id        String @id @default(cuid())
   orgId     String
   productId String
 
@@ -739,20 +740,20 @@ model StockMovement {
 // ─── Suppliers ───────────────────────────────────────────────────────────────
 
 model Supplier {
-  id             String   @id @default(cuid())
-  orgId          String
-  name           String
-  email          String?
-  phone          String?
-  address        String?
-  website        String?
-  notes          String?
-  status         String   @default("active")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id        String   @id @default(cuid())
+  orgId     String
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  website   String?
+  notes     String?
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  products     Product[]
+  organization  Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  products      Product[]
   cashMovements CashMovement[]
 
   @@index([orgId])
@@ -802,20 +803,21 @@ enum FinancialCategoryType {
 }
 
 model FinancialCategory {
-  id        String               @id @default(cuid())
+  id        String                @id @default(cuid())
   orgId     String
   name      String
   type      FinancialCategoryType
   parentId  String?
   color     String?
-  isDefault Boolean              @default(false)
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
+  isDefault Boolean               @default(false)
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
 
-  organization Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  organization Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
   parent       FinancialCategory?  @relation("FinCatTree", fields: [parentId], references: [id])
   children     FinancialCategory[] @relation("FinCatTree")
   movements    CashMovement[]
+  memberships  ClientMembership[]
 
   @@unique([orgId, name, type])
   @@index([orgId, type])
@@ -834,41 +836,84 @@ model CashAccount {
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
-  organization Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  movements    CashMovement[] @relation("AccountMovements")
-  transfersTo  CashMovement[] @relation("TransferDestination")
+  organization Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  movements    CashMovement[]     @relation("AccountMovements")
+  transfersTo  CashMovement[]     @relation("TransferDestination")
+  memberships  ClientMembership[]
 
   @@index([orgId, status])
 }
 
+// ── Membresías de clientes (cobro mensual recurrente) ─────────────────────────
+// Cada membresía activa genera CashMovement pendientes (uno por mes, period "YYYY-MM")
+// hasta 12 meses adelante.
+model ClientMembership {
+  id         String                 @id @default(cuid())
+  orgId      String
+  clientId   String
+  name       String
+  amount     Decimal                @db.Decimal(15, 2)
+  billingDay Int
+  startDate  DateTime
+  endDate    DateTime?
+  status     ClientMembershipStatus @default(active)
+  accountId  String
+  categoryId String?
+  notes      String?
+
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organization Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  client       Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  account      CashAccount        @relation(fields: [accountId], references: [id])
+  category     FinancialCategory? @relation(fields: [categoryId], references: [id])
+  createdBy    User               @relation(fields: [createdById], references: [id])
+  movements    CashMovement[]
+
+  @@index([orgId, status])
+  @@index([orgId, clientId])
+}
+
+enum ClientMembershipStatus {
+  active
+  paused
+  cancelled
+}
+
 model CashMovement {
-  id      String             @id @default(cuid())
-  orgId   String
+  id        String @id @default(cuid())
+  orgId     String
   accountId String
 
-  type      CashMovementType
-  concept   String
-  categoryId String?
-  amount    Decimal            @db.Decimal(15, 2)
-  balanceBefore Decimal        @db.Decimal(15, 2)
-  balanceAfter  Decimal        @db.Decimal(15, 2)
+  type          CashMovementType
+  concept       String
+  categoryId    String?
+  amount        Decimal          @db.Decimal(15, 2)
+  balanceBefore Decimal          @db.Decimal(15, 2)
+  balanceAfter  Decimal          @db.Decimal(15, 2)
 
-  paymentMethod PaymentMethod  @default(cash)
+  paymentMethod PaymentMethod      @default(cash)
   status        CashMovementStatus @default(pending)
 
   date        DateTime
   description String?
   reference   String?
 
-  clientId    String?
-  projectId   String?
-  supplierId  String?
-  quoteId     String?
+  clientId   String?
+  projectId  String?
+  supplierId String?
+  quoteId    String?
 
-  transferPairId    String?
-  toAccountId       String?
-  annulledById      String?
-  annulmentReason   String?
+  membershipId   String?
+  period         String? // "YYYY-MM" del cobro de membresía
+  reminderSentAt DateTime?
+
+  transferPairId  String?
+  toAccountId     String?
+  annulledById    String?
+  annulmentReason String?
 
   createdById String
   createdAt   DateTime @default(now())
@@ -882,10 +927,12 @@ model CashMovement {
   project      Project?           @relation(fields: [projectId], references: [id])
   supplier     Supplier?          @relation(fields: [supplierId], references: [id])
   quote        Quote?             @relation(fields: [quoteId], references: [id])
+  membership   ClientMembership?  @relation(fields: [membershipId], references: [id], onDelete: SetNull)
   createdBy    User               @relation(fields: [createdById], references: [id])
   annulledBy   CashMovement?      @relation("AnnulmentPair", fields: [annulledById], references: [id])
   annuls       CashMovement[]     @relation("AnnulmentPair")
 
+  @@unique([membershipId, period])
   @@index([orgId, date(sort: Desc)])
   @@index([orgId, accountId, date(sort: Desc)])
   @@index([orgId, type, date(sort: Desc)])
@@ -932,7 +979,7 @@ enum NotificationType {
 }
 
 model Notification {
-  id      String           @id @default(cuid())
+  id       String           @id @default(cuid())
   type     NotificationType
   title    String
   message  String

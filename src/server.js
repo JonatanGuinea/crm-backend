@@ -7,6 +7,7 @@ import { getMonthlyReportData } from './services/report.service.js'
 import { buildMonthlyReportPdf } from './utils/buildReportPdf.js'
 import { sendMonthlyReportEmail, sendQuoteReminderEmail, sendPaymentReminderEmail } from './services/email.service.js'
 import { runDatabaseBackup } from './services/backup.service.js'
+import { syncAllMemberships, sendMembershipReminders } from './services/memberships.service.js'
 
 dotenv.config({ override: true })
 
@@ -237,6 +238,16 @@ async function runPaymentReminders() {
   }
 }
 
+// Extiende el horizonte de cobros de membresías y avisa a los clientes con cobros atrasados
+async function runMemberships() {
+  try {
+    await syncAllMemberships()
+    await sendMembershipReminders()
+  } catch (err) {
+    console.error('[cron] Error en membresías:', err.message)
+  }
+}
+
 prisma.$connect()
   .then(() => {
     console.log('PostgreSQL conectado')
@@ -245,7 +256,9 @@ prisma.$connect()
       runTimeAlerts()
       runQuoteReminders()
       runPaymentReminders()
+      runMemberships()
       setInterval(runTimeAlerts,          6  * 60 * 60 * 1000) // cada 6 horas
+      setInterval(runMemberships,         6  * 60 * 60 * 1000) // cada 6 horas
       setInterval(runMonthlyReports,          60 * 60 * 1000) // cada hora
       setInterval(runQuoteReminders,      12  * 60 * 60 * 1000) // cada 12 horas
       setInterval(runPaymentReminders,        60 * 60 * 1000) // cada hora

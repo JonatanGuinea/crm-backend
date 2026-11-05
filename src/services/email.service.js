@@ -861,6 +861,121 @@ function buildPaymentReminderEmailHtml({ clientName, orgName, orgLogoUrl, num, q
 </html>`
 }
 
+export async function sendMembershipReminderEmail({
+  to, clientName, orgName, orgLogo,
+  membershipName, periodLabel, dueDate, amount, currency
+}) {
+  const orgLogoUrl = orgLogo ? `${BACKEND_URL}/uploads/${orgLogo}` : null
+  const isUSD      = currency === 'USD'
+  const amountFmt  = `${isUSD ? 'US$' : '$'}${Number(amount).toLocaleString('es-AR', { minimumFractionDigits: isUSD ? 2 : 0, maximumFractionDigits: isUSD ? 2 : 0 })}`
+  const dueFmt     = new Date(dueDate).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', timeZone: 'UTC' })
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+
+  const subject = `Recordatorio de pago · ${membershipName} (${periodLabel}) — ${orgName}`
+  const html    = buildMembershipReminderEmailHtml({
+    clientName: esc(clientName), orgName: esc(orgName), orgLogoUrl,
+    membershipName: esc(membershipName), periodLabel, dueFmt, amountFmt
+  })
+
+  await createTransporter().sendMail({
+    from: `${orgName} - Recordatorio <${process.env.SMTP_USER}>`,
+    to,
+    subject,
+    html,
+  })
+
+  console.log(`[email] Recordatorio de membresía → ${to} | ${membershipName} | ${periodLabel}`)
+}
+
+function buildMembershipReminderEmailHtml({ clientName, orgName, orgLogoUrl, membershipName, periodLabel, dueFmt, amountFmt }) {
+  const logoBlock = orgLogoUrl
+    ? `<img src="${orgLogoUrl}" alt="${orgName}" style="max-height:36px;max-width:120px;object-fit:contain;display:block;">`
+    : `<span style="color:#F2EDE3;font-size:15px;font-weight:700;letter-spacing:-0.5px;">${orgName}</span>`
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Recordatorio de pago · ${membershipName}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0B0B0C;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0B0B0C;padding:48px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:540px;border-radius:0 20px 20px 0;overflow:hidden;border:1px solid #2C2C2F;background:#141415;">
+
+          <tr>
+            <td style="padding:24px 32px;background:#0B0B0C;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    ${logoBlock}
+                  </td>
+                  <td style="vertical-align:middle;text-align:right;">
+                    <span style="display:inline-block;background:#1E1E20;color:#8C877E;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border:1px solid #2C2C2F;border-radius:0 6px 6px 0;">Recordatorio de pago</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
+          <tr>
+            <td style="padding:32px;background:#1E1E20;">
+              <p style="margin:0 0 8px;color:#8C877E;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Membresía</p>
+              <h1 style="margin:0 0 8px;color:#F2EDE3;font-size:26px;font-weight:700;letter-spacing:-0.5px;">${membershipName}</h1>
+              <p style="margin:0;color:#B9B4AA;font-size:14px;text-transform:capitalize;">${periodLabel}</p>
+            </td>
+          </tr>
+
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
+          <tr>
+            <td style="padding:32px 32px 16px;background:#141415;">
+              <p style="margin:0 0 16px;color:#F2EDE3;font-size:15px;font-weight:600;">Hola, ${clientName}</p>
+              <p style="margin:0 0 14px;color:#B9B4AA;font-size:14px;line-height:1.65;">
+                Te recordamos que el pago de tu membresía <strong style="color:#F2EDE3;">${membershipName}</strong> venció el <strong style="color:#F2EDE3;">${dueFmt}</strong> y todavía figura como pendiente.
+              </p>
+              <p style="margin:0 0 20px;color:#B9B4AA;font-size:14px;line-height:1.65;">
+                Si ya realizaste el pago, ignorá este mensaje. Ante cualquier duda, respondé este correo o contactá a ${orgName}.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px 28px;background:#141415;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#1E1E20;border-radius:0 8px 8px 0;border:1px solid #2C2C2F;">
+                <tr>
+                  <td style="padding:12px 16px;">
+                    <p style="margin:0 0 2px;color:#8C877E;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;">Monto a abonar</p>
+                    <p style="margin:0;color:#F2EDE3;font-size:18px;font-weight:700;">${amountFmt}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
+          <tr>
+            <td style="padding:18px 32px;text-align:center;background:#0B0B0C;">
+              <p style="margin:0;color:#8C877E;font-size:11px;">
+                Enviado por <a href="https://danteup.com" target="_blank" style="color:#B9B4AA;font-weight:600;text-decoration:none;">DANTEUP</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+}
+
 export async function sendQuoteEmail({ to, clientName, orgName, orgLogo, quoteId, quoteNumber, quoteTitle, total, currency }) {
   const publicUrl   = `${FRONTEND_URL}/p/presupuesto/${quoteId}`
   const orgLogoUrl  = orgLogo ? `${BACKEND_URL}/uploads/${orgLogo}` : null
