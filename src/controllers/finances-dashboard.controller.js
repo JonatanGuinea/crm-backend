@@ -16,6 +16,9 @@ export async function getFinancesDashboard(req, res) {
   const todayStart    = new Date(Date.UTC(nowArg.getUTCFullYear(), nowArg.getUTCMonth(), nowArg.getUTCDate(),  0,  0,  0,   0))
   const todayEnd      = new Date(Date.UTC(nowArg.getUTCFullYear(), nowArg.getUTCMonth(), nowArg.getUTCDate(), 23, 59, 59, 999))
   const endOfMonthArg = new Date(Date.UTC(nowArg.getUTCFullYear(), nowArg.getUTCMonth() + 1, 0, 23, 59, 59, 999))
+  // Mes futuro → pendientes solo de ese mes; mes actual o pasado → pendientes hasta fin del mes actual (incluye vencidos)
+  const isFutureMonth = start > endOfMonthArg
+  const pendingDate   = isFutureMonth ? { gte: start, lte: end } : { lte: endOfMonthArg }
 
   const movementBase = { orgId, ...(accountId ? { accountId } : {}) }
 
@@ -69,14 +72,14 @@ export async function getFinancesDashboard(req, res) {
       take: 8,
     }),
 
-    // Totales pendientes hasta fin del mes actual
+    // Totales pendientes (ver pendingDate)
     prisma.cashMovement.groupBy({
       by: ['type'],
       where: {
         ...movementBase,
         status: 'pending',
         type: { in: ['income', 'expense'] },
-        date: { lte: endOfMonthArg },
+        date: pendingDate,
       },
       _sum: { amount: true },
     }),
@@ -115,13 +118,13 @@ export async function getFinancesDashboard(req, res) {
       take: 200,
     }),
 
-    // Movimientos pendientes hasta fin del mes actual (pasados + este mes, no futuros)
+    // Movimientos pendientes (ver pendingDate)
     prisma.cashMovement.findMany({
       where: {
         ...movementBase,
         status: 'pending',
         type: { in: ['income', 'expense'] },
-        date: { lte: endOfMonthArg },
+        date: pendingDate,
       },
       include: {
         account:  { select: { id: true, name: true } },
