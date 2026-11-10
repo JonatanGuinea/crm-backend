@@ -3,13 +3,27 @@ import nodemailer from 'nodemailer'
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173'
 const BACKEND_URL  = process.env.BACKEND_URL  || `http://localhost:${process.env.PORT || 8000}`
 
+// Remitente de los emails del sistema (recuperación, verificación, invitaciones, alertas).
+// Siempre se envía desde la cuenta autenticada (SMTP_USER), que el servidor SMTP acepta; de
+// EMAIL_FROM se toma solo el nombre visible. Acepta "Nombre <dir>" o solo "Nombre".
+// Antes se usaba EMAIL_FROM tal cual: en prod era solo un nombre, sin dirección, y Migadu
+// rechazaba el envío ("550 sender address rejected") → recuperación/verificación/invitaciones fallaban.
+function systemFrom() {
+  const raw  = (process.env.EMAIL_FROM || '').trim()
+  const name = raw.includes('<')
+    ? raw.slice(0, raw.indexOf('<'))
+    : (raw.includes('@') ? '' : raw)
+  const clean = name.replace(/["']/g, '').trim() || 'DANTEUP CRM'
+  return `${clean} <${process.env.SMTP_USER}>`
+}
+
 export async function sendPasswordResetEmail({ to, name, token }) {
   const resetUrl = `${FRONTEND_URL}/reset-password?token=${token}`
   const subject  = 'Restablecer contraseña — DANTEUP CRM'
   const html     = buildPasswordResetEmailHtml({ name, resetUrl })
 
   await createTransporter().sendMail({
-    from: process.env.EMAIL_FROM,
+    from: systemFrom(),
     to,
     subject,
     html,
@@ -119,7 +133,7 @@ export async function sendPasswordChangeEmail({ to, name, token }) {
   const html       = buildPasswordChangeEmailHtml({ name, confirmUrl })
 
   await createTransporter().sendMail({
-    from: process.env.EMAIL_FROM,
+    from: systemFrom(),
     to,
     subject,
     html,
@@ -230,7 +244,7 @@ export async function sendVerificationEmail({ to, name, token }) {
   const html      = buildVerificationEmailHtml({ name, verifyUrl })
 
   await createTransporter().sendMail({
-    from: process.env.EMAIL_FROM,
+    from: systemFrom(),
     to,
     subject,
     html,
@@ -355,7 +369,7 @@ export async function sendInvitationEmail({ to, inviteeName, orgName, role, invi
   const html    = buildInvitationEmailHtml({ inviteeName, orgName, role, inviteLink, isNewUser })
 
   await createTransporter().sendMail({
-    from: process.env.EMAIL_FROM,
+    from: systemFrom(),
     to,
     subject,
     html,
@@ -1139,7 +1153,7 @@ export async function sendBackupFailureEmail(errorMessage) {
 </body>
 </html>`
 
-  await createTransporter().sendMail({ from: process.env.EMAIL_FROM, to, subject, html })
+  await createTransporter().sendMail({ from: systemFrom(), to, subject, html })
   console.log(`[backup] Alerta de error enviada → ${to}`)
 }
 
