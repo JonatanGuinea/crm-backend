@@ -268,6 +268,8 @@ model Quote {
   paymentReminderSentAt DateTime?
   rejectionReason       String?
   renewalRequestedAt    DateTime? // el cliente pidió un presupuesto actualizado desde el link de uno vencido
+  renewalSeenAt         DateTime? // alguien del equipo abrió el detalle → se apaga el globo rojo de la lista
+  renewalAckAt          DateTime? // alguien tocó "Entendido" en el banner del detalle
 
   // Datos temporales de cliente potencial (se eliminan al aprobar)
   potentialClientName    String?

@@ -739,12 +739,13 @@ function fmtDay(date) {
 }
 
 // ── Reactivar un presupuesto vencido con nueva validez ───────────────────────
-// Vuelve a "Enviado" con el mismo número y link; reinicia el recordatorio de 48 hs.
+// Vuelve a "Enviado" con el mismo número y link; reinicia el recordatorio de 48 hs
+// y habilita de nuevo los envíos (el reenvío por email lo hace el front con /send).
 export const reactivateQuote = async (req, res) => {
   try {
     const orgId = req.user.organizationId
     const { id } = req.params
-    const { validUntil } = req.body
+    const { validUntil } = req.body ?? {}
 
     const quote = await prisma.quote.findFirst({ where: { id, organizationId: orgId }, select: { id: true, status: true } })
     if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
@@ -761,7 +762,11 @@ export const reactivateQuote = async (req, res) => {
         validUntil:         newValid,
         sentAt:             new Date(),
         reminderSentAt:     null,
+        sentByEmail:        false, // se puede volver a enviar por email/WhatsApp
+        sentByWhatsapp:     false,
         renewalRequestedAt: null,
+        renewalSeenAt:      null,
+        renewalAckAt:       null,
       },
     })
 
@@ -781,6 +786,43 @@ export const reactivateQuote = async (req, res) => {
   }
 }
 
+// ── Pedido de presupuesto actualizado: visto / entendido ─────────────────────
+// step 'seen': se abrió el detalle (apaga el globo rojo de la lista y la notificación).
+// step 'ack':  se tocó "Entendido" en el banner (lo oculta; también cuenta como visto).
+export const markRenewalRead = async (req, res) => {
+  try {
+    const orgId = req.user.organizationId
+    const { id } = req.params
+    const step = req.body?.step === 'ack' ? 'ack' : 'seen'
+
+    const quote = await prisma.quote.findFirst({
+      where: { id, organizationId: orgId },
+      select: { id: true, renewalRequestedAt: true, renewalSeenAt: true, renewalAckAt: true },
+    })
+    if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
+    if (!quote.renewalRequestedAt) return fail(res, 400, 'El cliente no pidió un presupuesto actualizado')
+
+    const now = new Date()
+    const data = {}
+    if (!quote.renewalSeenAt) data.renewalSeenAt = now
+    if (step === 'ack' && !quote.renewalAckAt) data.renewalAckAt = now
+
+    const updated = Object.keys(data).length
+      ? await prisma.quote.update({ where: { id }, data, select: { id: true, renewalRequestedAt: true, renewalSeenAt: true, renewalAckAt: true } })
+      : quote
+
+    // la notificación de este pedido queda leída para quien lo abrió
+    await prisma.notification.updateMany({
+      where: { type: 'quote_renewal_requested', refId: id, userId: req.user.id, organizationId: orgId, read: false },
+      data:  { read: true },
+    })
+
+    return success(res, 200, updated)
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
+
 // ── Duplicar un presupuesto como borrador nuevo ──────────────────────────────
 // Copia cliente, ítems, impuestos, descuento, notas e imágenes (archivos copiados aparte).
 // No copia cuotas ni fechas de entrega/pago, que quedarían desactualizadas.
@@ -788,7 +830,7 @@ export const duplicateQuote = async (req, res) => {
   try {
     const orgId = req.user.organizationId
     const { id } = req.params
-    const { validUntil } = req.body
+    const { validUntil } = req.body ?? {} // Express 5: sin body, req.body es undefined
 
     const source = await prisma.quote.findFirst({
       where: { id, organizationId: orgId },
