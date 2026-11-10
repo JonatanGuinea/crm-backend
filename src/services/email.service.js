@@ -1083,15 +1083,19 @@ function buildQuoteExpiredEmailHtml({ clientName, orgName, orgLogoUrl, num, quot
 </html>`
 }
 
-export async function sendQuoteEmail({ to, clientName, orgName, orgLogo, quoteId, quoteNumber, quoteTitle, total, currency }) {
+// variant: undefined (envío normal) | 'resend' (reenvío sin cambios) | 'updated' (presupuesto actualizado)
+export async function sendQuoteEmail({ to, clientName, orgName, orgLogo, quoteId, quoteNumber, quoteTitle, total, currency, variant, validUntil }) {
   const publicUrl   = `${FRONTEND_URL}/p/presupuesto/${quoteId}`
   const orgLogoUrl  = orgLogo ? `${BACKEND_URL}/uploads/${orgLogo}` : null
   const num         = String(quoteNumber).padStart(3, '0')
   const sym         = currency === 'USD' ? 'US$' : '$'
   const totalFmt    = `${sym}${Number(total).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const validFmt    = validUntil ? new Date(validUntil).toLocaleDateString('es-AR', { timeZone: 'UTC' }) : null
 
-  const subject = `Presupuesto #${num} — ${orgName}`
-  const html    = buildEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, totalFmt, publicUrl })
+  const subject = variant === 'updated' ? `Presupuesto actualizado #${num} — ${orgName}`
+                : variant === 'resend'  ? `Te reenviamos el presupuesto #${num} — ${orgName}`
+                :                         `Presupuesto #${num} — ${orgName}`
+  const html    = buildEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, totalFmt, publicUrl, variant, validFmt })
 
   await createTransporter().sendMail({
     from: `${orgName} - Presupuesto <${process.env.SMTP_USER}>`,
@@ -1139,7 +1143,13 @@ export async function sendBackupFailureEmail(errorMessage) {
   console.log(`[backup] Alerta de error enviada → ${to}`)
 }
 
-function buildEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, totalFmt, publicUrl }) {
+function buildEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, totalFmt, publicUrl, variant, validFmt }) {
+  const kicker = variant === 'updated' ? 'Presupuesto actualizado' : variant === 'resend' ? 'Presupuesto reenviado' : 'Nuevo presupuesto'
+  const intro  = variant === 'updated'
+    ? `Como nos pediste, te enviamos el presupuesto <strong style="color:#F2EDE3;">${quoteTitle}</strong> actualizado${validFmt ? `, válido hasta el <strong style="color:#F2EDE3;">${validFmt}</strong>` : ''}.`
+    : variant === 'resend'
+    ? `Como nos pediste, te reenviamos el presupuesto <strong style="color:#F2EDE3;">${quoteTitle}</strong> con una nueva fecha de validez${validFmt ? `: <strong style="color:#F2EDE3;">hasta el ${validFmt}</strong>` : ''}. Las condiciones se mantienen.`
+    : `Te compartimos el presupuesto <strong style="color:#F2EDE3;">${quoteTitle}</strong> para tu revisión.`
   const logoBlock = orgLogoUrl
     ? `<img src="${orgLogoUrl}" alt="${orgName}" style="max-height:36px;max-width:120px;object-fit:contain;display:block;">`
     : `<span style="color:#F2EDE3;font-size:15px;font-weight:700;letter-spacing:-0.5px;">${orgName}</span>`
@@ -1176,7 +1186,7 @@ function buildEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, tota
 
           <tr>
             <td style="padding:32px;background:#1E1E20;">
-              <p style="margin:0 0 8px;color:#8C877E;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Nuevo presupuesto</p>
+              <p style="margin:0 0 8px;color:#8C877E;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">${kicker}</p>
               <h1 style="margin:0 0 8px;color:#F2EDE3;font-size:26px;font-weight:700;letter-spacing:-0.5px;">#${num}</h1>
               <p style="margin:0;color:#B9B4AA;font-size:14px;">${quoteTitle}</p>
             </td>
@@ -1188,7 +1198,7 @@ function buildEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, tota
             <td style="padding:32px 32px 16px;background:#141415;">
               <p style="margin:0 0 16px;color:#F2EDE3;font-size:15px;font-weight:600;">Hola, ${clientName}</p>
               <p style="margin:0 0 14px;color:#B9B4AA;font-size:14px;line-height:1.65;">
-                Te compartimos el presupuesto <strong style="color:#F2EDE3;">${quoteTitle}</strong> para tu revisión.
+                ${intro}
               </p>
               <p style="margin:0 0 20px;color:#B9B4AA;font-size:14px;line-height:1.65;">
                 Podés ver el detalle completo, aceptar o solicitar modificaciones desde el enlace de abajo.

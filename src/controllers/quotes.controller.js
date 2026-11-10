@@ -348,6 +348,12 @@ export const updateQuote = async (req, res) => {
       updates.sentByWhatsapp = true
       if (!['sent', 'approved', 'signed'].includes(quote.status)) updates.status = 'sent'
     }
+    if (req.body.sentByWhatsapp === true && quote.renewalRequestedAt) {
+      // enviarlo responde un pedido de presupuesto actualizado pendiente
+      updates.renewalRequestedAt = null
+      updates.renewalSeenAt      = null
+      updates.renewalAckAt       = null
+    }
 
     for (const key of ['title', 'notes', 'currency']) {
       if (req.body[key] !== undefined) updates[key] = req.body[key]
@@ -495,6 +501,7 @@ export const sendQuote = async (req, res) => {
     })
     if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
     if (!['draft', 'sent'].includes(quote.status)) return fail(res, 400, 'Solo se pueden enviar presupuestos en borrador o enviados')
+    const variant = ['resend', 'updated'].includes(req.body?.variant) ? req.body.variant : undefined
 
     if (!quote.organization?.signature) {
       return fail(res, 400, 'La organización no tiene firma configurada. Configurá la firma en Ajustes antes de enviar presupuestos.')
@@ -517,11 +524,14 @@ export const sendQuote = async (req, res) => {
       quoteTitle:  quote.title,
       total:       quote.total,
       currency:    quote.currency,
+      variant,
+      validUntil:  quote.validUntil,
     })
 
     const updated = await prisma.quote.update({
       where: { id },
-      data: { status: 'sent', sentByEmail: true, sentAt: new Date() }
+      // enviarlo responde un pedido de presupuesto actualizado pendiente
+      data: { status: 'sent', sentByEmail: true, sentAt: new Date(), renewalRequestedAt: null, renewalSeenAt: null, renewalAckAt: null }
     })
 
     await prisma.quoteHistory.create({
