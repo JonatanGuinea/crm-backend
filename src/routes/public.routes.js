@@ -197,7 +197,7 @@ router.post('/quotes/:id/request-renewal', async (req, res) => {
     const quote = await prisma.quote.findUnique({
       where: { id },
       select: {
-        id: true, status: true, number: true, title: true, validUntil: true, organizationId: true,
+        id: true, status: true, number: true, title: true, validUntil: true, organizationId: true, createdById: true,
         client: { select: { name: true, phone: true, company: true } },
         potentialClientName: true, potentialClientPhone: true, potentialClientCompany: true,
       }
@@ -213,6 +213,17 @@ router.post('/quotes/:id/request-renewal', async (req, res) => {
       data:  { renewalRequestedAt: new Date() },
     })
     if (count === 0) return success(res, 200, { message: 'La solicitud ya fue enviada', alreadyRequested: true })
+
+    // Si está "Enviado" pero ya pasó la validez y el job horario todavía no lo venció, se vence ahora
+    // (mismas reglas que el job: solo desde "sent"), así queda listo para Reactivar.
+    if (quote.status === 'sent' && isPastValidity(quote.validUntil)) {
+      const exp = await prisma.quote.updateMany({ where: { id, status: 'sent' }, data: { status: 'expired' } })
+      if (exp.count > 0) {
+        await prisma.quoteHistory.create({
+          data: { quoteId: id, userId: quote.createdById, action: 'auto_expired', organizationId: quote.organizationId },
+        })
+      }
+    }
 
     const clientName    = quote.client?.name    || quote.potentialClientName || 'Cliente'
     const clientCompany = quote.client?.company || quote.potentialClientCompany || null

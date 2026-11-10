@@ -897,6 +897,23 @@ export const duplicateQuote = async (req, res) => {
           organizationId: orgId,
         }
       })
+      // Si el cliente había pedido una actualización del original, el duplicado la responde:
+      // el original sale de "Piden presupuesto actualizado" y queda registrado en su historial.
+      if (source.renewalRequestedAt) {
+        await tx.quote.update({
+          where: { id: source.id },
+          data:  { renewalRequestedAt: null, renewalSeenAt: null, renewalAckAt: null },
+        })
+        await tx.quoteHistory.create({
+          data: {
+            quoteId:        source.id,
+            userId:         req.user.id,
+            action:         'renewal_answered',
+            detail:         `#${String(number).padStart(3, '0')}`,
+            organizationId: orgId,
+          }
+        })
+      }
       return q
     })
 
