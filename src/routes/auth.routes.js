@@ -8,11 +8,12 @@ import { acceptInvite } from '../controllers/members.controller.js'
 import { forgotPassword, resetPassword } from '../controllers/forgot-password.controller.js'
 import { auth } from "../middlewares/auth.middleware.js"
 import { authInvite } from "../middlewares/authInvite.middleware.js"
+import { verifyTurnstile } from "../middlewares/turnstile.middleware.js"
 
 const router = Router()
 
-router.post('/register', register)
-router.post('/login', login)
+router.post('/register', verifyTurnstile, register)
+router.post('/login', verifyTurnstile, login)
 router.post('/verify-email', verifyEmail)
 router.post('/forgot-password', forgotPassword)
 router.post('/reset-password', resetPassword)
