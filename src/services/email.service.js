@@ -976,6 +976,113 @@ function buildMembershipReminderEmailHtml({ clientName, orgName, orgLogoUrl, mem
 </html>`
 }
 
+export async function sendQuoteExpiredEmail({ to, clientName, orgName, orgLogo, quoteId, quoteNumber, quoteTitle, validUntil }) {
+  const esc        = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+  const publicUrl  = `${FRONTEND_URL}/p/presupuesto/${quoteId}`
+  const orgLogoUrl = orgLogo ? `${BACKEND_URL}/uploads/${orgLogo}` : null
+  const num        = String(quoteNumber).padStart(3, '0')
+  const validFmt   = new Date(validUntil).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', timeZone: 'UTC' })
+
+  const subject = `Tu presupuesto #${num} venció — ${orgName}`
+  const html    = buildQuoteExpiredEmailHtml({
+    clientName: esc(clientName), orgName: esc(orgName), orgLogoUrl,
+    num, quoteTitle: esc(quoteTitle), validFmt, publicUrl
+  })
+
+  await createTransporter().sendMail({
+    from: `${orgName} - Presupuesto <${process.env.SMTP_USER}>`,
+    to,
+    subject,
+    html,
+  })
+
+  console.log(`[email] Presupuesto vencido → ${to} | Presupuesto #${num}`)
+}
+
+function buildQuoteExpiredEmailHtml({ clientName, orgName, orgLogoUrl, num, quoteTitle, validFmt, publicUrl }) {
+  const logoBlock = orgLogoUrl
+    ? `<img src="${orgLogoUrl}" alt="${orgName}" style="max-height:36px;max-width:120px;object-fit:contain;display:block;">`
+    : `<span style="color:#F2EDE3;font-size:15px;font-weight:700;letter-spacing:-0.5px;">${orgName}</span>`
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Tu presupuesto #${num} venció</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0B0B0C;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0B0B0C;padding:48px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:540px;border-radius:0 20px 20px 0;overflow:hidden;border:1px solid #2C2C2F;background:#141415;">
+
+          <tr>
+            <td style="padding:24px 32px;background:#0B0B0C;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    ${logoBlock}
+                  </td>
+                  <td style="vertical-align:middle;text-align:right;">
+                    <span style="display:inline-block;background:#1E1E20;color:#8C877E;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border:1px solid #2C2C2F;border-radius:0 6px 6px 0;">Presupuesto vencido</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
+          <tr>
+            <td style="padding:32px;background:#1E1E20;">
+              <p style="margin:0 0 8px;color:#8C877E;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Presupuesto #${num}</p>
+              <h1 style="margin:0 0 8px;color:#F2EDE3;font-size:26px;font-weight:700;letter-spacing:-0.5px;">${quoteTitle}</h1>
+              <p style="margin:0;color:#B9B4AA;font-size:14px;">Válido hasta el ${validFmt}</p>
+            </td>
+          </tr>
+
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
+          <tr>
+            <td style="padding:32px 32px 16px;background:#141415;">
+              <p style="margin:0 0 16px;color:#F2EDE3;font-size:15px;font-weight:600;">Hola, ${clientName}</p>
+              <p style="margin:0 0 14px;color:#B9B4AA;font-size:14px;line-height:1.65;">
+                El presupuesto <strong style="color:#F2EDE3;">${quoteTitle}</strong> que te enviamos venció el <strong style="color:#F2EDE3;">${validFmt}</strong> sin que llegáramos a confirmarlo.
+              </p>
+              <p style="margin:0 0 20px;color:#B9B4AA;font-size:14px;line-height:1.65;">
+                Si seguís interesado, pedinos una versión actualizada desde el botón de abajo y te la preparamos.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px 28px;background:#141415;">
+              <a href="${publicUrl}"
+                 style="display:block;background:#F2EDE3;color:#0B0B0C;text-decoration:none;padding:14px 32px;border-radius:0 10px 10px 0;font-size:14px;font-weight:700;letter-spacing:0.2px;text-align:center;">
+                Quiero un presupuesto actualizado
+              </a>
+            </td>
+          </tr>
+
+          <tr><td style="height:1px;font-size:0;line-height:0;background:#2C2C2F;">&nbsp;</td></tr>
+
+          <tr>
+            <td style="padding:18px 32px;text-align:center;background:#0B0B0C;">
+              <p style="margin:0;color:#8C877E;font-size:11px;">
+                Enviado por <a href="https://danteup.com" target="_blank" style="color:#B9B4AA;font-weight:600;text-decoration:none;">DANTEUP</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+}
+
 export async function sendQuoteEmail({ to, clientName, orgName, orgLogo, quoteId, quoteNumber, quoteTitle, total, currency }) {
   const publicUrl   = `${FRONTEND_URL}/p/presupuesto/${quoteId}`
   const orgLogoUrl  = orgLogo ? `${BACKEND_URL}/uploads/${orgLogo}` : null

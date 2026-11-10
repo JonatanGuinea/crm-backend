@@ -189,6 +189,67 @@ router.post('/quotes/:id/confirm', async (req, res) => {
   }
 })
 
+// El cliente pide un presupuesto actualizado desde el link de uno vencido.
+// Se registra una sola vez por presupuesto (flag atómico) y se avisa a dueños y admins.
+router.post('/quotes/:id/request-renewal', async (req, res) => {
+  try {
+    const { id } = req.params
+    const quote = await prisma.quote.findUnique({
+      where: { id },
+      select: {
+        id: true, status: true, number: true, title: true, validUntil: true, organizationId: true,
+        client: { select: { name: true, phone: true, company: true } },
+        potentialClientName: true, potentialClientPhone: true, potentialClientCompany: true,
+      }
+    })
+    if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
+
+    const expired = quote.status === 'expired' ||
+      (['draft', 'sent'].includes(quote.status) && isPastValidity(quote.validUntil))
+    if (!expired) return fail(res, 400, 'Este presupuesto no está vencido')
+
+    const { count } = await prisma.quote.updateMany({
+      where: { id, renewalRequestedAt: null },
+      data:  { renewalRequestedAt: new Date() },
+    })
+    if (count === 0) return success(res, 200, { message: 'La solicitud ya fue enviada', alreadyRequested: true })
+
+    const clientName    = quote.client?.name    || quote.potentialClientName || 'Cliente'
+    const clientCompany = quote.client?.company || quote.potentialClientCompany || null
+    const clientPhone   = (quote.client?.phone  || quote.potentialClientPhone || '').replace(/\D/g, '')
+    const numStr        = String(quote.number).padStart(3, '0')
+    const displayName   = clientCompany ? `${clientCompany} (${clientName})` : clientName
+
+    const members = await prisma.organizationMembership.findMany({
+      where: { organizationId: quote.organizationId, status: 'active', role: { in: ['owner', 'admin'] } },
+      select: { userId: true }
+    })
+
+    await Promise.all(members.map(m =>
+      notify({
+        type:    'quote_renewal_requested',
+        title:   'Piden un presupuesto actualizado',
+        message: `${displayName} pidió una versión actualizada del presupuesto vencido #${numStr} — ${quote.title}`,
+        metadata: JSON.stringify({
+          phone:       clientPhone || null,
+          clientName,
+          clientCompany,
+          quoteNumber: numStr,
+          quoteTitle:  quote.title,
+        }),
+        userId: m.userId,
+        orgId:  quote.organizationId,
+        refId:  quote.id,
+        reactivate: true,
+      })
+    ))
+
+    return success(res, 200, { message: 'Solicitud enviada' })
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+})
+
 router.post('/quotes/:id/reject', async (req, res) => {
   try {
     const { id } = req.params

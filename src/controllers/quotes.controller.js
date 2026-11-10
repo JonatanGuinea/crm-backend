@@ -5,6 +5,7 @@ import { notify } from '../services/notifications.service.js'
 import { sendQuoteEmail } from '../services/email.service.js'
 import { syncQuoteMovements } from '../services/finances.service.js'
 import { applyDefaultTasks } from '../services/default-tasks.service.js'
+import { copyFile } from '../config/supabase.js'
 
 const allowedTransitions = {
   draft:     ['sent', 'expired'],
@@ -722,6 +723,160 @@ export const getQuotesDashboard = async (req, res) => {
       upcomingInstallments: installments,
       monthly: Object.values(monthlyMap)
     })
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
+
+// Hoy en Argentina como medianoche UTC (mismo criterio que validUntil)
+function todayArgUTC() {
+  const arg = new Date(Date.now() - 3 * 60 * 60 * 1000)
+  return new Date(Date.UTC(arg.getUTCFullYear(), arg.getUTCMonth(), arg.getUTCDate(), 0, 0, 0, 0))
+}
+
+function fmtDay(date) {
+  return new Date(date).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
+}
+
+// ── Reactivar un presupuesto vencido con nueva validez ───────────────────────
+// Vuelve a "Enviado" con el mismo número y link; reinicia el recordatorio de 48 hs.
+export const reactivateQuote = async (req, res) => {
+  try {
+    const orgId = req.user.organizationId
+    const { id } = req.params
+    const { validUntil } = req.body
+
+    const quote = await prisma.quote.findFirst({ where: { id, organizationId: orgId }, select: { id: true, status: true } })
+    if (!quote) return fail(res, 404, 'Presupuesto no encontrado')
+    if (quote.status !== 'expired') return fail(res, 400, 'Solo se pueden reactivar presupuestos vencidos')
+
+    const newValid = validUntil ? new Date(String(validUntil).slice(0, 10)) : null
+    if (!newValid || isNaN(newValid)) return fail(res, 400, 'Indicá la nueva fecha de validez')
+    if (newValid < todayArgUTC())     return fail(res, 400, 'La nueva fecha de validez no puede ser anterior a hoy')
+
+    const updated = await prisma.quote.update({
+      where: { id },
+      data: {
+        status:             'sent',
+        validUntil:         newValid,
+        sentAt:             new Date(),
+        reminderSentAt:     null,
+        renewalRequestedAt: null,
+      },
+    })
+
+    await prisma.quoteHistory.create({
+      data: {
+        quoteId:        id,
+        userId:         req.user.id,
+        action:         'reactivated',
+        detail:         `válido hasta ${fmtDay(newValid)}`,
+        organizationId: orgId,
+      }
+    })
+
+    return success(res, 200, updated)
+  } catch (error) {
+    return fail(res, 500, error.message)
+  }
+}
+
+// ── Duplicar un presupuesto como borrador nuevo ──────────────────────────────
+// Copia cliente, ítems, impuestos, descuento, notas e imágenes (archivos copiados aparte).
+// No copia cuotas ni fechas de entrega/pago, que quedarían desactualizadas.
+export const duplicateQuote = async (req, res) => {
+  try {
+    const orgId = req.user.organizationId
+    const { id } = req.params
+    const { validUntil } = req.body
+
+    const source = await prisma.quote.findFirst({
+      where: { id, organizationId: orgId },
+      include: {
+        items:      true,
+        quoteNotes: { orderBy: { order: 'asc' } },
+        images:     { orderBy: { order: 'asc' } },
+      },
+    })
+    if (!source) return fail(res, 404, 'Presupuesto no encontrado')
+
+    const newValid = validUntil ? new Date(String(validUntil).slice(0, 10)) : null
+    if (newValid && isNaN(newValid)) return fail(res, 400, 'Fecha de validez inválida')
+
+    const last   = await prisma.quote.findFirst({ where: { organizationId: orgId }, orderBy: { number: 'desc' }, select: { number: true } })
+    const number = (last?.number ?? 0) + 1
+
+    const copy = await prisma.$transaction(async (tx) => {
+      const q = await tx.quote.create({
+        data: {
+          number,
+          title:          source.title,
+          notes:          source.notes,
+          validUntil:     newValid,
+          taxRate:        source.taxRate,
+          discountType:   source.discountType,
+          discountValue:  source.discountValue,
+          subtotal:       source.subtotal,
+          total:          source.total,
+          currency:       source.currency,
+          clientId:       source.clientId,
+          projectId:      source.projectId,
+          potentialClientName:    source.potentialClientName,
+          potentialClientEmail:   source.potentialClientEmail,
+          potentialClientPhone:   source.potentialClientPhone,
+          potentialClientCompany: source.potentialClientCompany,
+          potentialProjectTitle:  source.potentialProjectTitle,
+          organizationId: orgId,
+          createdById:    req.user.id,
+          items: {
+            create: source.items.map(i => ({
+              description: i.description,
+              quantity:    i.quantity,
+              unitPrice:   i.unitPrice,
+              amount:      i.amount,
+              productId:   i.productId,
+            })),
+          },
+        },
+      })
+      if (source.quoteNotes.length > 0) {
+        await tx.quoteNote.createMany({
+          data: source.quoteNotes.map(n => ({
+            quoteId: q.id, organizationId: orgId, title: n.title, description: n.description, order: n.order,
+          })),
+        })
+      }
+      await tx.quoteHistory.create({
+        data: {
+          quoteId:        q.id,
+          userId:         req.user.id,
+          action:         'duplicated',
+          detail:         `#${String(source.number).padStart(3, '0')}`,
+          organizationId: orgId,
+        }
+      })
+      return q
+    })
+
+    // Imágenes fuera de la transacción: cada una se copia como archivo nuevo para que
+    // borrar la imagen en un presupuesto no rompa el otro. Si una falla, se omite.
+    let skippedImages = 0
+    for (const img of source.images) {
+      try {
+        const { name, url } = await copyFile(img.storedName)
+        await prisma.quoteImage.create({
+          data: {
+            quoteId: copy.id, organizationId: orgId,
+            storedName: name, url,
+            title: img.title, description: img.description, order: img.order,
+          },
+        })
+      } catch {
+        skippedImages++
+      }
+    }
+
+    return success(res, 201, { id: copy.id, number: copy.number, skippedImages })
   } catch (error) {
     return fail(res, 500, error.message)
   }

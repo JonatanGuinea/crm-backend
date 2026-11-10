@@ -14,6 +14,8 @@ import {
   deleteQuote,
   sendQuote,
   getAllQuotesHistory,
+  reactivateQuote,
+  duplicateQuote,
 } from '../controllers/quotes.controller.js'
 import { downloadQuotePdf } from '../controllers/pdf.controller.js'
 
@@ -28,6 +30,8 @@ router.get(    '/:id',       auth, requireMembership, requireRole('owner', 'admi
 router.put(    '/:id',       auth, requireMembership, requireRole('owner', 'admin'), updateQuote)
 router.delete( '/:id',       auth, requireMembership, requireRole('owner'),          deleteQuote)
 router.post(   '/:id/send',  auth, requireMembership, requireRole('owner', 'admin'), sendQuote)
+router.post(   '/:id/reactivate', auth, requireMembership, requireRole('owner', 'admin'), reactivateQuote)
+router.post(   '/:id/duplicate',  auth, requireMembership, requireRole('owner', 'admin'), duplicateQuote)
 router.get(    '/:id/pdf',   auth, requireMembership, requireRole('owner', 'admin'), downloadQuotePdf)
 
 export default router

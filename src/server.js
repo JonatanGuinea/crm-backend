@@ -5,7 +5,7 @@ import prisma from './config/db.js'
 import { checkTimeAlerts } from './services/notifications.service.js'
 import { getMonthlyReportData } from './services/report.service.js'
 import { buildMonthlyReportPdf } from './utils/buildReportPdf.js'
-import { sendMonthlyReportEmail, sendQuoteReminderEmail, sendPaymentReminderEmail } from './services/email.service.js'
+import { sendMonthlyReportEmail, sendQuoteReminderEmail, sendPaymentReminderEmail, sendQuoteExpiredEmail } from './services/email.service.js'
 import { runDatabaseBackup } from './services/backup.service.js'
 import { syncAllMemberships, sendMembershipReminders } from './services/memberships.service.js'
 
@@ -238,16 +238,24 @@ async function runPaymentReminders() {
   }
 }
 
-// Pasa a "Vencido" los presupuestos enviados cuya fecha de validez ya pasó (hora Argentina).
+// Pasa a "Vencido" los presupuestos enviados cuya fecha de validez ya pasó (hora Argentina)
+// y avisa al cliente por email para que pueda pedir uno actualizado.
 // Vencen el día siguiente a validUntil; los borradores no se tocan.
 async function runQuoteExpiration() {
   try {
     const arg      = new Date(Date.now() - 3 * 60 * 60 * 1000)
     const todayArg = new Date(Date.UTC(arg.getUTCFullYear(), arg.getUTCMonth(), arg.getUTCDate(), 0, 0, 0, 0))
+    // Solo se avisa por email lo que venció en la última semana (no deudas viejas tras una caída)
+    const emailFrom = new Date(todayArg.getTime() - 7 * 24 * 60 * 60 * 1000)
 
     const quotes = await prisma.quote.findMany({
       where:  { status: 'sent', validUntil: { lt: todayArg } },
-      select: { id: true, number: true, organizationId: true, createdById: true },
+      select: {
+        id: true, number: true, title: true, validUntil: true, organizationId: true, createdById: true,
+        potentialClientEmail: true, potentialClientName: true,
+        client:       { select: { email: true, name: true } },
+        organization: { select: { name: true, logo: true } },
+      },
     })
 
     for (const q of quotes) {
@@ -268,6 +276,20 @@ async function runQuoteExpiration() {
           }
         })
         console.log(`[cron] Presupuesto #${q.number} vencido automáticamente (${q.id})`)
+
+        const to = q.client?.email || q.potentialClientEmail
+        if (to && q.validUntil >= emailFrom) {
+          await sendQuoteExpiredEmail({
+            to,
+            clientName:  q.client?.name || q.potentialClientName || 'Cliente',
+            orgName:     q.organization.name,
+            orgLogo:     q.organization.logo,
+            quoteId:     q.id,
+            quoteNumber: q.number,
+            quoteTitle:  q.title,
+            validUntil:  q.validUntil,
+          })
+        }
       } catch (err) {
         console.error(`[cron] Error venciendo presupuesto ${q.id}:`, err.message)
       }
