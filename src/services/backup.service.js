@@ -3,6 +3,7 @@ import { promisify } from 'util'
 import prisma from '../config/db.js'
 import supabase from '../config/supabase.js'
 import { sendBackupFailureEmail } from './email.service.js'
+import { logAudit } from './audit.service.js'
 
 const gzipAsync  = promisify(gzip)
 const BUCKET     = 'backups'
@@ -91,7 +92,8 @@ async function deleteOldBackups() {
   }
 }
 
-export async function runDatabaseBackup() {
+// trigger: 'cron' (programado) o 'manual' (panel Sistema, con req del admin)
+export async function runDatabaseBackup({ trigger = 'cron', req } = {}) {
   const date     = new Date().toISOString().slice(0, 10)
   const filename = `backup-${date}.json.gz`
 
@@ -112,9 +114,13 @@ export async function runDatabaseBackup() {
 
     await deleteOldBackups()
     console.log(`[backup] Completado → ${filename} (${(buffer.length / 1024).toFixed(0)} KB)`)
+    await logAudit({ req, action: 'backup.run', entity: 'backup', entityId: filename, meta: { trigger, filename, sizeBytes: buffer.length } })
+    return { ok: true, filename, sizeBytes: buffer.length }
 
   } catch (err) {
     console.error('[backup] Error:', err.message)
     await sendBackupFailureEmail(err.message).catch(() => {})
+    await logAudit({ req, action: 'backup.failed', entity: 'backup', entityId: filename, success: false, meta: { trigger, filename, error: err.message } })
+    return { ok: false, filename, error: err.message }
   }
 }

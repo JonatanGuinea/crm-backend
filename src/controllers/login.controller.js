@@ -2,6 +2,7 @@ import prisma from '../config/db.js'
 import { comparePassword } from '../utils/passwordHash.js'
 import { success, fail } from '../utils/response.js'
 import { generateAccessToken } from '../utils/jwt.js'
+import { logAudit } from '../services/audit.service.js'
 
 export const login = async (req, res) => {
   try {
@@ -22,17 +23,25 @@ export const login = async (req, res) => {
         password: true,
         isSystemAdmin: true,
         emailVerified: true,
+        disabledAt: true,
       }
     })
 
     if (!user) {
+      await logAudit({ req, action: 'auth.login_failed', entity: 'auth', success: false, statusCode: 401, actorEmail: normalizedEmail, meta: { reason: 'unknown_email' } })
       return fail(res, 401, "Credenciales inválidas")
     }
 
     const isMatch = await comparePassword(password, user.password)
 
     if (!isMatch) {
+      await logAudit({ req, actorId: user.id, actorEmail: user.email, action: 'auth.login_failed', entity: 'auth', success: false, statusCode: 401, meta: { reason: 'bad_password' } })
       return fail(res, 401, "Credenciales inválidas")
+    }
+
+    if (user.disabledAt) {
+      await logAudit({ req, actorId: user.id, actorEmail: user.email, action: 'auth.login_failed', entity: 'auth', success: false, statusCode: 403, meta: { reason: 'disabled' } })
+      return fail(res, 403, "Tu cuenta está deshabilitada. Contactá al soporte de DanteUP.")
     }
 
     if (!user.emailVerified) {
@@ -41,7 +50,7 @@ export const login = async (req, res) => {
 
     const memberships = await prisma.organizationMembership.findMany({
       where: { userId: user.id, status: 'active' },
-      include: { organization: { select: { id: true, name: true } } }
+      include: { organization: { select: { id: true, name: true, status: true } } }
     })
 
     const organizations = memberships
@@ -52,8 +61,12 @@ export const login = async (req, res) => {
         role: m.role
       }))
 
-    const membership = memberships[0] ?? null
+    // Empresa inicial: la primera no suspendida (si todas lo están, igual entra y verá el aviso)
+    const membership = memberships.find(m => m.organization?.status !== 'suspended') ?? memberships[0] ?? null
     const token = generateAccessToken(user, membership)
+
+    await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } })
+    await logAudit({ req, actorId: user.id, actorEmail: user.email, organizationId: membership?.organizationId ?? null, action: 'auth.login', entity: 'auth' })
 
     return success(res, 200, {
       user: {

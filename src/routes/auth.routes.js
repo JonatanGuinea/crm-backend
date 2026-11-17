@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { rateLimit } from 'express-rate-limit'
 
-import { switchOrganization } from "../controllers/auth.controller.js";
+import { switchOrganization, logout } from "../controllers/auth.controller.js";
 import { login } from '../controllers/login.controller.js'
 import { register } from '../controllers/register.controller.js'
 import { verifyEmail } from '../controllers/verify-email.controller.js'
@@ -29,6 +29,7 @@ router.post('/verify-email', authLimiter, verifyEmail)
 router.post('/forgot-password', authLimiter, verifyTurnstile, forgotPassword)
 router.post('/reset-password', authLimiter, resetPassword)
 router.post('/switch-organization', auth, switchOrganization)
+router.post('/logout', auth, logout)
 router.post('/accept-invite', authInvite, acceptInvite)
 
 export default router

@@ -32,6 +32,7 @@ import quoteImagesRoutes from './routes/quote-images.routes.js'
 import quoteNotesRoutes from './routes/quote-notes.routes.js'
 import membershipsRoutes from './routes/memberships.routes.js'
 import adminRoutes from './routes/admin.routes.js'
+import { auditMutations } from './services/audit.service.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -42,13 +43,17 @@ const app = express()
 app.set('trust proxy', 1)
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }))
-app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173', credentials: true }))
+// exposedHeaders: el front (otro dominio) lee el nombre y la cantidad de filas de las exportaciones del panel Sistema
+app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173', credentials: true, exposedHeaders: ['Content-Disposition', 'X-Row-Count'] }))
 app.use(express.json({ limit: '2mb' }))
 
 const uploadsPath = path.join(__dirname, '..', 'uploads')
 if (!fs.existsSync(uploadsPath)) fs.mkdirSync(uploadsPath, { recursive: true })
 app.use('/uploads', express.static(uploadsPath))
 app.use('/api/uploads', express.static(uploadsPath))
+
+// Auditoría de toda escritura de la API (registra después de responder; no lee el body)
+app.use('/api', auditMutations)
 
 app.use('/api/auth', authRoutes)
 app.use('/api/clients', clientsRoutes)

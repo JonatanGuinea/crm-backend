@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["metrics"]
 }
 
 datasource db {
@@ -21,6 +22,10 @@ model User {
   passwordChangeHash  String?
   passwordResetToken  String?   @unique
   passwordResetExpiry DateTime?
+  // Cuenta deshabilitada por un administrador del sistema (null = habilitada)
+  disabledAt          DateTime?
+  disabledReason      String?
+  lastLoginAt         DateTime?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -67,6 +72,10 @@ model Organization {
   defaultCurrency      String   @default("USD")
   defaultCashAccountId String?
   ownerId              String
+  // Suspensión administrativa (panel Sistema): bloquea el acceso de sus miembros
+  status               OrgStatus @default(active)
+  suspendedAt          DateTime?
+  suspendedReason      String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -95,6 +104,11 @@ model Organization {
   clientMemberships   ClientMembership[]
 
   @@index([name])
+}
+
+enum OrgStatus {
+  active
+  suspended
 }
 
 enum Plan {
@@ -1001,4 +1015,32 @@ model Notification {
   @@unique([type, userId, organizationId, refId])
   @@index([userId, organizationId, read])
   @@index([userId, organizationId, createdAt(sort: Desc)])
+}
+
+// ─── Auditoría de la plataforma ─────────────────────────────────────────────
+// Registro inmutable desde la app: no hay endpoints de edición ni borrado.
+// Sin FKs a User/Organization a propósito: el evento sobrevive al borrado del usuario o la empresa.
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  createdAt      DateTime @default(now())
+  actorId        String?
+  actorEmail     String?
+  organizationId String?
+  action         String
+  entity         String?
+  entityId       String?
+  success        Boolean  @default(true)
+  statusCode     Int?
+  ip             String?
+  userAgent      String?
+  before         Json?
+  after          Json?
+  meta           Json?
+
+  @@index([createdAt(sort: Desc)])
+  @@index([actorId, createdAt(sort: Desc)])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
+  @@index([entity, entityId])
 }

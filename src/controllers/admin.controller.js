@@ -1,6 +1,7 @@
 import prisma from '../config/db.js'
 import supabase from '../config/supabase.js'
 import { success, fail } from '../utils/response.js'
+import { logAudit } from '../services/audit.service.js'
 
 const PLANS = ['free', 'pro', 'enterprise']
 const DAY = 24 * 60 * 60 * 1000
@@ -161,7 +162,7 @@ export const updateOrganizationPlan = async (req, res) => {
       return fail(res, 400, `Plan inválido. Valores posibles: ${PLANS.join(', ')}`)
     }
 
-    const current = await prisma.organization.findUnique({ where: { id }, select: { plan: true, name: true } })
+    const current = await prisma.organization.findUnique({ where: { id }, select: { id: true, plan: true, name: true } })
     if (!current) return fail(res, 404, 'Organización no encontrada')
 
     const org = await prisma.organization.update({
@@ -171,6 +172,7 @@ export const updateOrganizationPlan = async (req, res) => {
     })
 
     console.log(`[admin] Plan de "${current.name}" (${id}): ${current.plan} → ${plan} por usuario ${req.user.id}`)
+    await logAudit({ req, organizationId: id, action: 'admin.organization.plan', entity: 'organization', entityId: id, before: current, after: org })
 
     return success(res, 200, org)
   } catch (error) {
